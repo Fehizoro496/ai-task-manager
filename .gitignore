@@ -1,0 +1,60 @@
+# ========================
+# OS
+# ========================
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# ========================
+# IDEs
+# ========================
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# ========================
+# Backend (Node.js)
+# ========================
+backend/node_modules/
+backend/.env
+backend/dist/
+
+# ========================
+# Flutter / Dart
+# ========================
+ai_task_manager/.dart_tool/
+ai_task_manager/.flutter-plugins
+ai_task_manager/.flutter-plugins-dependencies
+ai_task_manager/.pub-cache/
+ai_task_manager/.pub/
+ai_task_manager/build/
+ai_task_manager/.metadata
+ai_task_manager/**/doc/api/
+ai_task_manager/**/ios/Flutter/.last_build_id
+ai_task_manager/coverage/
+
+# Generated files (rebuild with `flutter pub run build_runner build`)
+ai_task_manager/**/*.g.dart
+ai_task_manager/**/*.freezed.dart
+
+# Symbolication / Obfuscation
+ai_task_manager/app.*.symbols
+ai_task_manager/app.*.map.json
+
+# Android
+ai_task_manager/android/app/debug
+ai_task_manager/android/app/profile
+ai_task_manager/android/app/release
+
+# ========================
+# Logs
+# ========================
+*.log
+
+# ========================
+# Claude Code
+# ========================
+.claude/

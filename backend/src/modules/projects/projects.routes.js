@@ -1,0 +1,141 @@
+const { Router } = require("express");
+const authenticate = require("../../middleware/auth");
+const validate = require("../../middleware/validate");
+const { createProjectSchema, updateProjectSchema } = require("./projects.schema");
+const projectsController = require("./projects.controller");
+
+const router = Router();
+
+router.use(authenticate);
+
+/**
+ * @swagger
+ * /projects:
+ *   post:
+ *     tags: [Projects]
+ *     summary: Create a project
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name]
+ *             properties:
+ *               name:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Project created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Project'
+ */
+router.post("/", validate(createProjectSchema), projectsController.create);
+
+/**
+ * @swagger
+ * /projects:
+ *   get:
+ *     tags: [Projects]
+ *     summary: List user projects
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of projects
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Project'
+ */
+router.get("/", projectsController.list);
+
+/**
+ * @swagger
+ * /projects/{id}:
+ *   get:
+ *     tags: [Projects]
+ *     summary: Get project with full hierarchy (Epics > Stories > Tasks)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Project details
+ *       404:
+ *         description: Project not found
+ */
+router.get("/:id", projectsController.getById);
+
+/**
+ * @swagger
+ * /projects/{id}:
+ *   put:
+ *     tags: [Projects]
+ *     summary: Update a project
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Project updated
+ *       404:
+ *         description: Project not found
+ */
+router.put("/:id", validate(updateProjectSchema), projectsController.update);
+
+/**
+ * @swagger
+ * /projects/{id}:
+ *   delete:
+ *     tags: [Projects]
+ *     summary: Delete a project
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       204:
+ *         description: Project deleted
+ *       404:
+ *         description: Project not found
+ */
+router.delete("/:id", projectsController.remove);
+
+module.exports = router;
