@@ -6,6 +6,7 @@ import 'package:ai_task_manager/core/database/app_database.dart';
 import 'package:ai_task_manager/core/database/daos/task_dao.dart';
 import 'package:ai_task_manager/core/errors/exceptions.dart';
 import 'package:ai_task_manager/core/network/api_client.dart';
+import 'package:ai_task_manager/features/tasks/data/tasks_api.dart';
 import 'package:ai_task_manager/features/tasks/model/task_entity.dart';
 import 'package:ai_task_manager/features/tasks/model/task_model.dart';
 
@@ -21,17 +22,33 @@ class TaskService {
 
   Future<List<TaskEntity>> getTasksByProject(String projectId) async {
     try {
-      final response = await _apiClient.get<Map<String, dynamic>>(
-        '/projects/$projectId/tasks',
+      final response = await _apiClient.get<dynamic>(
+        TasksApi.listByProject(projectId),
       );
 
       if (response.data == null) {
         throw const ServerException(message: 'No data received from server');
       }
 
-      final tasks = (response.data!['tasks'] as List<dynamic>)
-          .map((json) => TaskModel.fromJson(json as Map<String, dynamic>))
-          .toList();
+      // Support both formats: direct list or { tasks: [...] }
+      List<dynamic> tasksList;
+      if (response.data is List) {
+        tasksList = response.data as List<dynamic>;
+      } else if (response.data is Map<String, dynamic>) {
+        final data = response.data as Map<String, dynamic>;
+        tasksList = (data['tasks'] ?? data['data'] ?? []) as List<dynamic>;
+      } else {
+        tasksList = [];
+      }
+
+      final tasks = tasksList.map((json) {
+        final taskJson = json as Map<String, dynamic>;
+        // Inject projectId if not present
+        if (!taskJson.containsKey('projectId') && !taskJson.containsKey('project_id')) {
+          taskJson['projectId'] = projectId;
+        }
+        return TaskModel.fromJson(taskJson);
+      }).toList();
 
       // Cache locally
       for (final task in tasks) {
@@ -60,7 +77,7 @@ class TaskService {
   }) async {
     try {
       final response = await _apiClient.post<Map<String, dynamic>>(
-        '/projects/$projectId/tasks',
+        TasksApi.create(projectId),
         data: {
           'title': title,
           'description': description,
@@ -87,7 +104,7 @@ class TaskService {
     try {
       final model = TaskModel.fromEntity(task);
       final response = await _apiClient.put<Map<String, dynamic>>(
-        '/tasks/${task.id}',
+        TasksApi.update(task.id),
         data: model.toJson(),
       );
 
@@ -107,7 +124,7 @@ class TaskService {
 
   Future<void> deleteTask(String id) async {
     try {
-      await _apiClient.delete<void>('/tasks/$id');
+      await _apiClient.delete<void>(TasksApi.delete(id));
       await _tasksDao.deleteTask(id);
     } on ServerException {
       rethrow;
@@ -123,7 +140,7 @@ class TaskService {
   ) async {
     try {
       await _apiClient.patch<void>(
-        '/tasks/$taskId/move',
+        TasksApi.move(taskId),
         data: {
           'status': TaskModel.statusToString(newStatus),
           'order': newOrder,

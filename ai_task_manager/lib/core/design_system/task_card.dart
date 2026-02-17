@@ -94,20 +94,21 @@ class _TaskCardState extends State<TaskCard> {
               ),
             ],
           ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Priority indicator bar
-              Container(
-                width: 4,
-                decoration: BoxDecoration(
-                  color: _priorityColor,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(AppSpacing.radiusLg),
-                    bottomLeft: Radius.circular(AppSpacing.radiusLg),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Priority indicator bar
+                Container(
+                  width: 4,
+                  decoration: BoxDecoration(
+                    color: _priorityColor,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(AppSpacing.radiusLg),
+                      bottomLeft: Radius.circular(AppSpacing.radiusLg),
+                    ),
                   ),
                 ),
-              ),
               // Card content
               Expanded(
                 child: Padding(
@@ -211,6 +212,7 @@ class _TaskCardState extends State<TaskCard> {
                 ),
               ),
             ],
+          ),
           ),
         ),
       ),

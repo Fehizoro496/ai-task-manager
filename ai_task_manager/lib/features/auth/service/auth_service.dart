@@ -5,6 +5,7 @@ import 'package:ai_task_manager/core/database/app_database.dart';
 import 'package:ai_task_manager/core/database/daos/user_dao.dart';
 import 'package:ai_task_manager/core/errors/exceptions.dart';
 import 'package:ai_task_manager/core/network/api_client.dart';
+import 'package:ai_task_manager/features/auth/data/auth_api.dart';
 import 'package:ai_task_manager/features/auth/model/auth_response_model.dart';
 import 'package:ai_task_manager/features/auth/model/user_entity.dart';
 import 'package:ai_task_manager/features/auth/model/user_model.dart';
@@ -30,7 +31,7 @@ class AuthService {
   Future<UserEntity> login(String email, String password) async {
     try {
       final response = await _apiClient.post<Map<String, dynamic>>(
-        '/auth/login',
+        AuthApi.login,
         data: {
           'email': email,
           'password': password,
@@ -61,7 +62,7 @@ class AuthService {
   ) async {
     try {
       final response = await _apiClient.post<Map<String, dynamic>>(
-        '/auth/register',
+        AuthApi.register,
         data: {
           'name': name,
           'email': email,
@@ -101,7 +102,7 @@ class AuthService {
 
   Future<UserEntity> getCurrentUser() async {
     try {
-      final response = await _apiClient.get<Map<String, dynamic>>('/auth/me');
+      final response = await _apiClient.get<Map<String, dynamic>>(AuthApi.me);
       if (response.data == null) {
         throw const ServerException(message: 'No data received from server');
       }

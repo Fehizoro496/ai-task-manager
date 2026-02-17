@@ -26,4 +26,14 @@ const remove = asyncHandler(async (req, res) => {
   res.status(204).end();
 });
 
-module.exports = { create, listByStory, getById, update, remove };
+const listByProject = asyncHandler(async (req, res) => {
+  const tasks = await tasksService.listByProject(req.params.projectId, req.user.id);
+  res.json({ tasks });
+});
+
+const createForProject = asyncHandler(async (req, res) => {
+  const task = await tasksService.createForProject(req.user.id, req.params.projectId, req.body);
+  res.status(201).json(task);
+});
+
+module.exports = { create, listByStory, getById, update, remove, listByProject, createForProject };

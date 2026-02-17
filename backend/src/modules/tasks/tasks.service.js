@@ -64,4 +64,62 @@ const remove = async (id, userId) => {
   return prisma.task.delete({ where: { id } });
 };
 
-module.exports = { create, listByStory, getById, update, remove };
+const listByProject = async (projectId, userId) => {
+  const project = await prisma.project.findFirst({
+    where: { id: projectId, ownerId: userId },
+  });
+  if (!project) {
+    throw new AppError("Project not found", 404);
+  }
+
+  return prisma.task.findMany({
+    where: {
+      story: { epic: { projectId } },
+    },
+    orderBy: { position: "asc" },
+  });
+};
+
+const createForProject = async (userId, projectId, data) => {
+  const project = await prisma.project.findFirst({
+    where: { id: projectId, ownerId: userId },
+  });
+  if (!project) {
+    throw new AppError("Project not found", 404);
+  }
+
+  // If storyId is provided, verify it belongs to this project
+  if (data.storyId || data.story_id) {
+    const storyId = data.storyId || data.story_id;
+    const story = await prisma.story.findFirst({
+      where: { id: storyId, epic: { projectId } },
+    });
+    if (!story) {
+      throw new AppError("Story not found in this project", 404);
+    }
+    return prisma.task.create({
+      data: { title: data.title, description: data.description, storyId },
+    });
+  }
+
+  // No storyId: assign to the first story of the first epic, or create a default epic/story
+  let story = await prisma.story.findFirst({
+    where: { epic: { projectId } },
+    orderBy: { position: "asc" },
+  });
+
+  if (!story) {
+    const epic = await prisma.epic.create({
+      data: { title: "Backlog", projectId, position: 0 },
+    });
+    story = await prisma.story.create({
+      data: { title: "Default", epicId: epic.id, position: 0 },
+    });
+  }
+
+  return prisma.task.create({
+    data: { title: data.title, description: data.description, storyId: story.id },
+  });
+};
+
+module.exports = { create, listByStory, getById, update, remove, listByProject, createForProject };

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:ai_task_manager/core/widgets/sidebar.dart';
 
 final sidebarCollapsedProvider = StateProvider<bool>((ref) => false);
@@ -48,6 +49,7 @@ class AppLayout extends ConsumerWidget {
             isCollapsed: isCollapsed,
             onItemSelected: (index) {
               ref.read(selectedNavIndexProvider.notifier).state = index;
+              context.go(_navItems[index].route);
             },
             onToggleCollapse: () {
               ref.read(sidebarCollapsedProvider.notifier).state = !isCollapsed;

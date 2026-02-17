@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 
 import 'package:ai_task_manager/core/errors/exceptions.dart';
+import 'package:ai_task_manager/features/ai_planning/data/ai_planning_api.dart';
 import 'package:ai_task_manager/features/ai_planning/model/ai_draft_entity.dart';
 import 'package:ai_task_manager/features/ai_planning/model/ai_draft_model.dart';
 
@@ -20,7 +21,7 @@ class AiPlanningService {
   ) async {
     try {
       final response = await _dio.post(
-        '/ai/generate-plan',
+        AiPlanningApi.generatePlan,
         data: {
           'project_id': projectId,
           'document': document,
@@ -41,7 +42,7 @@ class AiPlanningService {
   /// Approves a draft, promoting it to actual project items.
   Future<void> approveDraft(String draftId) async {
     try {
-      await _dio.post('/ai/drafts/$draftId/approve');
+      await _dio.post(AiPlanningApi.approveDraft(draftId));
       _removeDraft(draftId);
     } on DioException catch (e) {
       throw ServerException(
@@ -54,7 +55,7 @@ class AiPlanningService {
   /// Rejects a draft, marking it as discarded.
   Future<void> rejectDraft(String draftId) async {
     try {
-      await _dio.post('/ai/drafts/$draftId/reject');
+      await _dio.post(AiPlanningApi.rejectDraft(draftId));
       _removeDraft(draftId);
     } on DioException catch (e) {
       throw ServerException(
@@ -68,7 +69,7 @@ class AiPlanningService {
   Future<List<AiDraftEntity>> getDraftsByProject(String projectId) async {
     try {
       final response = await _dio.get(
-        '/ai/drafts',
+        AiPlanningApi.drafts,
         queryParameters: {'project_id': projectId},
       );
       final data = response.data as List<dynamic>;

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:ai_task_manager/core/design_system/app_button.dart';
 import 'package:ai_task_manager/core/design_system/empty_state.dart';
 import 'package:ai_task_manager/core/design_system/loading_skeleton.dart';
@@ -202,9 +203,7 @@ class _ProjectGrid extends StatelessWidget {
                   project: project,
                   onTap: () {
                     ref.read(selectedProjectProvider.notifier).state = project;
-                    debugPrint(
-                      'Selected project: ${project.name} (ID: ${project.id})',
-                    );
+                    context.go('/board/${project.id}');
                   },
                   onDelete: () {
                     ref

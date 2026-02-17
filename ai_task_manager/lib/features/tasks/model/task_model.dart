@@ -25,19 +25,19 @@ class TaskModel extends TaskEntity {
       description: json['description'] as String?,
       status: _statusFromString(json['status'] as String? ?? 'todo'),
       priority: _priorityFromString(json['priority'] as String? ?? 'medium'),
-      storyId: json['story_id'] as String?,
-      projectId: json['project_id'] as String,
-      assigneeId: json['assignee_id'] as String?,
+      storyId: (json['storyId'] ?? json['story_id']) as String?,
+      projectId: (json['projectId'] ?? json['project_id'] ?? '') as String,
+      assigneeId: (json['assigneeId'] ?? json['assignee_id']) as String?,
       labels: (json['labels'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           const [],
-      order: (json['order'] as num?)?.toInt() ?? 0,
-      dueDate: json['due_date'] != null
-          ? DateTime.parse(json['due_date'] as String)
+      order: (json['position'] ?? json['order'] ?? 0) as int,
+      dueDate: (json['dueDate'] ?? json['due_date']) != null
+          ? DateTime.parse((json['dueDate'] ?? json['due_date']) as String)
           : null,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      createdAt: DateTime.parse((json['createdAt'] ?? json['created_at']) as String),
+      updatedAt: DateTime.parse((json['updatedAt'] ?? json['updated_at']) as String),
     );
   }
 
@@ -78,12 +78,14 @@ class TaskModel extends TaskEntity {
   }
 
   static TaskStatus _statusFromString(String value) {
-    switch (value) {
+    switch (value.toLowerCase()) {
       case 'todo':
         return TaskStatus.todo;
       case 'in_progress':
+      case 'inprogress':
         return TaskStatus.inProgress;
       case 'in_review':
+      case 'inreview':
         return TaskStatus.inReview;
       case 'done':
         return TaskStatus.done;
@@ -106,7 +108,7 @@ class TaskModel extends TaskEntity {
   }
 
   static TaskPriority _priorityFromString(String value) {
-    switch (value) {
+    switch (value.toLowerCase()) {
       case 'urgent':
         return TaskPriority.urgent;
       case 'high':

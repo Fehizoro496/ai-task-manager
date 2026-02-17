@@ -3,6 +3,7 @@ const authenticate = require("../../middleware/auth");
 const validate = require("../../middleware/validate");
 const { createProjectSchema, updateProjectSchema } = require("./projects.schema");
 const projectsController = require("./projects.controller");
+const tasksController = require("../tasks/tasks.controller");
 
 const router = Router();
 
@@ -137,5 +138,66 @@ router.put("/:id", validate(updateProjectSchema), projectsController.update);
  *         description: Project not found
  */
 router.delete("/:id", projectsController.remove);
+
+/**
+ * @swagger
+ * /projects/{projectId}/tasks:
+ *   get:
+ *     tags: [Tasks]
+ *     summary: List all tasks for a project
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: projectId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: List of tasks
+ *       404:
+ *         description: Project not found
+ */
+router.get("/:projectId/tasks", tasksController.listByProject);
+
+/**
+ * @swagger
+ * /projects/{projectId}/tasks:
+ *   post:
+ *     tags: [Tasks]
+ *     summary: Create a task in a project
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: projectId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [title]
+ *             properties:
+ *               title:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               storyId:
+ *                 type: string
+ *                 format: uuid
+ *     responses:
+ *       201:
+ *         description: Task created
+ *       404:
+ *         description: Project not found
+ */
+router.post("/:projectId/tasks", tasksController.createForProject);
 
 module.exports = router;

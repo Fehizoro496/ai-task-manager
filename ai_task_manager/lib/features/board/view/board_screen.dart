@@ -493,15 +493,19 @@ class _DraggableTaskCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final card = ds.TaskCard(
-      title: task.title,
-      description: task.description,
-      priority: _mapPriority(task.priority),
-      labels: task.labels,
-      onTap: () {
-        ref.read(selectedTaskProvider.notifier).state = task;
-      },
-    );
+    final cardWidth = AppConstants.kanbanColumnWidth - AppSpacing.lg * 2;
+
+    Widget buildCard() {
+      return ds.TaskCard(
+        title: task.title,
+        description: task.description,
+        priority: _mapPriority(task.priority),
+        labels: task.labels,
+        onTap: () {
+          ref.read(selectedTaskProvider.notifier).state = task;
+        },
+      );
+    }
 
     return Draggable<TaskEntity>(
       data: task,
@@ -509,15 +513,15 @@ class _DraggableTaskCard extends ConsumerWidget {
         elevation: 8,
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
         child: SizedBox(
-          width: AppConstants.kanbanColumnWidth - AppSpacing.lg * 2,
-          child: Opacity(opacity: 0.9, child: card),
+          width: cardWidth,
+          child: Opacity(opacity: 0.9, child: buildCard()),
         ),
       ),
       childWhenDragging: Opacity(
         opacity: 0.3,
-        child: card,
+        child: buildCard(),
       ),
-      child: card,
+      child: buildCard(),
     )
         .animate()
         .fadeIn(
@@ -636,21 +640,13 @@ class _SkeletonCard extends StatelessWidget {
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
+        padding: const EdgeInsets.all(AppSpacing.sm),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
               width: 50,
-              height: 16,
-              decoration: BoxDecoration(
-                color: shimmerColor,
-                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Container(
-              width: double.infinity,
               height: 14,
               decoration: BoxDecoration(
                 color: shimmerColor,
@@ -659,8 +655,17 @@ class _SkeletonCard extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.xs),
             Container(
+              width: double.infinity,
+              height: 12,
+              decoration: BoxDecoration(
+                color: shimmerColor,
+                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xxs),
+            Container(
               width: 140,
-              height: 14,
+              height: 12,
               decoration: BoxDecoration(
                 color: shimmerColor,
                 borderRadius: BorderRadius.circular(AppSpacing.radiusSm),

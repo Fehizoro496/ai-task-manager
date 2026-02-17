@@ -4,6 +4,7 @@ import 'package:ai_task_manager/core/database/app_database.dart';
 import 'package:ai_task_manager/core/database/daos/project_dao.dart';
 import 'package:ai_task_manager/core/errors/exceptions.dart';
 import 'package:ai_task_manager/core/network/api_client.dart';
+import 'package:ai_task_manager/features/projects/data/projects_api.dart';
 import 'package:ai_task_manager/features/projects/model/project_entity.dart';
 import 'package:ai_task_manager/features/projects/model/project_model.dart';
 
@@ -19,7 +20,7 @@ class ProjectService {
 
   Future<List<ProjectEntity>> getProjects() async {
     try {
-      final response = await _apiClient.get<List<dynamic>>('/projects');
+      final response = await _apiClient.get<List<dynamic>>(ProjectsApi.list);
       final data = response.data;
 
       if (data == null) {
@@ -49,7 +50,7 @@ class ProjectService {
   Future<ProjectEntity> getProjectById(String id) async {
     try {
       final response =
-          await _apiClient.get<Map<String, dynamic>>('/projects/$id');
+          await _apiClient.get<Map<String, dynamic>>(ProjectsApi.getById(id));
       final data = response.data;
 
       if (data == null) {
@@ -77,7 +78,7 @@ class ProjectService {
       };
 
       final response = await _apiClient.post<Map<String, dynamic>>(
-        '/projects',
+        ProjectsApi.create,
         data: body,
       );
       final data = response.data;
@@ -100,7 +101,7 @@ class ProjectService {
     try {
       final model = ProjectModel.fromEntity(project);
       final response = await _apiClient.put<Map<String, dynamic>>(
-        '/projects/${project.id}',
+        ProjectsApi.update(project.id),
         data: model.toJson(),
       );
       final data = response.data;
@@ -121,7 +122,7 @@ class ProjectService {
 
   Future<void> deleteProject(String id) async {
     try {
-      await _apiClient.delete<void>('/projects/$id');
+      await _apiClient.delete<void>(ProjectsApi.delete(id));
       await _projectsDao.deleteProject(id);
     } on ServerException {
       rethrow;
