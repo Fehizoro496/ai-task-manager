@@ -51,6 +51,7 @@ class _AddTaskInlineState extends ConsumerState<AddTaskInline> {
     await ref.read(boardTasksProvider(widget.projectId).notifier).createTask(
           title: title,
           priority: _selectedPriority,
+          status: widget.status,
         );
 
     if (mounted) {

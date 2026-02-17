@@ -10,7 +10,7 @@ router.use(authenticate);
 
 /**
  * @swagger
- * /ai/plan:
+ * /ai/generate-plan:
  *   post:
  *     tags: [AI]
  *     summary: Generate an AI plan from a feature document
@@ -23,9 +23,12 @@ router.use(authenticate);
  *         application/json:
  *           schema:
  *             type: object
- *             required: [projectId, document]
+ *             required: [document]
  *             properties:
  *               projectId:
+ *                 type: string
+ *                 format: uuid
+ *               project_id:
  *                 type: string
  *                 format: uuid
  *               document:
@@ -41,7 +44,7 @@ router.use(authenticate);
  *       404:
  *         description: Project not found
  */
-router.post("/plan", validate(planRequestSchema), aiController.plan);
+router.post("/generate-plan", validate(planRequestSchema), aiController.plan);
 
 /**
  * @swagger
@@ -53,8 +56,12 @@ router.post("/plan", validate(planRequestSchema), aiController.plan);
  *       - bearerAuth: []
  *     parameters:
  *       - in: query
+ *         name: project_id
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: query
  *         name: projectId
- *         required: true
  *         schema:
  *           type: string
  *           format: uuid
@@ -95,7 +102,7 @@ router.get("/drafts/:id", aiController.getDraft);
 
 /**
  * @swagger
- * /ai/approve/{draftId}:
+ * /ai/drafts/{id}/approve:
  *   post:
  *     tags: [AI]
  *     summary: Approve a draft and convert to real Epics/Stories/Tasks
@@ -104,7 +111,7 @@ router.get("/drafts/:id", aiController.getDraft);
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: draftId
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
@@ -117,6 +124,29 @@ router.get("/drafts/:id", aiController.getDraft);
  *       404:
  *         description: Draft not found
  */
-router.post("/approve/:draftId", aiController.approve);
+router.post("/drafts/:id/approve", aiController.approve);
+
+/**
+ * @swagger
+ * /ai/drafts/{id}/reject:
+ *   post:
+ *     tags: [AI]
+ *     summary: Reject a draft
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Draft rejected
+ *       404:
+ *         description: Draft not found
+ */
+router.post("/drafts/:id/reject", aiController.reject);
 
 module.exports = router;

@@ -30,6 +30,35 @@ Return ONLY valid JSON in this exact format:
   ]
 }`;
 
+/**
+ * Serializes a Prisma AiDraft into the format expected by the Flutter frontend.
+ * Frontend expects snake_case keys and specific field names.
+ */
+const serializeDraft = (draft) => {
+  let status = "pending";
+  if (draft.approved) {
+    status = "approved";
+  } else if (draft.plan && Object.keys(draft.plan).length > 0) {
+    status = "generated";
+  }
+
+  return {
+    id: draft.id,
+    projectId: draft.projectId,
+    project_id: draft.projectId,
+    document: draft.document,
+    input_document: draft.document,
+    plan: draft.plan,
+    generated_plan: draft.plan,
+    approved: draft.approved,
+    status,
+    createdAt: draft.createdAt.toISOString(),
+    created_at: draft.createdAt.toISOString(),
+    updatedAt: draft.updatedAt.toISOString(),
+    updated_at: draft.updatedAt.toISOString(),
+  };
+};
+
 const generatePlan = async (userId, { projectId, document }) => {
   const project = await prisma.project.findFirst({
     where: { id: projectId, ownerId: userId },
@@ -165,4 +194,19 @@ const approveDraft = async (draftId, userId) => {
   return result;
 };
 
-module.exports = { generatePlan, getDraft, listDrafts, approveDraft };
+const rejectDraft = async (draftId, userId) => {
+  const draft = await prisma.aiDraft.findUnique({
+    where: { id: draftId },
+    include: { project: true },
+  });
+
+  if (!draft || draft.project.ownerId !== userId) {
+    throw new AppError("Draft not found", 404);
+  }
+
+  await prisma.aiDraft.delete({
+    where: { id: draftId },
+  });
+};
+
+module.exports = { generatePlan, getDraft, listDrafts, approveDraft, rejectDraft, serializeDraft };

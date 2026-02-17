@@ -73,6 +73,7 @@ class TaskService {
     String? description,
     required String projectId,
     TaskPriority priority = TaskPriority.medium,
+    TaskStatus status = TaskStatus.todo,
     String? storyId,
   }) async {
     try {
@@ -82,6 +83,7 @@ class TaskService {
           'title': title,
           'description': description,
           'priority': TaskModel.priorityToString(priority),
+          'status': TaskModel.statusToString(status),
           'story_id': storyId,
         },
       );

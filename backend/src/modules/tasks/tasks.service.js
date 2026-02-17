@@ -1,6 +1,45 @@
 const prisma = require("../../prisma/client");
 const AppError = require("../../utils/AppError");
 
+// Map Prisma UPPERCASE status to lowercase for frontend
+const statusToLowercase = {
+  TODO: "todo",
+  IN_PROGRESS: "in_progress",
+  IN_REVIEW: "in_review",
+  DONE: "done",
+};
+
+/**
+ * Serializes a Prisma Task into the format expected by the Flutter frontend.
+ * Includes both camelCase and snake_case variants, and maps position→order.
+ */
+const serializeTask = (task, projectId) => {
+  const computedProjectId = projectId || task.projectId || null;
+
+  return {
+    id: task.id,
+    title: task.title,
+    description: task.description,
+    status: statusToLowercase[task.status] || task.status,
+    priority: task.priority || "medium",
+    position: task.position,
+    order: task.position,
+    storyId: task.storyId,
+    story_id: task.storyId,
+    projectId: computedProjectId,
+    project_id: computedProjectId,
+    assigneeId: task.assigneeId || null,
+    assignee_id: task.assigneeId || null,
+    labels: task.labels || [],
+    dueDate: task.dueDate ? task.dueDate.toISOString() : null,
+    due_date: task.dueDate ? task.dueDate.toISOString() : null,
+    createdAt: task.createdAt.toISOString(),
+    created_at: task.createdAt.toISOString(),
+    updatedAt: task.updatedAt.toISOString(),
+    updated_at: task.updatedAt.toISOString(),
+  };
+};
+
 const verifyStoryOwnership = async (storyId, userId) => {
   const story = await prisma.story.findUnique({
     where: { id: storyId },
@@ -64,6 +103,22 @@ const remove = async (id, userId) => {
   return prisma.task.delete({ where: { id } });
 };
 
+const moveTask = async (id, userId, { status, position }) => {
+  const task = await prisma.task.findUnique({
+    where: { id },
+    include: { story: { include: { epic: { include: { project: true } } } } },
+  });
+
+  if (!task || task.story.epic.project.ownerId !== userId) {
+    throw new AppError("Task not found", 404);
+  }
+
+  return prisma.task.update({
+    where: { id },
+    data: { status, position },
+  });
+};
+
 const listByProject = async (projectId, userId) => {
   const project = await prisma.project.findFirst({
     where: { id: projectId, ownerId: userId },
@@ -98,7 +153,13 @@ const createForProject = async (userId, projectId, data) => {
       throw new AppError("Story not found in this project", 404);
     }
     return prisma.task.create({
-      data: { title: data.title, description: data.description, storyId },
+      data: {
+        title: data.title,
+        description: data.description,
+        priority: data.priority || "medium",
+        status: data.status || "TODO",
+        storyId,
+      },
     });
   }
 
@@ -118,8 +179,24 @@ const createForProject = async (userId, projectId, data) => {
   }
 
   return prisma.task.create({
-    data: { title: data.title, description: data.description, storyId: story.id },
+    data: {
+      title: data.title,
+      description: data.description,
+      priority: data.priority || "medium",
+      status: data.status || "TODO",
+      storyId: story.id,
+    },
   });
 };
 
-module.exports = { create, listByStory, getById, update, remove, listByProject, createForProject };
+module.exports = {
+  create,
+  listByStory,
+  getById,
+  update,
+  remove,
+  moveTask,
+  listByProject,
+  createForProject,
+  serializeTask,
+};

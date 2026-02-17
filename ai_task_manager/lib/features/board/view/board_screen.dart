@@ -43,8 +43,18 @@ class _BoardScreenState extends ConsumerState<BoardScreen> {
   Widget build(BuildContext context) {
     final columns = ref.watch(boardColumnsProvider);
     final boardState = ref.watch(boardTasksProvider(widget.projectId));
-    final selectedTask = ref.watch(selectedTaskProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Open dialog when a task is selected
+    ref.listen<TaskEntity?>(selectedTaskProvider, (previous, next) {
+      if (next != null && previous == null) {
+        showTaskDetailDialog(
+          context,
+          task: next,
+          projectId: widget.projectId,
+        );
+      }
+    });
 
     return Scaffold(
       backgroundColor:
@@ -61,40 +71,26 @@ class _BoardScreenState extends ConsumerState<BoardScreen> {
                 setState(() => _priorityFilter = value),
           ),
           Expanded(
-            child: Stack(
-              children: [
-                boardState.when(
-                  loading: () => _BoardSkeleton(
-                    columns: columns,
-                    isDark: isDark,
-                  ),
-                  error: (error, _) => _BoardError(
-                    message: error.toString(),
-                    onRetry: () => ref
-                        .read(boardTasksProvider(widget.projectId).notifier)
-                        .loadTasks(),
-                  ),
-                  data: (tasks) {
-                    final filtered = _applyFilters(tasks);
-                    return _BoardContent(
-                      projectId: widget.projectId,
-                      columns: columns,
-                      tasks: filtered,
-                      isDark: isDark,
-                    );
-                  },
-                ),
-                if (selectedTask != null)
-                  Positioned(
-                    top: 0,
-                    right: 0,
-                    bottom: 0,
-                    child: TaskDetailPanel(
-                      task: selectedTask,
-                      projectId: widget.projectId,
-                    ),
-                  ),
-              ],
+            child: boardState.when(
+              loading: () => _BoardSkeleton(
+                columns: columns,
+                isDark: isDark,
+              ),
+              error: (error, _) => _BoardError(
+                message: error.toString(),
+                onRetry: () => ref
+                    .read(boardTasksProvider(widget.projectId).notifier)
+                    .loadTasks(),
+              ),
+              data: (tasks) {
+                final filtered = _applyFilters(tasks);
+                return _BoardContent(
+                  projectId: widget.projectId,
+                  columns: columns,
+                  tasks: filtered,
+                  isDark: isDark,
+                );
+              },
             ),
           ),
         ],

@@ -1,7 +1,7 @@
 const { Router } = require("express");
 const authenticate = require("../../middleware/auth");
 const validate = require("../../middleware/validate");
-const { createTaskSchema, updateTaskSchema } = require("./tasks.schema");
+const { createTaskSchema, updateTaskSchema, moveTaskSchema } = require("./tasks.schema");
 const tasksController = require("./tasks.controller");
 
 const router = Router();
@@ -22,7 +22,7 @@ router.use(authenticate);
  *         application/json:
  *           schema:
  *             type: object
- *             required: [title, storyId]
+ *             required: [title]
  *             properties:
  *               title:
  *                 type: string
@@ -31,6 +31,8 @@ router.use(authenticate);
  *               storyId:
  *                 type: string
  *                 format: uuid
+ *               priority:
+ *                 type: string
  *               position:
  *                 type: integer
  *     responses:
@@ -98,7 +100,7 @@ router.get("/:id", tasksController.getById);
  * /tasks/{id}:
  *   put:
  *     tags: [Tasks]
- *     summary: Update a task (status, position, title, description)
+ *     summary: Update a task (status, position, title, description, priority, etc.)
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -121,9 +123,21 @@ router.get("/:id", tasksController.getById);
  *                 type: string
  *               status:
  *                 type: string
- *                 enum: [TODO, IN_PROGRESS, IN_REVIEW, DONE]
+ *                 enum: [TODO, IN_PROGRESS, IN_REVIEW, DONE, todo, in_progress, in_review, done]
  *               position:
  *                 type: integer
+ *               priority:
+ *                 type: string
+ *               assigneeId:
+ *                 type: string
+ *                 format: uuid
+ *               labels:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               dueDate:
+ *                 type: string
+ *                 format: date-time
  *     responses:
  *       200:
  *         description: Task updated
@@ -131,6 +145,42 @@ router.get("/:id", tasksController.getById);
  *         description: Task not found
  */
 router.put("/:id", validate(updateTaskSchema), tasksController.update);
+
+/**
+ * @swagger
+ * /tasks/{id}/move:
+ *   patch:
+ *     tags: [Tasks]
+ *     summary: Move a task (change status and/or position)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [status]
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [todo, in_progress, in_review, done]
+ *               order:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Task moved
+ *       404:
+ *         description: Task not found
+ */
+router.patch("/:id/move", validate(moveTaskSchema), tasksController.move);
 
 /**
  * @swagger

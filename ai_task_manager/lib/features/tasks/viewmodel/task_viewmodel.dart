@@ -44,6 +44,7 @@ class BoardTasksViewModel
     required String title,
     String? description,
     TaskPriority priority = TaskPriority.medium,
+    TaskStatus status = TaskStatus.todo,
   }) async {
     try {
       final task = await _service.createTask(
@@ -51,6 +52,7 @@ class BoardTasksViewModel
         description: description,
         projectId: arg,
         priority: priority,
+        status: status,
       );
 
       final current = state.valueOrNull ?? [];

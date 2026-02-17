@@ -1,9 +1,15 @@
 const { z } = require("zod");
 
-const planRequestSchema = z.object({
-  projectId: z.string().uuid(),
-  document: z.string().min(1),
-});
+const planRequestSchema = z
+  .object({
+    projectId: z.string().uuid().optional(),
+    project_id: z.string().uuid().optional(),
+    document: z.string().min(1),
+  })
+  .transform((data) => ({
+    projectId: data.projectId || data.project_id,
+    document: data.document,
+  }));
 
 const aiTaskSchema = z.object({
   title: z.string(),
