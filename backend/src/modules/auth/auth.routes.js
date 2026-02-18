@@ -91,4 +91,64 @@ router.post("/login", validate(loginSchema), authController.login);
  */
 router.get("/me", authenticate, authController.getMe);
 
+/**
+ * @swagger
+ * /auth/google:
+ *   get:
+ *     tags: [Auth]
+ *     summary: Get Google OAuth consent URL
+ *     responses:
+ *       200:
+ *         description: Returns the OAuth URL and state token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 url:
+ *                   type: string
+ *                 state:
+ *                   type: string
+ */
+router.get("/google", authController.googleInit);
+
+/**
+ * @swagger
+ * /auth/google/callback:
+ *   get:
+ *     tags: [Auth]
+ *     summary: Google OAuth callback (called by Google)
+ *     parameters:
+ *       - in: query
+ *         name: code
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: state
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: HTML success/error page
+ */
+router.get("/google/callback", authController.googleCallback);
+
+/**
+ * @swagger
+ * /auth/google/status/{state}:
+ *   get:
+ *     tags: [Auth]
+ *     summary: Poll for Google OAuth result
+ *     parameters:
+ *       - in: path
+ *         name: state
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: OAuth status (pending / success / error / expired)
+ */
+router.get("/google/status/:state", authController.googleStatus);
+
 module.exports = router;

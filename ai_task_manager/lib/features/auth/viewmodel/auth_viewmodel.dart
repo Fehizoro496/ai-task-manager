@@ -56,6 +56,16 @@ class AuthViewModel extends AsyncNotifier<UserEntity?> {
     }
   }
 
+  Future<void> loginWithGoogle() async {
+    state = const AsyncLoading();
+    try {
+      final user = await ref.read(authServiceProvider).loginWithGoogle();
+      state = AsyncData(user);
+    } catch (e) {
+      state = AsyncError(e, StackTrace.current);
+    }
+  }
+
   Future<void> logout() async {
     state = const AsyncLoading();
     try {

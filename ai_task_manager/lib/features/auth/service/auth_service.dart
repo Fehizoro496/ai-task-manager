@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:ai_task_manager/core/database/app_database.dart';
 import 'package:ai_task_manager/core/database/daos/user_dao.dart';
@@ -80,6 +81,64 @@ class AuthService {
       await _cacheUser(user);
       _apiClient.updateToken(user.token);
       return user;
+    } on ServerException {
+      rethrow;
+    } catch (e) {
+      throw ServerException(message: e.toString());
+    }
+  }
+
+  Future<UserEntity> loginWithGoogle() async {
+    try {
+      // Step 1: Get the Google auth URL and state from backend
+      final initResponse = await _apiClient.get<Map<String, dynamic>>(
+        AuthApi.googleInit,
+      );
+      if (initResponse.data == null) {
+        throw const ServerException(message: 'Failed to initiate Google sign-in');
+      }
+
+      final url = initResponse.data!['url'] as String?;
+      final state = initResponse.data!['state'] as String?;
+
+      if (url == null || state == null) {
+        throw const ServerException(message: 'Invalid response from server');
+      }
+
+      // Step 2: Open the URL in the default browser
+      final uri = Uri.parse(url);
+      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+        throw const ServerException(message: 'Could not open browser for sign-in');
+      }
+
+      // Step 3: Poll for the result (every 2s, max 60 attempts = 2 minutes)
+      for (var i = 0; i < 60; i++) {
+        await Future.delayed(const Duration(seconds: 2));
+
+        final statusResponse = await _apiClient.get<Map<String, dynamic>>(
+          AuthApi.googleStatus(state),
+        );
+
+        if (statusResponse.data == null) continue;
+
+        final status = statusResponse.data!['status'] as String?;
+
+        if (status == 'success') {
+          final authResponse = AuthResponseModel.fromJson(statusResponse.data!);
+          final user = authResponse.userWithToken;
+          await _cacheUser(user);
+          _apiClient.updateToken(user.token);
+          return user;
+        } else if (status == 'error') {
+          final error = statusResponse.data!['error'] as String? ?? 'Google sign-in failed';
+          throw ServerException(message: error);
+        } else if (status == 'expired') {
+          throw const ServerException(message: 'Sign-in session expired. Please try again.');
+        }
+        // status == 'pending': continue polling
+      }
+
+      throw const ServerException(message: 'Sign-in timed out. Please try again.');
     } on ServerException {
       rethrow;
     } catch (e) {

@@ -23,6 +23,9 @@ class AppSidebar extends StatefulWidget {
   final ValueChanged<int> onItemSelected;
   final bool isCollapsed;
   final VoidCallback onToggleCollapse;
+  final String userName;
+  final String? userAvatarUrl;
+  final VoidCallback onLogout;
 
   const AppSidebar({
     super.key,
@@ -31,6 +34,9 @@ class AppSidebar extends StatefulWidget {
     required this.onItemSelected,
     this.isCollapsed = false,
     required this.onToggleCollapse,
+    required this.userName,
+    this.userAvatarUrl,
+    required this.onLogout,
   });
 
   @override
@@ -39,6 +45,7 @@ class AppSidebar extends StatefulWidget {
 
 class _AppSidebarState extends State<AppSidebar> {
   int _hoveredIndex = -1;
+  bool _logoutHovered = false;
 
   @override
   Widget build(BuildContext context) {
@@ -79,6 +86,7 @@ class _AppSidebarState extends State<AppSidebar> {
               ),
             ),
           ),
+          _buildUserSection(isDark),
           _buildCollapseButton(isDark),
         ],
       ),
@@ -225,6 +233,106 @@ class _AppSidebarState extends State<AppSidebar> {
         ),
       ),
     );
+  }
+
+  Widget _buildUserSection(bool isDark) {
+    final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
+    final textSecondary = isDark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondaryLight;
+    final textTertiary = isDark
+        ? AppColors.textTertiaryDark
+        : AppColors.textTertiaryLight;
+
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(color: borderColor),
+        ),
+      ),
+      padding: EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.sm,
+      ),
+      child: widget.isCollapsed
+          ? Center(child: _buildAvatar(isDark))
+          : Row(
+              children: [
+                _buildAvatar(isDark),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    widget.userName,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: textSecondary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  onEnter: (_) => setState(() => _logoutHovered = true),
+                  onExit: (_) => setState(() => _logoutHovered = false),
+                  child: GestureDetector(
+                    onTap: widget.onLogout,
+                    child: Tooltip(
+                      message: 'Se déconnecter',
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        padding: const EdgeInsets.all(AppSpacing.xs),
+                        decoration: BoxDecoration(
+                          color: _logoutHovered
+                              ? (isDark
+                                  ? AppColors.hoverDark
+                                  : AppColors.hoverLight)
+                              : Colors.transparent,
+                          borderRadius:
+                              BorderRadius.circular(AppSpacing.radiusSm),
+                        ),
+                        child: Icon(
+                          Icons.logout_rounded,
+                          size: 16,
+                          color: _logoutHovered
+                              ? AppColors.error
+                              : textTertiary,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildAvatar(bool isDark) {
+    final initials = _getInitials(widget.userName);
+    return Container(
+      width: 32,
+      height: 32,
+      decoration: BoxDecoration(
+        color: AppColors.primarySurface,
+        shape: BoxShape.circle,
+      ),
+      child: Center(
+        child: Text(
+          initials,
+          style: const TextStyle(
+            color: AppColors.primary,
+            fontWeight: FontWeight.w700,
+            fontSize: 12,
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _getInitials(String name) {
+    final parts = name.trim().split(RegExp(r'\s+'));
+    if (parts.isEmpty || parts.first.isEmpty) return '?';
+    if (parts.length == 1) return parts.first[0].toUpperCase();
+    return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
   }
 
   Widget _buildCollapseButton(bool isDark) {

@@ -16,4 +16,12 @@ abstract class AuthApi {
   /// Headers: Authorization: Bearer <token>
   /// Response: User
   static const String me = '$basePath/me';
+
+  /// GET /auth/google
+  /// Response: { url: string, state: string }
+  static const String googleInit = '$basePath/google';
+
+  /// GET /auth/google/status/:state
+  /// Response: { status: 'pending' | 'success' | 'error' | 'expired', token?, user?, error? }
+  static String googleStatus(String state) => '$basePath/google/status/$state';
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ai_task_manager/core/widgets/sidebar.dart';
+import 'package:ai_task_manager/features/auth/viewmodel/auth_viewmodel.dart';
 
 final sidebarCollapsedProvider = StateProvider<bool>((ref) => false);
 final selectedNavIndexProvider = StateProvider<int>((ref) => 0);
@@ -39,6 +40,8 @@ class AppLayout extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isCollapsed = ref.watch(sidebarCollapsedProvider);
     final selectedIndex = ref.watch(selectedNavIndexProvider);
+    final authState = ref.watch(authStateProvider);
+    final userName = authState.valueOrNull?.name ?? '';
 
     return Scaffold(
       body: Row(
@@ -47,6 +50,7 @@ class AppLayout extends ConsumerWidget {
             selectedIndex: selectedIndex,
             items: _navItems,
             isCollapsed: isCollapsed,
+            userName: userName,
             onItemSelected: (index) {
               ref.read(selectedNavIndexProvider.notifier).state = index;
               context.go(_navItems[index].route);
@@ -54,6 +58,8 @@ class AppLayout extends ConsumerWidget {
             onToggleCollapse: () {
               ref.read(sidebarCollapsedProvider.notifier).state = !isCollapsed;
             },
+            onLogout: () =>
+                ref.read(authStateProvider.notifier).logout(),
           ),
           Expanded(child: child),
         ],

@@ -8,6 +8,7 @@ import 'package:ai_task_manager/core/errors/exceptions.dart';
 import 'package:ai_task_manager/core/theme/app_colors.dart';
 import 'package:ai_task_manager/core/theme/app_spacing.dart';
 import 'package:ai_task_manager/core/utils/constants.dart';
+import 'package:ai_task_manager/features/auth/view/widgets/google_sign_in_button.dart';
 import 'package:ai_task_manager/features/auth/viewmodel/auth_viewmodel.dart';
 import 'package:go_router/go_router.dart';
 
@@ -41,6 +42,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           _emailController.text.trim(),
           _passwordController.text,
         );
+  }
+
+  void _onGoogleSignIn() {
+    ref.read(authStateProvider.notifier).loginWithGoogle();
   }
 
   void _navigateToRegister() {
@@ -206,6 +211,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 size: AppButtonSize.lg,
               ),
             ),
+            const SizedBox(height: AppSpacing.lg),
+            _buildDivider(isDark),
+            const SizedBox(height: AppSpacing.lg),
+            GoogleSignInButton(
+              onPressed: isLoading ? null : _onGoogleSignIn,
+              isLoading: isLoading,
+            ),
             const SizedBox(height: AppSpacing.xl),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -250,6 +262,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           duration: 500.ms,
           curve: Curves.easeOut,
         );
+  }
+
+  Widget _buildDivider(bool isDark) {
+    final color = isDark ? AppColors.borderDark : AppColors.borderLight;
+    final textColor = isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight;
+    return Row(
+      children: [
+        Expanded(child: Divider(color: color, thickness: 1)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          child: Text(
+            'or',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: textColor),
+          ),
+        ),
+        Expanded(child: Divider(color: color, thickness: 1)),
+      ],
+    );
   }
 
   Widget _buildTextField({
