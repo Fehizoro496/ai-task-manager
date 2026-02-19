@@ -73,8 +73,8 @@ class ProjectService {
     try {
       final body = <String, dynamic>{
         'name': name,
-        if (description != null) 'description': description,
-        if (color != null) 'color': color,
+        'description': ?description,
+        'color': ?color,
       };
 
       final response = await _apiClient.post<Map<String, dynamic>>(

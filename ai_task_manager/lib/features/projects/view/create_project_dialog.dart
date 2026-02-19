@@ -37,7 +37,7 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
   final _descriptionController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   String? _selectedColor;
-  bool _isSubmitting = false;
+  final bool _isSubmitting = false;
 
   static const List<_PresetColor> _presetColors = [
     _PresetColor('6C5CE7', 'Purple'),
