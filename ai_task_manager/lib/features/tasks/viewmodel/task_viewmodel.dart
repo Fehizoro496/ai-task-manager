@@ -85,6 +85,19 @@ class BoardTasksViewModel
     }
   }
 
+  Future<void> updateTask(TaskEntity updated) async {
+    final previous = state.valueOrNull ?? [];
+    // Optimistic update
+    state = AsyncData(
+      previous.map((t) => t.id == updated.id ? updated : t).toList(),
+    );
+    try {
+      await _service.updateTask(updated);
+    } catch (_) {
+      state = AsyncData(previous); // revert on failure
+    }
+  }
+
   Future<void> deleteTask(String taskId) async {
     final previous = state.valueOrNull ?? [];
     state = AsyncData(previous.where((t) => t.id != taskId).toList());
