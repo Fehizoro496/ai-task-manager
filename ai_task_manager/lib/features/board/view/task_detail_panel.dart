@@ -17,6 +17,7 @@ void showTaskDetailDialog(
 }) {
   showDialog(
     context: context,
+    barrierDismissible: false,
     barrierColor: Colors.black54,
     builder: (_) => TaskDetailDialog(task: task, projectId: projectId),
   );
