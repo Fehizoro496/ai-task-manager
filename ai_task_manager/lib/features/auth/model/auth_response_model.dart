@@ -8,11 +8,11 @@ part 'auth_response_model.g.dart';
 @JsonSerializable()
 class AuthResponseModel {
   final UserModel user;
-  final String token;
+  final String? token;
 
   const AuthResponseModel({
     required this.user,
-    required this.token,
+    this.token,
   });
 
   factory AuthResponseModel.fromJson(DataMap json) =>
@@ -20,6 +20,8 @@ class AuthResponseModel {
 
   DataMap toJson() => _$AuthResponseModelToJson(this);
 
-  /// Returns a [UserModel] with the token attached.
+  bool get hasPendingApproval => token == null;
+
+  /// Returns a [UserModel] with the token attached (only when token is present).
   UserModel get userWithToken => user.copyWith(token: token);
 }

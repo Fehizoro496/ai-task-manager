@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:ai_task_manager/features/admin/view/admin_dashboard_screen.dart';
 import 'package:ai_task_manager/features/auth/viewmodel/auth_viewmodel.dart';
 import 'package:ai_task_manager/shared/app_layout.dart';
 import 'package:ai_task_manager/features/auth/view/login_screen.dart';
+import 'package:ai_task_manager/features/auth/view/pending_approval_screen.dart';
 import 'package:ai_task_manager/features/auth/view/register_screen.dart';
 import 'package:ai_task_manager/features/projects/view/dashboard_screen.dart';
 import 'package:ai_task_manager/features/board/view/board_screen.dart';
@@ -20,12 +22,21 @@ final routerProvider = Provider<GoRouter>((ref) {
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/login',
     redirect: (context, state) {
-      final isLoggedIn = authState.valueOrNull != null;
-      final isAuthRoute =
-          state.matchedLocation == '/login' || state.matchedLocation == '/register';
+      final user = authState.valueOrNull;
+      final isLoggedIn = user != null;
+      final location = state.matchedLocation;
+
+      final isAuthRoute = ['/login', '/register', '/pending-approval']
+          .contains(location);
 
       if (!isLoggedIn && !isAuthRoute) return '/login';
-      if (isLoggedIn && isAuthRoute) return '/dashboard';
+      if (isLoggedIn && (location == '/login' || location == '/register')) {
+        return user.isAdmin ? '/admin' : '/dashboard';
+      }
+      if (location == '/admin' && isLoggedIn && !user.isAdmin) {
+        return '/dashboard';
+      }
+
       return null;
     },
     routes: [
@@ -44,6 +55,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => CustomTransitionPage(
           key: state.pageKey,
           child: const RegisterScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      ),
+      GoRoute(
+        path: '/pending-approval',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const PendingApprovalScreen(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },
@@ -93,6 +114,17 @@ final routerProvider = Provider<GoRouter>((ref) {
             pageBuilder: (context, state) => CustomTransitionPage(
               key: state.pageKey,
               child: const AiPlanningScreen(),
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) {
+                return FadeTransition(opacity: animation, child: child);
+              },
+            ),
+          ),
+          GoRoute(
+            path: '/admin',
+            pageBuilder: (context, state) => CustomTransitionPage(
+              key: state.pageKey,
+              child: const AdminDashboardScreen(),
               transitionsBuilder:
                   (context, animation, secondaryAnimation, child) {
                 return FadeTransition(opacity: animation, child: child);

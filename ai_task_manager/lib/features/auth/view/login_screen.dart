@@ -64,6 +64,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final authState = ref.watch(authStateProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isLoading = authState is AsyncLoading;
+    final isPending = authState is AsyncError &&
+        authState.error is PendingApprovalException;
 
     return Scaffold(
       backgroundColor:
@@ -78,13 +80,117 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               children: [
                 _buildHeader(isDark),
                 const SizedBox(height: AppSpacing.xxxl),
-                _buildForm(isDark, isLoading, authState),
+                if (isPending)
+                  _buildPendingView(context, isDark)
+                else
+                  _buildForm(isDark, isLoading, authState),
               ],
             ),
           ),
         ),
       ),
     );
+  }
+
+  Widget _buildPendingView(BuildContext context, bool isDark) {
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.xxl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(
+            child: Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: AppColors.warning.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+                border: Border.all(
+                  color: AppColors.warning.withOpacity(0.35),
+                  width: 1.5,
+                ),
+              ),
+              child: const Icon(
+                Icons.hourglass_empty_rounded,
+                color: AppColors.warning,
+                size: 36,
+              ),
+            ).animate().scale(
+                  begin: const Offset(0.8, 0.8),
+                  duration: 400.ms,
+                  curve: Curves.easeOut,
+                ),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          Text(
+            'Account Pending Approval',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimaryLight,
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            'Your account is awaiting admin approval. '
+            'You will be notified once it has been reviewed.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight,
+                  height: 1.6,
+                ),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.warning.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              border: Border.all(color: AppColors.warning.withOpacity(0.25)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline_rounded,
+                    color: AppColors.warning, size: 16),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    'Contact an administrator if this takes too long.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.warning,
+                        ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xxl),
+          AppButton(
+            label: 'Try with another account',
+            onPressed: () =>
+                ref.read(authStateProvider.notifier).clearError(),
+            size: AppButtonSize.lg,
+            variant: AppButtonVariant.secondary,
+          ),
+        ],
+      ),
+    )
+        .animate()
+        .fadeIn(delay: 100.ms, duration: 400.ms, curve: Curves.easeOut)
+        .slideY(
+          begin: 0.05,
+          end: 0,
+          delay: 100.ms,
+          duration: 400.ms,
+          curve: Curves.easeOut,
+        );
   }
 
   Widget _buildHeader(bool isDark) {

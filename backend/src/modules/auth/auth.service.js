@@ -16,14 +16,10 @@ const register = async ({ email, password, name }) => {
   const hashed = await bcrypt.hash(password, 12);
   const user = await prisma.user.create({
     data: { email, password: hashed, name },
-    select: { id: true, email: true, name: true, createdAt: true },
+    select: { id: true, email: true, name: true, role: true, status: true, createdAt: true },
   });
 
-  const token = jwt.sign({ id: user.id, email: user.email }, config.jwtSecret, {
-    expiresIn: config.jwtExpiresIn,
-  });
-
-  return { user, token };
+  return { user };
 };
 
 const login = async ({ email, password }) => {
@@ -41,12 +37,21 @@ const login = async ({ email, password }) => {
     throw new AppError("Invalid credentials", 401);
   }
 
-  const token = jwt.sign({ id: user.id, email: user.email }, config.jwtSecret, {
-    expiresIn: config.jwtExpiresIn,
-  });
+  if (user.status === "PENDING") {
+    throw new AppError("Your account is pending admin approval", 403);
+  }
+  if (user.status === "REJECTED") {
+    throw new AppError("Your account registration has been rejected", 403);
+  }
+
+  const token = jwt.sign(
+    { id: user.id, email: user.email, role: user.role },
+    config.jwtSecret,
+    { expiresIn: config.jwtExpiresIn }
+  );
 
   return {
-    user: { id: user.id, email: user.email, name: user.name },
+    user: { id: user.id, email: user.email, name: user.name, role: user.role, status: user.status },
     token,
   };
 };
@@ -54,7 +59,7 @@ const login = async ({ email, password }) => {
 const getMe = async (userId) => {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, email: true, name: true, createdAt: true },
+    select: { id: true, email: true, name: true, role: true, status: true, createdAt: true },
   });
 
   if (!user) {
@@ -126,7 +131,9 @@ const googleCallback = async (code, state) => {
       }
     }
 
+    let isNewUser = false;
     if (!user) {
+      isNewUser = true;
       user = await prisma.user.create({
         data: {
           email,
@@ -138,16 +145,37 @@ const googleCallback = async (code, state) => {
       });
     }
 
-    const token = jwt.sign({ id: user.id, email: user.email }, config.jwtSecret, {
-      expiresIn: config.jwtExpiresIn,
-    });
-
     const userPayload = {
       id: user.id,
       email: user.email,
       name: user.name,
       avatarUrl: user.avatarUrl,
+      role: user.role,
+      status: user.status,
     };
+
+    // New Google user → pending approval
+    if (isNewUser || user.status === "PENDING") {
+      if (state) {
+        oauthStore.set(state, { pending_approval: true, user: userPayload });
+      }
+      return { pending_approval: true, user: userPayload };
+    }
+
+    if (user.status === "REJECTED") {
+      const errMsg = "Your account registration has been rejected";
+      if (state) {
+        oauthStore.set(state, { error: errMsg });
+      }
+      throw new AppError(errMsg, 403);
+    }
+
+    // APPROVED user
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role },
+      config.jwtSecret,
+      { expiresIn: config.jwtExpiresIn }
+    );
 
     if (state) {
       oauthStore.set(state, { token, user: userPayload });
@@ -155,6 +183,10 @@ const googleCallback = async (code, state) => {
 
     return { token, user: userPayload };
   } catch (err) {
+    // Re-throw AppErrors (e.g. rejected users) so the oauthStore is already set above
+    if (err instanceof AppError) {
+      throw err;
+    }
     if (state) {
       oauthStore.set(state, { error: err.message || "Google authentication failed" });
     }
@@ -169,6 +201,10 @@ const getGoogleStatus = (state) => {
   }
   if (entry.pending) {
     return { status: "pending" };
+  }
+  if (entry.pending_approval) {
+    oauthStore.delete(state);
+    return { status: "pending_approval", user: entry.user };
   }
   if (entry.error) {
     oauthStore.delete(state);

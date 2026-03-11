@@ -17,3 +17,9 @@ class AuthException implements Exception {
 
   const AuthException({required this.message, this.statusCode});
 }
+
+class PendingApprovalException implements Exception {
+  final String message;
+  const PendingApprovalException(
+      {this.message = 'Your account is pending admin approval'});
+}

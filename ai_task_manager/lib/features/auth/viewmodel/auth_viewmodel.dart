@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:ai_task_manager/core/errors/exceptions.dart';
 import 'package:ai_task_manager/features/auth/model/user_entity.dart';
 import 'package:ai_task_manager/features/auth/service/auth_service.dart';
 import 'package:ai_task_manager/shared/providers.dart';
@@ -51,6 +52,8 @@ class AuthViewModel extends AsyncNotifier<UserEntity?> {
       final user =
           await ref.read(authServiceProvider).register(name, email, password);
       state = AsyncData(user);
+    } on PendingApprovalException catch (e) {
+      state = AsyncError(e, StackTrace.current);
     } catch (e) {
       state = AsyncError(e, StackTrace.current);
     }
@@ -61,9 +64,15 @@ class AuthViewModel extends AsyncNotifier<UserEntity?> {
     try {
       final user = await ref.read(authServiceProvider).loginWithGoogle();
       state = AsyncData(user);
+    } on PendingApprovalException catch (e) {
+      state = AsyncError(e, StackTrace.current);
     } catch (e) {
       state = AsyncError(e, StackTrace.current);
     }
+  }
+
+  void clearError() {
+    state = const AsyncData(null);
   }
 
   Future<void> logout() async {

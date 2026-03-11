@@ -33,7 +33,26 @@ try {
 Write-Host "[OK] Tables PostgreSQL videes." -ForegroundColor Green
 
 # -----------------------------------------------------------------------------
-# 2. Frontend — Suppression du cache SQLite Drift
+# 2. Backend — Seed admin
+# -----------------------------------------------------------------------------
+Write-Host ""
+Write-Host ">>> Backend : seed admin..." -ForegroundColor Cyan
+
+Push-Location $BackendDir
+try {
+    node src/scripts/seed-admin.js
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[ERREUR] seed-admin.js a echoue." -ForegroundColor Red
+        exit 1
+    }
+} finally {
+    Pop-Location
+}
+
+Write-Host "[OK] Compte admin seede." -ForegroundColor Green
+
+# -----------------------------------------------------------------------------
+# 3. Frontend — Suppression du cache SQLite Drift
 # -----------------------------------------------------------------------------
 Write-Host ""
 Write-Host ">>> Frontend : suppression du cache SQLite..." -ForegroundColor Cyan
@@ -47,4 +66,4 @@ if (Test-Path $SqliteFile) {
 
 # -----------------------------------------------------------------------------
 Write-Host ""
-Write-Host "Reset complet. Relancez l'application." -ForegroundColor Green
+Write-Host "Reset complet. Relancez le serveur backend et l'application." -ForegroundColor Green

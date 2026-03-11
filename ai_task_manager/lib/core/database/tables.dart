@@ -6,6 +6,10 @@ class Users extends Table {
   TextColumn get name => text()();
   TextColumn get avatarUrl => text().nullable()();
   TextColumn get token => text().nullable()();
+  TextColumn get role =>
+      text().nullable().withDefault(const Constant('USER'))();
+  TextColumn get status =>
+      text().nullable().withDefault(const Constant('PENDING'))();
   DateTimeColumn get createdAt => dateTime()();
 
   @override

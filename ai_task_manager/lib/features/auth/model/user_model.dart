@@ -13,6 +13,8 @@ class UserModel extends UserEntity {
     required super.name,
     super.avatarUrl,
     super.token,
+    super.role,
+    super.status,
   });
 
   factory UserModel.fromJson(DataMap json) => _$UserModelFromJson(json);
@@ -26,6 +28,8 @@ class UserModel extends UserEntity {
       name: entity.name,
       avatarUrl: entity.avatarUrl,
       token: entity.token,
+      role: entity.role,
+      status: entity.status,
     );
   }
 
@@ -35,6 +39,8 @@ class UserModel extends UserEntity {
     String? name,
     String? avatarUrl,
     String? token,
+    String? role,
+    String? status,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -42,6 +48,8 @@ class UserModel extends UserEntity {
       name: name ?? this.name,
       avatarUrl: avatarUrl ?? this.avatarUrl,
       token: token ?? this.token,
+      role: role ?? this.role,
+      status: status ?? this.status,
     );
   }
 }

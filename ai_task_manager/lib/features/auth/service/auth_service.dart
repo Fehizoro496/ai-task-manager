@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:drift/drift.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -49,6 +50,16 @@ class AuthService {
       await _cacheUser(user);
       _apiClient.updateToken(user.token);
       return user;
+    } on DioException catch (e) {
+      final statusCode = e.response?.statusCode;
+      final message = e.response?.data?['message'] as String? ?? e.message ?? 'Login failed';
+      if (statusCode == 403 && message.toLowerCase().contains('pending')) {
+        throw PendingApprovalException(message: message);
+      }
+      if (statusCode == 403 && message.toLowerCase().contains('rejected')) {
+        throw ServerException(message: message, statusCode: statusCode);
+      }
+      throw ServerException(message: message, statusCode: statusCode);
     } on ServerException {
       rethrow;
     } catch (e) {
@@ -76,11 +87,17 @@ class AuthService {
       }
 
       final authResponse = AuthResponseModel.fromJson(response.data!);
-      final user = authResponse.userWithToken;
 
+      if (authResponse.hasPendingApproval) {
+        throw PendingApprovalException();
+      }
+
+      final user = authResponse.userWithToken;
       await _cacheUser(user);
       _apiClient.updateToken(user.token);
       return user;
+    } on PendingApprovalException {
+      rethrow;
     } on ServerException {
       rethrow;
     } catch (e) {
@@ -129,6 +146,8 @@ class AuthService {
           await _cacheUser(user);
           _apiClient.updateToken(user.token);
           return user;
+        } else if (status == 'pending_approval') {
+          throw const PendingApprovalException();
         } else if (status == 'error') {
           final error = statusResponse.data!['error'] as String? ?? 'Google sign-in failed';
           throw ServerException(message: error);
@@ -139,6 +158,8 @@ class AuthService {
       }
 
       throw const ServerException(message: 'Sign-in timed out. Please try again.');
+    } on PendingApprovalException {
+      rethrow;
     } on ServerException {
       rethrow;
     } catch (e) {
@@ -167,7 +188,7 @@ class AuthService {
       }
       final user = UserModel.fromJson(response.data!);
       await _cacheUser(user.copyWith(token: cachedToken));
-      return user;
+      return user.copyWith(token: cachedToken);
     } on AuthException {
       rethrow;
     } catch (_) {
@@ -188,6 +209,8 @@ class AuthService {
             name: user.name,
             avatarUrl: user.avatarUrl,
             token: user.token,
+            role: user.role,
+            status: user.status,
           ),
         );
   }
@@ -208,6 +231,8 @@ class AuthService {
           name: Value(user.name),
           avatarUrl: Value(user.avatarUrl),
           token: Value(user.token),
+          role: Value(user.role),
+          status: Value(user.status),
           createdAt: Value(DateTime.now()),
         ),
       );
@@ -220,6 +245,8 @@ class AuthService {
             name: Value(user.name),
             avatarUrl: Value(user.avatarUrl),
             token: Value(user.token),
+            role: Value(user.role),
+            status: Value(user.status),
             createdAt: Value(DateTime.now()),
           ),
         );
@@ -242,6 +269,8 @@ class AuthService {
       name: user.name,
       avatarUrl: user.avatarUrl,
       token: user.token,
+      role: user.role,
+      status: user.status,
     );
   }
 }

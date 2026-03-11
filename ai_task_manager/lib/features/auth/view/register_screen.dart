@@ -70,6 +70,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final authState = ref.watch(authStateProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isLoading = authState is AsyncLoading;
+    final isPending = authState is AsyncError &&
+        authState.error is PendingApprovalException;
 
     return Scaffold(
       backgroundColor:
@@ -84,12 +86,127 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               children: [
                 _buildHeader(isDark),
                 const SizedBox(height: AppSpacing.xxxl),
-                _buildForm(isDark, isLoading, authState),
+                if (isPending)
+                  _buildPendingView(context, isDark)
+                else
+                  _buildForm(isDark, isLoading, authState),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildPendingView(BuildContext context, bool isDark) {
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.xxl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(
+            child: Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: AppColors.warning.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+                border: Border.all(
+                  color: AppColors.warning.withOpacity(0.35),
+                  width: 1.5,
+                ),
+              ),
+              child: const Icon(
+                Icons.hourglass_empty_rounded,
+                color: AppColors.warning,
+                size: 36,
+              ),
+            ).animate().scale(
+                  begin: const Offset(0.8, 0.8),
+                  duration: 400.ms,
+                  curve: Curves.easeOut,
+                ),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          Text(
+            'Account Created — Pending Approval',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimaryLight,
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            'Your account has been created successfully. '
+            'An administrator will review and approve your request shortly.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight,
+                  height: 1.6,
+                ),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          _buildInfoRow(
+            context,
+            isDark,
+            Icons.check_circle_outline_rounded,
+            AppColors.success,
+            'Account created successfully',
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          _buildInfoRow(
+            context,
+            isDark,
+            Icons.hourglass_top_rounded,
+            AppColors.warning,
+            'Waiting for admin review',
+          ),
+          const SizedBox(height: AppSpacing.xxl),
+          AppButton(
+            label: 'Back to Sign In',
+            onPressed: _navigateToLogin,
+            size: AppButtonSize.lg,
+          ),
+        ],
+      ),
+    )
+        .animate()
+        .fadeIn(delay: 100.ms, duration: 400.ms, curve: Curves.easeOut)
+        .slideY(
+          begin: 0.05,
+          end: 0,
+          delay: 100.ms,
+          duration: 400.ms,
+          curve: Curves.easeOut,
+        );
+  }
+
+  Widget _buildInfoRow(
+    BuildContext context,
+    bool isDark,
+    IconData icon,
+    Color color,
+    String text,
+  ) {
+    return Row(
+      children: [
+        Icon(icon, color: color, size: 16),
+        const SizedBox(width: AppSpacing.sm),
+        Text(
+          text,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+                fontWeight: FontWeight.w500,
+              ),
+        ),
+      ],
     );
   }
 

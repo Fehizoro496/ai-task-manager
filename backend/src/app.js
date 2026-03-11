@@ -10,6 +10,7 @@ const epicsRoutes = require("./modules/epics/epics.routes");
 const storiesRoutes = require("./modules/stories/stories.routes");
 const tasksRoutes = require("./modules/tasks/tasks.routes");
 const aiRoutes = require("./modules/ai/ai.routes");
+const adminRoutes = require("./modules/admin/admin.routes");
 
 const app = express();
 
@@ -24,6 +25,7 @@ app.use("/api/epics", epicsRoutes);
 app.use("/api/stories", storiesRoutes);
 app.use("/api/tasks", tasksRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/admin", adminRoutes);
 
 app.use(errorHandler);
 
