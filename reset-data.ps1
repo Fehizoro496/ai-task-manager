@@ -10,6 +10,26 @@ $BackendDir = Join-Path $PSScriptRoot "backend"
 $SqliteFile = Join-Path $env:USERPROFILE "Documents\ai_task_manager.sqlite"
 
 # -----------------------------------------------------------------------------
+# Lecture de DATABASE_URL depuis backend/.env
+# -----------------------------------------------------------------------------
+$envFile = Join-Path $BackendDir ".env"
+if (-not (Test-Path $envFile)) {
+    Write-Host "[ERREUR] Fichier backend/.env introuvable." -ForegroundColor Red
+    exit 1
+}
+Get-Content $envFile | ForEach-Object {
+    if ($_ -match '^([^#][^=]*)=(.*)$') {
+        $key = $matches[1].Trim()
+        $value = $matches[2].Trim().Trim('"')
+        [System.Environment]::SetEnvironmentVariable($key, $value, 'Process')
+    }
+}
+if (-not $env:DATABASE_URL) {
+    Write-Host "[ERREUR] DATABASE_URL introuvable dans backend/.env" -ForegroundColor Red
+    exit 1
+}
+
+# -----------------------------------------------------------------------------
 # 1. Backend — TRUNCATE toutes les tables PostgreSQL (ordre CASCADE)
 # -----------------------------------------------------------------------------
 Write-Host ""
