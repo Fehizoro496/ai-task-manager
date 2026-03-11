@@ -52,6 +52,7 @@ class AppToast {
 
     messenger.showSnackBar(
       SnackBar(
+        persist: false,
         content: Row(
           children: [
             Icon(icon, color: Colors.white, size: 20),

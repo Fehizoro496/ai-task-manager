@@ -37,11 +37,11 @@ class AppLayout extends ConsumerWidget {
           label: 'Admin',
           route: '/admin',
         ),
-      const SidebarItem(
-        icon: Icons.settings_rounded,
-        label: 'Settings',
-        route: '/settings',
-      ),
+      // const SidebarItem(
+      //   icon: Icons.settings_rounded,
+      //   label: 'Settings',
+      //   route: '/settings',
+      // ),
     ];
   }
 
@@ -69,8 +69,7 @@ class AppLayout extends ConsumerWidget {
             onToggleCollapse: () {
               ref.read(sidebarCollapsedProvider.notifier).state = !isCollapsed;
             },
-            onLogout: () =>
-                ref.read(authStateProvider.notifier).logout(),
+            onLogout: () => ref.read(authStateProvider.notifier).logout(),
           ),
           Expanded(child: child),
         ],
