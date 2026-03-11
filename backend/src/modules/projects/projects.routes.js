@@ -1,5 +1,6 @@
 const { Router } = require("express");
 const authenticate = require("../../middleware/auth");
+const requireAdmin = require("../../middleware/requireAdmin");
 const validate = require("../../middleware/validate");
 const { createProjectSchema, updateProjectSchema } = require("./projects.schema");
 const { createTaskForProjectSchema } = require("../tasks/tasks.schema");
@@ -199,6 +200,6 @@ router.get("/:projectId/tasks", tasksController.listByProject);
  *       404:
  *         description: Project not found
  */
-router.post("/:projectId/tasks", validate(createTaskForProjectSchema), tasksController.createForProject);
+router.post("/:projectId/tasks", requireAdmin, validate(createTaskForProjectSchema), tasksController.createForProject);
 
 module.exports = router;

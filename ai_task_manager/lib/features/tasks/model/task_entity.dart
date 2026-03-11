@@ -13,6 +13,8 @@ class TaskEntity extends Equatable {
   final String? storyId;
   final String projectId;
   final String? assigneeId;
+  final String? assigneeName;
+  final String? assigneeAvatar;
   final List<String> labels;
   final int order;
   final DateTime? dueDate;
@@ -28,6 +30,8 @@ class TaskEntity extends Equatable {
     this.storyId,
     required this.projectId,
     this.assigneeId,
+    this.assigneeName,
+    this.assigneeAvatar,
     this.labels = const [],
     this.order = 0,
     this.dueDate,
@@ -40,7 +44,9 @@ class TaskEntity extends Equatable {
     String? description,
     TaskStatus? status,
     TaskPriority? priority,
-    String? assigneeId,
+    Object? assigneeId = _keep,
+    Object? assigneeName = _keep,
+    Object? assigneeAvatar = _keep,
     List<String>? labels,
     int? order,
     DateTime? dueDate,
@@ -53,13 +59,17 @@ class TaskEntity extends Equatable {
         priority: priority ?? this.priority,
         storyId: storyId,
         projectId: projectId,
-        assigneeId: assigneeId ?? this.assigneeId,
+        assigneeId: assigneeId == _keep ? this.assigneeId : assigneeId as String?,
+        assigneeName: assigneeName == _keep ? this.assigneeName : assigneeName as String?,
+        assigneeAvatar: assigneeAvatar == _keep ? this.assigneeAvatar : assigneeAvatar as String?,
         labels: labels ?? this.labels,
         order: order ?? this.order,
         dueDate: dueDate ?? this.dueDate,
         createdAt: createdAt,
         updatedAt: DateTime.now(),
       );
+
+  static const Object _keep = Object();
 
   @override
   List<Object?> get props => [
@@ -71,6 +81,8 @@ class TaskEntity extends Equatable {
         storyId,
         projectId,
         assigneeId,
+        assigneeName,
+        assigneeAvatar,
         labels,
         order,
         dueDate,

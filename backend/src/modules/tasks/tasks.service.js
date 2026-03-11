@@ -9,9 +9,12 @@ const statusToLowercase = {
   DONE: "done",
 };
 
+const assigneeInclude = {
+  assignee: { select: { id: true, name: true, avatarUrl: true } },
+};
+
 /**
  * Serializes a Prisma Task into the format expected by the Flutter frontend.
- * Includes both camelCase and snake_case variants, and maps position→order.
  */
 const serializeTask = (task, projectId) => {
   const computedProjectId = projectId || task.projectId || null;
@@ -30,6 +33,13 @@ const serializeTask = (task, projectId) => {
     project_id: computedProjectId,
     assigneeId: task.assigneeId || null,
     assignee_id: task.assigneeId || null,
+    assignee: task.assignee
+      ? {
+          id: task.assignee.id,
+          name: task.assignee.name,
+          avatarUrl: task.assignee.avatarUrl || null,
+        }
+      : null,
     labels: task.labels || [],
     dueDate: task.dueDate ? task.dueDate.toISOString() : null,
     due_date: task.dueDate ? task.dueDate.toISOString() : null,
@@ -40,107 +50,115 @@ const serializeTask = (task, projectId) => {
   };
 };
 
-const verifyStoryOwnership = async (storyId, userId) => {
+const verifyStoryOwnership = async (storyId, userId, isAdmin) => {
   const story = await prisma.story.findUnique({
     where: { id: storyId },
     include: { epic: { include: { project: true } } },
   });
-  if (!story || story.epic.project.ownerId !== userId) {
+  if (!story || (!isAdmin && story.epic.project.ownerId !== userId)) {
     throw new AppError("Story not found", 404);
   }
   return story;
 };
 
-const create = async (userId, data) => {
-  await verifyStoryOwnership(data.storyId, userId);
-  return prisma.task.create({ data });
+const create = async (userId, isAdmin, data) => {
+  await verifyStoryOwnership(data.storyId, userId, isAdmin);
+  return prisma.task.create({ data, include: assigneeInclude });
 };
 
-const listByStory = async (storyId, userId) => {
-  await verifyStoryOwnership(storyId, userId);
+const listByStory = async (storyId, userId, isAdmin) => {
+  await verifyStoryOwnership(storyId, userId, isAdmin);
   return prisma.task.findMany({
     where: { storyId },
     orderBy: { position: "asc" },
+    include: assigneeInclude,
   });
 };
 
-const getById = async (id, userId) => {
+const getById = async (id, userId, isAdmin) => {
   const task = await prisma.task.findUnique({
     where: { id },
-    include: { story: { include: { epic: { include: { project: true } } } } },
+    include: {
+      story: { include: { epic: { include: { project: true } } } },
+      ...assigneeInclude,
+    },
   });
 
-  if (!task || task.story.epic.project.ownerId !== userId) {
+  if (!task || (!isAdmin && task.story.epic.project.ownerId !== userId)) {
     throw new AppError("Task not found", 404);
   }
 
   return task;
 };
 
-const update = async (id, userId, data) => {
+const update = async (id, userId, isAdmin, data) => {
   const task = await prisma.task.findUnique({
     where: { id },
     include: { story: { include: { epic: { include: { project: true } } } } },
   });
 
-  if (!task || task.story.epic.project.ownerId !== userId) {
+  if (!task || (!isAdmin && task.story.epic.project.ownerId !== userId)) {
     throw new AppError("Task not found", 404);
   }
 
-  return prisma.task.update({ where: { id }, data });
+  // Validate assigneeId if provided
+  if (data.assigneeId) {
+    const assignee = await prisma.user.findUnique({ where: { id: data.assigneeId } });
+    if (!assignee) throw new AppError("Assignee not found", 404);
+  }
+
+  return prisma.task.update({ where: { id }, data, include: assigneeInclude });
 };
 
-const remove = async (id, userId) => {
+const remove = async (id, userId, isAdmin) => {
   const task = await prisma.task.findUnique({
     where: { id },
     include: { story: { include: { epic: { include: { project: true } } } } },
   });
 
-  if (!task || task.story.epic.project.ownerId !== userId) {
+  if (!task || (!isAdmin && task.story.epic.project.ownerId !== userId)) {
     throw new AppError("Task not found", 404);
   }
 
   return prisma.task.delete({ where: { id } });
 };
 
-const moveTask = async (id, userId, { status, position }) => {
-  const task = await prisma.task.findUnique({
-    where: { id },
-    include: { story: { include: { epic: { include: { project: true } } } } },
-  });
-
-  if (!task || task.story.epic.project.ownerId !== userId) {
-    throw new AppError("Task not found", 404);
+const moveTask = async (id, userId, isAdmin, { status, position }) => {
+  if (!isAdmin && status === "DONE") {
+    throw new AppError("Only admin can mark a task as Done", 403);
   }
+
+  const task = await prisma.task.findUnique({ where: { id } });
+  if (!task) throw new AppError("Task not found", 404);
 
   return prisma.task.update({
     where: { id },
     data: { status, position },
+    include: assigneeInclude,
   });
 };
 
-const listByProject = async (projectId, userId) => {
-  const project = await prisma.project.findFirst({
-    where: { id: projectId, ownerId: userId },
-  });
-  if (!project) {
-    throw new AppError("Project not found", 404);
-  }
+const listByProject = async (projectId, userId, isAdmin) => {
+  const project = await prisma.project.findUnique({ where: { id: projectId } });
+  if (!project) throw new AppError("Project not found", 404);
 
   return prisma.task.findMany({
     where: {
       story: { epic: { projectId } },
     },
     orderBy: { position: "asc" },
+    include: assigneeInclude,
   });
 };
 
-const createForProject = async (userId, projectId, data) => {
-  const project = await prisma.project.findFirst({
-    where: { id: projectId, ownerId: userId },
-  });
-  if (!project) {
-    throw new AppError("Project not found", 404);
+const createForProject = async (userId, isAdmin, projectId, data) => {
+  if (!isAdmin) {
+    const project = await prisma.project.findFirst({
+      where: { id: projectId, ownerId: userId },
+    });
+    if (!project) {
+      throw new AppError("Project not found", 404);
+    }
   }
 
   // If storyId is provided, verify it belongs to this project
@@ -160,6 +178,7 @@ const createForProject = async (userId, projectId, data) => {
         status: data.status || "TODO",
         storyId,
       },
+      include: assigneeInclude,
     });
   }
 
@@ -186,6 +205,7 @@ const createForProject = async (userId, projectId, data) => {
       status: data.status || "TODO",
       storyId: story.id,
     },
+    include: assigneeInclude,
   });
 };
 

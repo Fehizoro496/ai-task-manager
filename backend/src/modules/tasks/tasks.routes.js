@@ -1,5 +1,6 @@
 const { Router } = require("express");
 const authenticate = require("../../middleware/auth");
+const requireAdmin = require("../../middleware/requireAdmin");
 const validate = require("../../middleware/validate");
 const { createTaskSchema, updateTaskSchema, moveTaskSchema } = require("./tasks.schema");
 const tasksController = require("./tasks.controller");
@@ -43,7 +44,7 @@ router.use(authenticate);
  *             schema:
  *               $ref: '#/components/schemas/Task'
  */
-router.post("/", validate(createTaskSchema), tasksController.create);
+router.post("/", requireAdmin, validate(createTaskSchema), tasksController.create);
 
 /**
  * @swagger
@@ -144,7 +145,7 @@ router.get("/:id", tasksController.getById);
  *       404:
  *         description: Task not found
  */
-router.put("/:id", validate(updateTaskSchema), tasksController.update);
+router.put("/:id", requireAdmin, validate(updateTaskSchema), tasksController.update);
 
 /**
  * @swagger
@@ -203,6 +204,6 @@ router.patch("/:id/move", validate(moveTaskSchema), tasksController.move);
  *       404:
  *         description: Task not found
  */
-router.delete("/:id", tasksController.remove);
+router.delete("/:id", requireAdmin, tasksController.remove);
 
 module.exports = router;

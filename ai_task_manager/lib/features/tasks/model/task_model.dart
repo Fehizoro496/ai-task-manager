@@ -11,6 +11,8 @@ class TaskModel extends TaskEntity {
     super.storyId,
     required super.projectId,
     super.assigneeId,
+    super.assigneeName,
+    super.assigneeAvatar,
     super.labels,
     super.order,
     super.dueDate,
@@ -19,6 +21,7 @@ class TaskModel extends TaskEntity {
   });
 
   factory TaskModel.fromJson(DataMap json) {
+    final assigneeJson = json['assignee'] as Map<String, dynamic>?;
     return TaskModel(
       id: json['id'] as String,
       title: json['title'] as String,
@@ -28,6 +31,8 @@ class TaskModel extends TaskEntity {
       storyId: (json['storyId'] ?? json['story_id']) as String?,
       projectId: (json['projectId'] ?? json['project_id'] ?? '') as String,
       assigneeId: (json['assigneeId'] ?? json['assignee_id']) as String?,
+      assigneeName: assigneeJson?['name'] as String?,
+      assigneeAvatar: assigneeJson?['avatarUrl'] as String?,
       labels: (json['labels'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
@@ -51,6 +56,8 @@ class TaskModel extends TaskEntity {
       storyId: entity.storyId,
       projectId: entity.projectId,
       assigneeId: entity.assigneeId,
+      assigneeName: entity.assigneeName,
+      assigneeAvatar: entity.assigneeAvatar,
       labels: entity.labels,
       order: entity.order,
       dueDate: entity.dueDate,

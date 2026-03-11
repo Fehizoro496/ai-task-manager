@@ -9,6 +9,11 @@ final adminServiceProvider = Provider<AdminService>((ref) {
   return AdminService(apiClient: apiClient);
 });
 
+/// Approved users available for task assignment (admin use only).
+final approvedUsersProvider = FutureProvider<List<AdminUserModel>>((ref) {
+  return ref.read(adminServiceProvider).getUsers(status: 'APPROVED');
+});
+
 /// Filter: null = all, 'PENDING', 'APPROVED', 'REJECTED'
 final adminUserFilterProvider = StateProvider<String?>((ref) => 'PENDING');
 

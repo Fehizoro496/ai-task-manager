@@ -7,6 +7,7 @@ import 'package:ai_task_manager/core/design_system/task_card.dart' as ds;
 import 'package:ai_task_manager/core/theme/app_colors.dart';
 import 'package:ai_task_manager/core/theme/app_spacing.dart';
 import 'package:ai_task_manager/core/utils/constants.dart';
+import 'package:ai_task_manager/features/auth/viewmodel/auth_viewmodel.dart';
 import 'package:ai_task_manager/features/board/model/board_column_entity.dart';
 import 'package:ai_task_manager/features/board/viewmodel/board_viewmodel.dart';
 import 'package:ai_task_manager/features/board/view/add_task_inline.dart';
@@ -84,11 +85,14 @@ class _BoardScreenState extends ConsumerState<BoardScreen> {
               ),
               data: (tasks) {
                 final filtered = _applyFilters(tasks);
+                final isAdmin =
+                    ref.watch(authStateProvider).valueOrNull?.isAdmin ?? false;
                 return _BoardContent(
                   projectId: widget.projectId,
                   columns: columns,
                   tasks: filtered,
                   isDark: isDark,
+                  isAdmin: isAdmin,
                 );
               },
             ),
@@ -331,12 +335,14 @@ class _BoardContent extends ConsumerWidget {
     required this.columns,
     required this.tasks,
     required this.isDark,
+    required this.isAdmin,
   });
 
   final String projectId;
   final List<BoardColumnEntity> columns;
   final List<TaskEntity> tasks;
   final bool isDark;
+  final bool isAdmin;
 
   List<TaskEntity> _tasksForStatus(TaskStatus status) {
     return tasks.where((t) => t.status == status).toList()
@@ -364,6 +370,7 @@ class _BoardContent extends ConsumerWidget {
               column: column,
               tasks: columnTasks,
               isDark: isDark,
+              isAdmin: isAdmin,
             ),
           );
         }).toList(),
@@ -382,12 +389,14 @@ class _DragTargetColumn extends ConsumerStatefulWidget {
     required this.column,
     required this.tasks,
     required this.isDark,
+    required this.isAdmin,
   });
 
   final String projectId;
   final BoardColumnEntity column;
   final List<TaskEntity> tasks;
   final bool isDark;
+  final bool isAdmin;
 
   @override
   ConsumerState<_DragTargetColumn> createState() => _DragTargetColumnState();
@@ -399,8 +408,10 @@ class _DragTargetColumnState extends ConsumerState<_DragTargetColumn> {
 
   @override
   Widget build(BuildContext context) {
-    return DragTarget<TaskEntity>(
+    final column = DragTarget<TaskEntity>(
       onWillAcceptWithDetails: (details) {
+        final isDoneColumn = widget.column.status == TaskStatus.done;
+        if (!widget.isAdmin && isDoneColumn) return false;
         if (details.data.status != widget.column.status) {
           setState(() => _isDragOver = true);
           return true;
@@ -435,7 +446,9 @@ class _DragTargetColumnState extends ConsumerState<_DragTargetColumn> {
               title: widget.column.title,
               color: widget.column.color,
               taskCount: widget.tasks.length,
-              onAddTask: () => setState(() => _showAddTask = !_showAddTask),
+              onAddTask: widget.isAdmin
+                  ? () => setState(() => _showAddTask = !_showAddTask)
+                  : null,
               children: [
                 ...widget.tasks.asMap().entries.map((entry) {
                   final task = entry.value;
@@ -458,6 +471,7 @@ class _DragTargetColumnState extends ConsumerState<_DragTargetColumn> {
         );
       },
     );
+    return column;
   }
 }
 
