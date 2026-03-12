@@ -98,6 +98,15 @@ class BoardTasksViewModel
     }
   }
 
+  Future<TaskEntity> assignSelf(String taskId) async {
+    final updated = await _service.assignSelf(taskId);
+    final previous = state.valueOrNull ?? [];
+    state = AsyncData(
+      previous.map((t) => t.id == taskId ? updated : t).toList(),
+    );
+    return updated;
+  }
+
   Future<void> deleteTask(String taskId) async {
     final previous = state.valueOrNull ?? [];
     state = AsyncData(previous.where((t) => t.id != taskId).toList());

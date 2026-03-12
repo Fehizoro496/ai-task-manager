@@ -11,16 +11,20 @@ class TaskCard extends StatefulWidget {
     required this.title,
     this.description,
     this.priority = TaskPriority.medium,
-    this.assignee,
+    this.assigneeName,
+    this.assigneeAvatar,
     this.labels = const [],
+    this.dueDate,
     this.onTap,
   });
 
   final String title;
   final String? description;
   final TaskPriority priority;
-  final String? assignee;
+  final String? assigneeName;
+  final String? assigneeAvatar;
   final List<String> labels;
+  final DateTime? dueDate;
   final VoidCallback? onTap;
 
   @override
@@ -56,6 +60,29 @@ class _TaskCardState extends State<TaskCard> {
     }
   }
 
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final d = DateTime(date.year, date.month, date.day);
+    final diff = d.difference(today).inDays;
+
+    if (diff == 0) return 'Today';
+    if (diff == 1) return 'Tomorrow';
+    if (diff == -1) return 'Yesterday';
+
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    return '${months[date.month - 1]} ${date.day}';
+  }
+
+  bool get _isOverdue {
+    if (widget.dueDate == null) return false;
+    final now = DateTime.now();
+    return widget.dueDate!.isBefore(DateTime(now.year, now.month, now.day));
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -68,8 +95,7 @@ class _TaskCardState extends State<TaskCard> {
     final tertiaryColor = isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight;
 
     return MouseRegion(
-      cursor:
-          widget.onTap != null ? SystemMouseCursors.click : MouseCursor.defer,
+      cursor: widget.onTap != null ? SystemMouseCursors.click : MouseCursor.defer,
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       child: GestureDetector(
@@ -109,110 +135,134 @@ class _TaskCardState extends State<TaskCard> {
                     ),
                   ),
                 ),
-              // Card content
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Priority badge row
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.sm,
-                              vertical: AppSpacing.xxs,
-                            ),
-                            decoration: BoxDecoration(
-                              color: _priorityColor.withOpacity(0.12),
-                              borderRadius:
-                                  BorderRadius.circular(AppSpacing.radiusSm),
-                            ),
-                            child: Text(
-                              _priorityLabel,
-                              style: TextStyle(
-                                color: _priorityColor,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0.3,
-                              ),
-                            ),
-                          ),
-                          const Spacer(),
-                          if (widget.assignee != null)
-                            _AvatarBubble(
-                              name: widget.assignee!,
-                              isDark: isDark,
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      // Title
-                      Text(
-                        widget.title,
-                        style: TextStyle(
-                          color: titleColor,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          height: 1.3,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      // Description
-                      if (widget.description != null &&
-                          widget.description!.isNotEmpty) ...[
-                        const SizedBox(height: AppSpacing.xs),
-                        Text(
-                          widget.description!,
-                          style: TextStyle(
-                            color: subtitleColor,
-                            fontSize: 12,
-                            height: 1.4,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                      // Labels
-                      if (widget.labels.isNotEmpty) ...[
-                        const SizedBox(height: AppSpacing.sm),
-                        Wrap(
-                          spacing: AppSpacing.xs,
-                          runSpacing: AppSpacing.xs,
-                          children: widget.labels.map((label) {
-                            return Container(
+                // Card content
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Priority badge row
+                        Row(
+                          children: [
+                            Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: AppSpacing.sm,
                                 vertical: AppSpacing.xxs,
                               ),
                               decoration: BoxDecoration(
-                                color: isDark
-                                    ? AppColors.surfaceDark
-                                    : AppColors.hoverLight,
-                                borderRadius: BorderRadius.circular(
-                                    AppSpacing.radiusSm),
+                                color: _priorityColor.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                               ),
                               child: Text(
-                                label,
+                                _priorityLabel,
                                 style: TextStyle(
-                                  color: tertiaryColor,
+                                  color: _priorityColor,
                                   fontSize: 10,
-                                  fontWeight: FontWeight.w500,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.3,
                                 ),
                               ),
-                            );
-                          }).toList(),
+                            ),
+                          ],
                         ),
+                        const SizedBox(height: AppSpacing.sm),
+                        // Title
+                        Text(
+                          widget.title,
+                          style: TextStyle(
+                            color: titleColor,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            height: 1.3,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        // Description
+                        if (widget.description != null && widget.description!.isNotEmpty) ...[
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(
+                            widget.description!,
+                            style: TextStyle(
+                              color: subtitleColor,
+                              fontSize: 12,
+                              height: 1.4,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                        // Labels
+                        if (widget.labels.isNotEmpty) ...[
+                          const SizedBox(height: AppSpacing.sm),
+                          Wrap(
+                            spacing: AppSpacing.xs,
+                            runSpacing: AppSpacing.xs,
+                            children: widget.labels.map((label) {
+                              return Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.sm,
+                                  vertical: AppSpacing.xxs,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isDark
+                                      ? AppColors.surfaceDark
+                                      : AppColors.hoverLight,
+                                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                                ),
+                                child: Text(
+                                  label,
+                                  style: TextStyle(
+                                    color: tertiaryColor,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ],
+                        // Bottom row: due date + assignee avatar
+                        if (widget.dueDate != null || widget.assigneeName != null) ...[
+                          const SizedBox(height: AppSpacing.sm),
+                          Row(
+                            children: [
+                              if (widget.dueDate != null) ...[
+                                Icon(
+                                  _isOverdue
+                                      ? Icons.warning_amber_rounded
+                                      : Icons.calendar_today_rounded,
+                                  size: 11,
+                                  color: _isOverdue ? AppColors.error : tertiaryColor,
+                                ),
+                                const SizedBox(width: AppSpacing.xxs + 2),
+                                Text(
+                                  _formatDate(widget.dueDate!),
+                                  style: TextStyle(
+                                    color: _isOverdue ? AppColors.error : tertiaryColor,
+                                    fontSize: 11,
+                                    fontWeight: _isOverdue ? FontWeight.w600 : FontWeight.w400,
+                                  ),
+                                ),
+                              ],
+                              const Spacer(),
+                              if (widget.assigneeName != null)
+                                _AssigneeAvatar(
+                                  name: widget.assigneeName!,
+                                  avatarUrl: widget.assigneeAvatar,
+                                  isDark: isDark,
+                                ),
+                            ],
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
           ),
         ),
       ),
@@ -220,37 +270,87 @@ class _TaskCardState extends State<TaskCard> {
   }
 }
 
-class _AvatarBubble extends StatelessWidget {
-  const _AvatarBubble({
+// =============================================================================
+// Assignee Avatar with tooltip
+// =============================================================================
+
+class _AssigneeAvatar extends StatelessWidget {
+  const _AssigneeAvatar({
     required this.name,
     required this.isDark,
+    this.avatarUrl,
   });
 
   final String name;
+  final String? avatarUrl;
+  final bool isDark;
+
+  String get _initials => name
+      .split(' ')
+      .where((p) => p.isNotEmpty)
+      .take(2)
+      .map((p) => p[0].toUpperCase())
+      .join();
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: name,
+      preferBelow: false,
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceDark : AppColors.textPrimaryLight,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+      ),
+      textStyle: const TextStyle(
+        color: Colors.white,
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+      ),
+      child: Container(
+        width: 26,
+        height: 26,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: isDark ? AppColors.borderDark : AppColors.borderLight,
+            width: 1.5,
+          ),
+        ),
+        child: ClipOval(
+          child: avatarUrl != null && avatarUrl!.isNotEmpty
+              ? Image.network(
+                  avatarUrl!,
+                  width: 26,
+                  height: 26,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => _InitialsBubble(
+                    initials: _initials,
+                    isDark: isDark,
+                  ),
+                )
+              : _InitialsBubble(initials: _initials, isDark: isDark),
+        ),
+      ),
+    );
+  }
+}
+
+class _InitialsBubble extends StatelessWidget {
+  const _InitialsBubble({required this.initials, required this.isDark});
+
+  final String initials;
   final bool isDark;
 
   @override
   Widget build(BuildContext context) {
-    final initials = name
-        .split(' ')
-        .where((part) => part.isNotEmpty)
-        .take(2)
-        .map((part) => part[0].toUpperCase())
-        .join();
-
     return Container(
-      width: 24,
-      height: 24,
-      decoration: BoxDecoration(
-        color: AppColors.primarySurface,
-        shape: BoxShape.circle,
-      ),
+      color: AppColors.primarySurface,
       child: Center(
         child: Text(
           initials,
           style: const TextStyle(
             color: AppColors.primary,
-            fontSize: 10,
+            fontSize: 9,
             fontWeight: FontWeight.w700,
           ),
         ),

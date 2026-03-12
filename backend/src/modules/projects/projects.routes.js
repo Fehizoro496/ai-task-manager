@@ -39,7 +39,7 @@ router.use(authenticate);
  *             schema:
  *               $ref: '#/components/schemas/Project'
  */
-router.post("/", validate(createProjectSchema), projectsController.create);
+router.post("/", requireAdmin, validate(createProjectSchema), projectsController.create);
 
 /**
  * @swagger

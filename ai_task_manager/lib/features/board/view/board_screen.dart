@@ -85,14 +85,16 @@ class _BoardScreenState extends ConsumerState<BoardScreen> {
               ),
               data: (tasks) {
                 final filtered = _applyFilters(tasks);
-                final isAdmin =
-                    ref.watch(authStateProvider).valueOrNull?.isAdmin ?? false;
+                final currentUser = ref.watch(authStateProvider).valueOrNull;
+                final isAdmin = currentUser?.isAdmin ?? false;
+                final currentUserId = currentUser?.id ?? '';
                 return _BoardContent(
                   projectId: widget.projectId,
                   columns: columns,
                   tasks: filtered,
                   isDark: isDark,
                   isAdmin: isAdmin,
+                  currentUserId: currentUserId,
                 );
               },
             ),
@@ -336,6 +338,7 @@ class _BoardContent extends ConsumerWidget {
     required this.tasks,
     required this.isDark,
     required this.isAdmin,
+    required this.currentUserId,
   });
 
   final String projectId;
@@ -343,6 +346,7 @@ class _BoardContent extends ConsumerWidget {
   final List<TaskEntity> tasks;
   final bool isDark;
   final bool isAdmin;
+  final String currentUserId;
 
   List<TaskEntity> _tasksForStatus(TaskStatus status) {
     return tasks.where((t) => t.status == status).toList()
@@ -371,6 +375,7 @@ class _BoardContent extends ConsumerWidget {
               tasks: columnTasks,
               isDark: isDark,
               isAdmin: isAdmin,
+              currentUserId: currentUserId,
             ),
           );
         }).toList(),
@@ -390,6 +395,7 @@ class _DragTargetColumn extends ConsumerStatefulWidget {
     required this.tasks,
     required this.isDark,
     required this.isAdmin,
+    required this.currentUserId,
   });
 
   final String projectId;
@@ -397,6 +403,7 @@ class _DragTargetColumn extends ConsumerStatefulWidget {
   final List<TaskEntity> tasks;
   final bool isDark;
   final bool isAdmin;
+  final String currentUserId;
 
   @override
   ConsumerState<_DragTargetColumn> createState() => _DragTargetColumnState();
@@ -410,9 +417,11 @@ class _DragTargetColumnState extends ConsumerState<_DragTargetColumn> {
   Widget build(BuildContext context) {
     final column = DragTarget<TaskEntity>(
       onWillAcceptWithDetails: (details) {
-        final isDoneColumn = widget.column.status == TaskStatus.done;
-        if (!widget.isAdmin && isDoneColumn) return false;
-        if (details.data.status != widget.column.status) {
+        final task = details.data;
+        if (!widget.isAdmin && task.assigneeId != widget.currentUserId) {
+          return false;
+        }
+        if (task.status != widget.column.status) {
           setState(() => _isDragOver = true);
           return true;
         }
@@ -455,6 +464,8 @@ class _DragTargetColumnState extends ConsumerState<_DragTargetColumn> {
                   return _DraggableTaskCard(
                     task: task,
                     index: entry.key,
+                    isAdmin: widget.isAdmin,
+                    currentUserId: widget.currentUserId,
                   );
                 }),
                 if (_isDragOver && candidateData.isNotEmpty)
@@ -483,10 +494,14 @@ class _DraggableTaskCard extends ConsumerWidget {
   const _DraggableTaskCard({
     required this.task,
     required this.index,
+    required this.isAdmin,
+    required this.currentUserId,
   });
 
   final TaskEntity task;
   final int index;
+  final bool isAdmin;
+  final String currentUserId;
 
   ds.TaskPriority _mapPriority(TaskPriority priority) {
     switch (priority) {
@@ -510,29 +525,38 @@ class _DraggableTaskCard extends ConsumerWidget {
         title: task.title,
         description: task.description,
         priority: _mapPriority(task.priority),
+        assigneeName: task.assigneeName,
+        assigneeAvatar: task.assigneeAvatar,
         labels: task.labels,
+        dueDate: task.dueDate,
         onTap: () {
           ref.read(selectedTaskProvider.notifier).state = task;
         },
       );
     }
 
-    return Draggable<TaskEntity>(
-      data: task,
-      feedback: Material(
-        elevation: 8,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        child: SizedBox(
-          width: cardWidth,
-          child: Opacity(opacity: 0.9, child: buildCard()),
-        ),
-      ),
-      childWhenDragging: Opacity(
-        opacity: 0.3,
-        child: buildCard(),
-      ),
-      child: buildCard(),
-    )
+    final canDrag = isAdmin || task.assigneeId == currentUserId;
+
+    final draggable = canDrag
+        ? Draggable<TaskEntity>(
+            data: task,
+            feedback: Material(
+              elevation: 8,
+              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              child: SizedBox(
+                width: cardWidth,
+                child: Opacity(opacity: 0.9, child: buildCard()),
+              ),
+            ),
+            childWhenDragging: Opacity(
+              opacity: 0.3,
+              child: buildCard(),
+            ),
+            child: buildCard(),
+          )
+        : buildCard();
+
+    return draggable
         .animate()
         .fadeIn(
           duration: const Duration(milliseconds: 300),

@@ -10,6 +10,7 @@ import 'package:ai_task_manager/core/theme/app_spacing.dart';
 import 'package:ai_task_manager/features/projects/model/project_entity.dart';
 import 'package:ai_task_manager/features/projects/viewmodel/project_viewmodel.dart';
 import 'package:ai_task_manager/features/projects/view/project_card.dart';
+import 'package:ai_task_manager/features/auth/viewmodel/auth_viewmodel.dart';
 import 'package:ai_task_manager/features/projects/view/create_project_dialog.dart';
 
 class DashboardScreen extends ConsumerWidget {
@@ -19,6 +20,8 @@ class DashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final projectsAsync = ref.watch(projectListProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final userAsync = ref.watch(currentUserProvider);
+    final isAdmin = userAsync.valueOrNull?.isAdmin ?? false;
 
     return Scaffold(
       backgroundColor: isDark
@@ -27,7 +30,7 @@ class DashboardScreen extends ConsumerWidget {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _DashboardHeader(isDark: isDark, ref: ref),
+          _DashboardHeader(isDark: isDark, ref: ref, isAdmin: isAdmin),
           Expanded(
             child: projectsAsync.when(
               data: (projects) => projects.isEmpty
@@ -36,8 +39,10 @@ class DashboardScreen extends ConsumerWidget {
                       title: 'No projects yet',
                       description:
                           'Create your first project to start managing tasks with AI-powered planning.',
-                      actionLabel: 'Create Project',
-                      onAction: () => _showCreateProject(context, ref),
+                      actionLabel: isAdmin ? 'Create Project' : null,
+                      onAction: isAdmin
+                          ? () => _showCreateProject(context, ref)
+                          : null,
                     )
                   : _ProjectGrid(projects: projects, ref: ref),
               loading: () => const _DashboardSkeleton(),
@@ -94,10 +99,15 @@ class DashboardScreen extends ConsumerWidget {
 }
 
 class _DashboardHeader extends StatelessWidget {
-  const _DashboardHeader({required this.isDark, required this.ref});
+  const _DashboardHeader({
+    required this.isDark,
+    required this.ref,
+    required this.isAdmin,
+  });
 
   final bool isDark;
   final WidgetRef ref;
+  final bool isAdmin;
 
   @override
   Widget build(BuildContext context) {
@@ -143,24 +153,25 @@ class _DashboardHeader extends StatelessWidget {
                   ],
                 ),
               ),
-              AppButton(
-                label: 'New Project',
-                icon: Icons.add_rounded,
-                onPressed: () async {
-                  final result = await CreateProjectDialog.show(context);
-                  if (result != null) {
-                    ref
-                        .read(projectListProvider.notifier)
-                        .createProject(
-                          name: result.name,
-                          description: result.description,
-                          color: result.color,
-                        );
-                  }
-                },
-                variant: AppButtonVariant.primary,
-                size: AppButtonSize.md,
-              ),
+              if (isAdmin)
+                AppButton(
+                  label: 'New Project',
+                  icon: Icons.add_rounded,
+                  onPressed: () async {
+                    final result = await CreateProjectDialog.show(context);
+                    if (result != null) {
+                      ref
+                          .read(projectListProvider.notifier)
+                          .createProject(
+                            name: result.name,
+                            description: result.description,
+                            color: result.color,
+                          );
+                    }
+                  },
+                  variant: AppButtonVariant.primary,
+                  size: AppButtonSize.md,
+                ),
             ],
           ),
         )

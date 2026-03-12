@@ -419,6 +419,29 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> {
                           hintColor: hintColor,
                           onChanged: _onAssigneeChanged,
                         )
+                      else if (_assigneeId == null)
+                        _SelfAssignButton(
+                          isDark: isDark,
+                          borderColor: borderColor,
+                          hintColor: hintColor,
+                          onAssign: () async {
+                            try {
+                              final updated = await ref
+                                  .read(boardTasksProvider(widget.projectId).notifier)
+                                  .assignSelf(widget.task.id);
+                              setState(() {
+                                _assigneeId = updated.assigneeId;
+                                _assigneeName = updated.assigneeName;
+                              });
+                              ref.read(selectedTaskProvider.notifier).state = updated;
+                              if (!mounted) return;
+                              AppToast.success(context, 'Tâche assignée');
+                            } catch (_) {
+                              if (!mounted) return;
+                              AppToast.error(context, 'Échec de l\'assignation');
+                            }
+                          },
+                        )
                       else
                         _AssigneeReadOnly(
                           assigneeName: _assigneeName,
@@ -725,6 +748,60 @@ class _AssigneePicker extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+}
+
+// =============================================================================
+// Self-assign button (non-admin, unassigned task)
+// =============================================================================
+
+class _SelfAssignButton extends StatelessWidget {
+  const _SelfAssignButton({
+    required this.isDark,
+    required this.borderColor,
+    required this.hintColor,
+    required this.onAssign,
+  });
+
+  final bool isDark;
+  final Color borderColor;
+  final Color hintColor;
+  final VoidCallback onAssign;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onAssign,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.md,
+          ),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+            border: Border.all(color: AppColors.primary.withOpacity(0.5)),
+            color: AppColors.primary.withOpacity(0.06),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.person_add_rounded, size: 14, color: AppColors.primary),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                'S\'assigner cette tâche',
+                style: TextStyle(
+                  color: AppColors.primary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

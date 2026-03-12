@@ -50,4 +50,10 @@ const createForProject = asyncHandler(async (req, res) => {
   res.status(201).json(tasksService.serializeTask(task, req.params.projectId));
 });
 
-module.exports = { create, listByStory, getById, update, remove, move, listByProject, createForProject };
+const assign = asyncHandler(async (req, res) => {
+  const isAdmin = req.user.role === "ADMIN";
+  const task = await tasksService.assignSelf(req.params.id, req.user.id, isAdmin);
+  res.json(tasksService.serializeTask(task));
+});
+
+module.exports = { create, listByStory, getById, update, remove, move, listByProject, createForProject, assign };

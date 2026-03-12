@@ -22,4 +22,7 @@ abstract class TasksApi {
   /// PATCH /tasks/:id/move
   /// Body: { status: string, order: int }
   static String move(String id) => '$basePath/$id/move';
+
+  /// PATCH /tasks/:id/assign
+  static String assign(String id) => '$basePath/$id/assign';
 }

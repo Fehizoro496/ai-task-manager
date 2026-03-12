@@ -124,12 +124,12 @@ const remove = async (id, userId, isAdmin) => {
 };
 
 const moveTask = async (id, userId, isAdmin, { status, position }) => {
-  if (!isAdmin && status === "DONE") {
-    throw new AppError("Only admin can mark a task as Done", 403);
-  }
-
   const task = await prisma.task.findUnique({ where: { id } });
   if (!task) throw new AppError("Task not found", 404);
+
+  if (!isAdmin && task.assigneeId !== userId) {
+    throw new AppError("You can only change the status of tasks assigned to you", 403);
+  }
 
   return prisma.task.update({
     where: { id },
@@ -209,6 +209,21 @@ const createForProject = async (userId, isAdmin, projectId, data) => {
   });
 };
 
+const assignSelf = async (id, userId, isAdmin) => {
+  const task = await prisma.task.findUnique({ where: { id } });
+  if (!task) throw new AppError("Task not found", 404);
+
+  if (!isAdmin && task.assigneeId !== null) {
+    throw new AppError("Task is already assigned to someone", 403);
+  }
+
+  return prisma.task.update({
+    where: { id },
+    data: { assigneeId: userId },
+    include: assigneeInclude,
+  });
+};
+
 module.exports = {
   create,
   listByStory,
@@ -218,5 +233,6 @@ module.exports = {
   moveTask,
   listByProject,
   createForProject,
+  assignSelf,
   serializeTask,
 };

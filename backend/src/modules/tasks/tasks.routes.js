@@ -183,6 +183,8 @@ router.put("/:id", requireAdmin, validate(updateTaskSchema), tasksController.upd
  */
 router.patch("/:id/move", validate(moveTaskSchema), tasksController.move);
 
+router.patch("/:id/assign", tasksController.assign);
+
 /**
  * @swagger
  * /tasks/{id}:

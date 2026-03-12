@@ -135,6 +135,24 @@ class TaskService {
     }
   }
 
+  Future<TaskEntity> assignSelf(String taskId) async {
+    try {
+      final response = await _apiClient.patch<Map<String, dynamic>>(
+        TasksApi.assign(taskId),
+      );
+      if (response.data == null) {
+        throw const ServerException(message: 'No data received from server');
+      }
+      final updated = TaskModel.fromJson(response.data!);
+      await _updateTaskInCache(updated);
+      return updated;
+    } on ServerException {
+      rethrow;
+    } catch (e) {
+      throw ServerException(message: e.toString());
+    }
+  }
+
   Future<void> moveTask(
     String taskId,
     TaskStatus newStatus,
