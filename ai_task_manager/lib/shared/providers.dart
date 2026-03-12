@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -20,4 +21,4 @@ final apiClientProvider = Provider<ApiClient>((ref) {
   return ApiClient(baseUrl: ApiConfig.baseUrl, prefs: prefs);
 });
 
-final themeProvider = StateProvider<bool>((ref) => false);
+final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.system);

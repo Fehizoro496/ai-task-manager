@@ -2,6 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:ai_task_manager/features/admin/model/admin_user_model.dart';
 import 'package:ai_task_manager/features/admin/service/admin_service.dart';
+import 'package:ai_task_manager/features/projects/model/project_entity.dart';
+import 'package:ai_task_manager/features/projects/viewmodel/project_viewmodel.dart';
+import 'package:ai_task_manager/features/tasks/model/task_entity.dart';
+import 'package:ai_task_manager/features/tasks/viewmodel/task_viewmodel.dart';
 import 'package:ai_task_manager/shared/providers.dart';
 
 final adminServiceProvider = Provider<AdminService>((ref) {
@@ -42,3 +46,38 @@ class AdminUsersViewModel extends AsyncNotifier<List<AdminUserModel>> {
     ref.invalidateSelf();
   }
 }
+
+class AdminOverviewData {
+  final List<ProjectEntity> projects;
+  final Map<String, List<TaskEntity>> tasksByProject;
+  final List<AdminUserModel> approvedUsers;
+
+  const AdminOverviewData({
+    required this.projects,
+    required this.tasksByProject,
+    required this.approvedUsers,
+  });
+
+  int get totalProjects => projects.length;
+  int get totalTasks =>
+      tasksByProject.values.fold(0, (sum, list) => sum + list.length);
+  int get totalMembers => approvedUsers.length;
+}
+
+final adminOverviewProvider = FutureProvider<AdminOverviewData>((ref) async {
+  final projects = await ref.watch(projectListProvider.future);
+  final approvedUsers = await ref.watch(approvedUsersProvider.future);
+
+  final taskEntries = await Future.wait(
+    projects.map((p) async {
+      final tasks = await ref.read(boardTasksProvider(p.id).future);
+      return MapEntry(p.id, tasks);
+    }),
+  );
+
+  return AdminOverviewData(
+    projects: projects,
+    tasksByProject: Map.fromEntries(taskEntries),
+    approvedUsers: approvedUsers,
+  );
+});

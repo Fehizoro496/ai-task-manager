@@ -879,7 +879,7 @@ class _StatusDropdown extends StatelessWidget {
                 : AppColors.textTertiaryLight,
           ),
           items: TaskStatus.values
-              .where((s) => isAdmin || s != TaskStatus.done)
+              .where((s) => isAdmin || s != TaskStatus.done || s == value)
               .map(
                 (status) => DropdownMenuItem(
                   value: status,

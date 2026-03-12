@@ -15,33 +15,28 @@ class AppLayout extends ConsumerWidget {
 
   List<SidebarItem> _buildNavItems(UserEntity? user) {
     return [
+      if (user?.isAdmin == true)
+        const SidebarItem(
+          icon: Icons.bar_chart_rounded,
+          label: 'Dashboard',
+          route: '/overview',
+        ),
       const SidebarItem(
-        icon: Icons.dashboard_rounded,
-        label: 'Dashboard',
+        icon: Icons.folder_rounded,
+        label: 'Projects',
         route: '/dashboard',
-      ),
-      const SidebarItem(
-        icon: Icons.view_kanban_rounded,
-        label: 'Board',
-        route: '/board',
-      ),
-      const SidebarItem(
-        icon: Icons.auto_awesome_rounded,
-        label: 'AI Planning',
-        route: '/ai-planning',
-        showBadge: true,
       ),
       if (user?.isAdmin == true)
         const SidebarItem(
-          icon: Icons.admin_panel_settings_rounded,
-          label: 'Admin',
-          route: '/admin',
+          icon: Icons.people_rounded,
+          label: 'Team',
+          route: '/team',
         ),
-      // const SidebarItem(
-      //   icon: Icons.settings_rounded,
-      //   label: 'Settings',
-      //   route: '/settings',
-      // ),
+      const SidebarItem(
+        icon: Icons.settings_rounded,
+        label: 'Settings',
+        route: '/settings',
+      ),
     ];
   }
 

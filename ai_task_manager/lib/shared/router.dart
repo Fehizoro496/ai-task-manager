@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:ai_task_manager/features/admin/view/admin_dashboard_screen.dart';
+import 'package:ai_task_manager/features/admin/view/admin_overview_screen.dart';
 import 'package:ai_task_manager/features/auth/viewmodel/auth_viewmodel.dart';
 import 'package:ai_task_manager/shared/app_layout.dart';
 import 'package:ai_task_manager/features/auth/view/login_screen.dart';
@@ -11,6 +12,8 @@ import 'package:ai_task_manager/features/auth/view/register_screen.dart';
 import 'package:ai_task_manager/features/projects/view/dashboard_screen.dart';
 import 'package:ai_task_manager/features/board/view/board_screen.dart';
 import 'package:ai_task_manager/features/ai_planning/view/ai_planning_screen.dart';
+import 'package:ai_task_manager/features/settings/view/settings_screen.dart';
+import 'package:ai_task_manager/features/team/view/team_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -31,9 +34,15 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       if (!isLoggedIn && !isAuthRoute) return '/login';
       if (isLoggedIn && (location == '/login' || location == '/register')) {
-        return user.isAdmin ? '/admin' : '/dashboard';
+        return user.isAdmin ? '/overview' : '/dashboard';
       }
       if (location == '/admin' && isLoggedIn && !user.isAdmin) {
+        return '/dashboard';
+      }
+      if (location == '/overview' && isLoggedIn && !user.isAdmin) {
+        return '/dashboard';
+      }
+      if (location == '/team' && isLoggedIn && !user.isAdmin) {
         return '/dashboard';
       }
 
@@ -86,17 +95,6 @@ final routerProvider = Provider<GoRouter>((ref) {
             ),
           ),
           GoRoute(
-            path: '/board',
-            pageBuilder: (context, state) => CustomTransitionPage(
-              key: state.pageKey,
-              child: const BoardScreen(projectId: 'default'),
-              transitionsBuilder:
-                  (context, animation, secondaryAnimation, child) {
-                return FadeTransition(opacity: animation, child: child);
-              },
-            ),
-          ),
-          GoRoute(
             path: '/board/:projectId',
             pageBuilder: (context, state) => CustomTransitionPage(
               key: state.pageKey,
@@ -125,6 +123,37 @@ final routerProvider = Provider<GoRouter>((ref) {
             pageBuilder: (context, state) => CustomTransitionPage(
               key: state.pageKey,
               child: const AdminDashboardScreen(),
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) {
+                return FadeTransition(opacity: animation, child: child);
+              },
+            ),
+          ),
+          GoRoute(
+            path: '/overview',
+            pageBuilder: (context, state) => CustomTransitionPage(
+              key: state.pageKey,
+              child: const AdminOverviewScreen(),
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) =>
+                      FadeTransition(opacity: animation, child: child),
+            ),
+          ),
+          GoRoute(
+            path: '/team',
+            pageBuilder: (context, state) => CustomTransitionPage(
+              key: state.pageKey,
+              child: const TeamScreen(),
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) =>
+                      FadeTransition(opacity: animation, child: child),
+            ),
+          ),
+          GoRoute(
+            path: '/settings',
+            pageBuilder: (context, state) => CustomTransitionPage(
+              key: state.pageKey,
+              child: const SettingsScreen(),
               transitionsBuilder:
                   (context, animation, secondaryAnimation, child) {
                 return FadeTransition(opacity: animation, child: child);
