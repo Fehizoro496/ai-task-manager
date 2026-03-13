@@ -1,5 +1,6 @@
 const prisma = require("../../prisma/client");
 const AppError = require("../../utils/AppError");
+const { createNotification, notifyAdmins } = require("../notifications/notifications.service");
 
 // Map Prisma UPPERCASE status to lowercase for frontend
 const statusToLowercase = {
@@ -107,7 +108,34 @@ const update = async (id, userId, isAdmin, data) => {
     if (!assignee) throw new AppError("Assignee not found", 404);
   }
 
-  return prisma.task.update({ where: { id }, data, include: assigneeInclude });
+  const updated = await prisma.task.update({ where: { id }, data, include: assigneeInclude });
+
+  const projectId = task.story.epic.project.id;
+  const link = `/board/${projectId}`;
+
+  // Notify new assignee when assigned
+  if (data.assigneeId && data.assigneeId !== task.assigneeId) {
+    createNotification({
+      type: "TASK_ASSIGNED",
+      title: "Tâche assignée",
+      message: `La tâche "${task.title}" vous a été assignée.`,
+      userId: data.assigneeId,
+      taskId: id,
+      link,
+    }).catch(() => {});
+  } else if (task.assigneeId && task.assigneeId !== userId) {
+    // Notify existing assignee of other updates
+    createNotification({
+      type: "TASK_UPDATED",
+      title: "Tâche mise à jour",
+      message: `La tâche "${task.title}" a été modifiée.`,
+      userId: task.assigneeId,
+      taskId: id,
+      link,
+    }).catch(() => {});
+  }
+
+  return updated;
 };
 
 const remove = async (id, userId, isAdmin) => {
@@ -124,18 +152,49 @@ const remove = async (id, userId, isAdmin) => {
 };
 
 const moveTask = async (id, userId, isAdmin, { status, position }) => {
-  const task = await prisma.task.findUnique({ where: { id } });
+  const task = await prisma.task.findUnique({
+    where: { id },
+    include: { story: { include: { epic: { include: { project: true } } } } },
+  });
   if (!task) throw new AppError("Task not found", 404);
 
   if (!isAdmin && task.assigneeId !== userId) {
     throw new AppError("You can only change the status of tasks assigned to you", 403);
   }
 
-  return prisma.task.update({
+  const updated = await prisma.task.update({
     where: { id },
     data: { status, position },
     include: assigneeInclude,
   });
+
+  const projectId = task.story.epic.project.id;
+  const link = `/board/${projectId}`;
+
+  // Notify assignee if someone else moved the task
+  if (task.assigneeId && task.assigneeId !== userId) {
+    createNotification({
+      type: "TASK_STATUS_CHANGED",
+      title: "Statut de tâche modifié",
+      message: `Le statut de "${task.title}" a changé vers ${status}.`,
+      userId: task.assigneeId,
+      taskId: id,
+      link,
+    }).catch(() => {});
+  }
+
+  // Notify admins when a non-admin user changes the status
+  if (!isAdmin) {
+    notifyAdmins({
+      type: "TASK_STATUS_CHANGED",
+      title: "Statut de tâche modifié",
+      message: `Le statut de "${task.title}" a changé vers ${status}.`,
+      taskId: id,
+      link,
+    }).catch(() => {});
+  }
+
+  return updated;
 };
 
 const listByProject = async (projectId, userId, isAdmin) => {

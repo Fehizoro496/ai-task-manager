@@ -12,6 +12,7 @@ import 'package:ai_task_manager/features/auth/view/register_screen.dart';
 import 'package:ai_task_manager/features/projects/view/dashboard_screen.dart';
 import 'package:ai_task_manager/features/board/view/board_screen.dart';
 import 'package:ai_task_manager/features/ai_planning/view/ai_planning_screen.dart';
+import 'package:ai_task_manager/features/notifications/view/notifications_screen.dart';
 import 'package:ai_task_manager/features/settings/view/settings_screen.dart';
 import 'package:ai_task_manager/features/team/view/team_screen.dart';
 
@@ -144,6 +145,16 @@ final routerProvider = Provider<GoRouter>((ref) {
             pageBuilder: (context, state) => CustomTransitionPage(
               key: state.pageKey,
               child: const TeamScreen(),
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) =>
+                      FadeTransition(opacity: animation, child: child),
+            ),
+          ),
+          GoRoute(
+            path: '/notifications',
+            pageBuilder: (context, state) => CustomTransitionPage(
+              key: state.pageKey,
+              child: const NotificationsScreen(),
               transitionsBuilder:
                   (context, animation, secondaryAnimation, child) =>
                       FadeTransition(opacity: animation, child: child),

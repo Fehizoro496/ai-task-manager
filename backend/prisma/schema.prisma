@@ -19,19 +19,20 @@ enum UserStatus {
 }
 
 model User {
-  id            String     @id @default(uuid())
-  email         String     @unique
+  id            String         @id @default(uuid())
+  email         String         @unique
   password      String?
   name          String
-  googleId      String?    @unique
+  googleId      String?        @unique
   avatarUrl     String?
-  provider      String     @default("local")
-  role          UserRole   @default(USER)
-  status        UserStatus @default(PENDING)
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  provider      String         @default("local")
+  role          UserRole       @default(USER)
+  status        UserStatus     @default(PENDING)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
   projects      Project[]
-  assignedTasks Task[]     @relation("TaskAssignee")
+  assignedTasks Task[]         @relation("TaskAssignee")
+  notifications Notification[]
 }
 
 model Project {
@@ -93,6 +94,25 @@ model Task {
   dueDate     DateTime?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+}
+
+enum NotificationType {
+  TASK_ASSIGNED
+  TASK_UPDATED
+  TASK_STATUS_CHANGED
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  type      NotificationType
+  title     String
+  message   String
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  taskId    String
+  link      String
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
 }
 
 model AiDraft {

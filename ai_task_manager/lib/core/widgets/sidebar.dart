@@ -8,12 +8,14 @@ class SidebarItem {
   final String label;
   final String route;
   final bool showBadge;
+  final int? badgeCount;
 
   const SidebarItem({
     required this.icon,
     required this.label,
     required this.route,
     this.showBadge = false,
+    this.badgeCount,
   });
 }
 
@@ -199,7 +201,52 @@ class _AppSidebarState extends State<AppSidebar> {
             ),
             child: widget.isCollapsed
                 ? Center(
-                    child: Icon(item.icon, size: 20, color: iconColor),
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Icon(item.icon, size: 20, color: iconColor),
+                        if (item.badgeCount != null && item.badgeCount! > 0)
+                          Positioned(
+                            top: -4,
+                            right: -6,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                                vertical: 1,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.error,
+                                borderRadius: BorderRadius.circular(
+                                    AppSpacing.radiusFull),
+                              ),
+                              child: Text(
+                                item.badgeCount! > 99
+                                    ? '99+'
+                                    : '${item.badgeCount}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w700,
+                                  height: 1,
+                                ),
+                              ),
+                            ),
+                          )
+                        else if (item.showBadge)
+                          Positioned(
+                            top: -2,
+                            right: -2,
+                            child: Container(
+                              width: 7,
+                              height: 7,
+                              decoration: const BoxDecoration(
+                                color: AppColors.accent,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   )
                 : Row(
                     children: [
@@ -218,7 +265,30 @@ class _AppSidebarState extends State<AppSidebar> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      if (item.showBadge)
+                      if (item.badgeCount != null && item.badgeCount! > 0)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.error,
+                            borderRadius:
+                                BorderRadius.circular(AppSpacing.radiusFull),
+                          ),
+                          child: Text(
+                            item.badgeCount! > 99
+                                ? '99+'
+                                : '${item.badgeCount}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              height: 1,
+                            ),
+                          ),
+                        )
+                      else if (item.showBadge)
                         Container(
                           width: 8,
                           height: 8,
