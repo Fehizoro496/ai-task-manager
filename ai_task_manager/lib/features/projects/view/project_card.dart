@@ -47,12 +47,15 @@ class _ProjectCardState extends State<ProjectCard> {
     final borderColor = _isHovered
         ? _accentColor.withOpacity(0.4)
         : (isDark ? AppColors.borderDark : AppColors.borderLight);
-    final textPrimary =
-        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final textSecondary =
-        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final textTertiary =
-        isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight;
+    final textPrimary = isDark
+        ? AppColors.textPrimaryDark
+        : AppColors.textPrimaryLight;
+    final textSecondary = isDark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondaryLight;
+    final textTertiary = isDark
+        ? AppColors.textTertiaryDark
+        : AppColors.textTertiaryLight;
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -158,8 +161,9 @@ class _ProjectCardState extends State<ProjectCard> {
                           ),
                           const SizedBox(width: AppSpacing.xs),
                           Text(
-                            DateFormat('MMM d, yyyy')
-                                .format(widget.project.createdAt),
+                            DateFormat(
+                              'MMM d, yyyy',
+                            ).format(widget.project.createdAt),
                             style: TextStyle(
                               color: textTertiary,
                               fontSize: 11,
@@ -176,8 +180,9 @@ class _ProjectCardState extends State<ProjectCard> {
                               color: isDark
                                   ? AppColors.surfaceDark
                                   : AppColors.hoverLight,
-                              borderRadius:
-                                  BorderRadius.circular(AppSpacing.radiusSm),
+                              borderRadius: BorderRadius.circular(
+                                AppSpacing.radiusSm,
+                              ),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -265,17 +270,19 @@ class _ContextMenuButtonState extends State<_ContextMenuButton> {
 
   void _showContextMenu(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final renderBox = context.findRenderObject() as RenderBox;
-    final offset = renderBox.localToGlobal(Offset.zero);
+    final button = context.findRenderObject()! as RenderBox;
+    final overlay = Navigator.of(context).overlay!.context.findRenderObject()! as RenderBox;
+    final position = RelativeRect.fromRect(
+      Rect.fromPoints(
+        button.localToGlobal(Offset.zero, ancestor: overlay),
+        button.localToGlobal(button.size.bottomRight(Offset.zero), ancestor: overlay),
+      ),
+      Offset.zero & overlay.size,
+    );
 
     showMenu<String>(
       context: context,
-      position: RelativeRect.fromLTRB(
-        offset.dx,
-        offset.dy + renderBox.size.height,
-        offset.dx + renderBox.size.width,
-        offset.dy,
-      ),
+      position: position,
       color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
@@ -289,11 +296,13 @@ class _ContextMenuButtonState extends State<_ContextMenuButton> {
             value: 'members',
             child: Row(
               children: [
-                Icon(Icons.group_rounded,
-                    size: 16,
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight),
+                Icon(
+                  Icons.group_rounded,
+                  size: 16,
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight,
+                ),
                 const SizedBox(width: AppSpacing.sm),
                 Text(
                   'Gérer les membres',
@@ -313,8 +322,11 @@ class _ContextMenuButtonState extends State<_ContextMenuButton> {
             value: 'delete',
             child: Row(
               children: [
-                const Icon(Icons.delete_outline_rounded,
-                    size: 16, color: AppColors.error),
+                const Icon(
+                  Icons.delete_outline_rounded,
+                  size: 16,
+                  color: AppColors.error,
+                ),
                 const SizedBox(width: AppSpacing.sm),
                 const Text(
                   'Delete Project',

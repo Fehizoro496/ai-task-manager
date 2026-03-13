@@ -4,25 +4,29 @@
   - A unique constraint covering the columns `[googleId]` on the table `User` will be added. If there are existing duplicate values, this will fail.
 
 */
--- CreateEnum
-CREATE TYPE "UserRole" AS ENUM ('USER', 'ADMIN');
+-- CreateEnum (IF NOT EXISTS to avoid conflict with earlier migrations)
+DO $$ BEGIN
+  CREATE TYPE "UserRole" AS ENUM ('USER', 'ADMIN');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- CreateEnum
-CREATE TYPE "UserStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
+DO $$ BEGIN
+  CREATE TYPE "UserStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- CreateEnum
-CREATE TYPE "NotificationType" AS ENUM ('TASK_ASSIGNED', 'TASK_UPDATED', 'TASK_STATUS_CHANGED');
+DO $$ BEGIN
+  CREATE TYPE "NotificationType" AS ENUM ('TASK_ASSIGNED', 'TASK_UPDATED', 'TASK_STATUS_CHANGED');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- AlterTable
-ALTER TABLE "User" ADD COLUMN     "avatarUrl" TEXT,
-ADD COLUMN     "googleId" TEXT,
-ADD COLUMN     "provider" TEXT NOT NULL DEFAULT 'local',
-ADD COLUMN     "role" "UserRole" NOT NULL DEFAULT 'USER',
-ADD COLUMN     "status" "UserStatus" NOT NULL DEFAULT 'PENDING',
-ALTER COLUMN "password" DROP NOT NULL;
+-- AlterTable (IF NOT EXISTS to avoid conflict with earlier migrations)
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "avatarUrl" TEXT;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "googleId" TEXT;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "provider" TEXT NOT NULL DEFAULT 'local';
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "role" "UserRole" NOT NULL DEFAULT 'USER';
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "status" "UserStatus" NOT NULL DEFAULT 'PENDING';
+ALTER TABLE "User" ALTER COLUMN "password" DROP NOT NULL;
 
 -- CreateTable
-CREATE TABLE "Notification" (
+CREATE TABLE IF NOT EXISTS "Notification" (
     "id" TEXT NOT NULL,
     "type" "NotificationType" NOT NULL,
     "title" TEXT NOT NULL,
@@ -37,7 +41,9 @@ CREATE TABLE "Notification" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "User_googleId_key" ON "User"("googleId");
+CREATE UNIQUE INDEX IF NOT EXISTS "User_googleId_key" ON "User"("googleId");
 
 -- AddForeignKey
-ALTER TABLE "Notification" ADD CONSTRAINT "Notification_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+  ALTER TABLE "Notification" ADD CONSTRAINT "Notification_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
