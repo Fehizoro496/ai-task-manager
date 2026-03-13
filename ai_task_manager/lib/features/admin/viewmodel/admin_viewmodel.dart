@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:ai_task_manager/features/admin/model/admin_user_model.dart';
+import 'package:ai_task_manager/features/admin/model/project_member_model.dart';
 import 'package:ai_task_manager/features/admin/service/admin_service.dart';
 import 'package:ai_task_manager/features/projects/model/project_entity.dart';
 import 'package:ai_task_manager/features/projects/viewmodel/project_viewmodel.dart';
@@ -81,3 +82,33 @@ final adminOverviewProvider = FutureProvider<AdminOverviewData>((ref) async {
     approvedUsers: approvedUsers,
   );
 });
+
+// ---------------------------------------------------------------------------
+// Project members
+// ---------------------------------------------------------------------------
+
+final projectMembersProvider = AsyncNotifierProvider.family<
+    ProjectMembersViewModel, List<ProjectMemberModel>, String>(
+  ProjectMembersViewModel.new,
+);
+
+class ProjectMembersViewModel
+    extends FamilyAsyncNotifier<List<ProjectMemberModel>, String> {
+  @override
+  Future<List<ProjectMemberModel>> build(String arg) async {
+    return ref.read(adminServiceProvider).getProjectMembers(arg);
+  }
+
+  Future<void> addMember(String userId) async {
+    final member =
+        await ref.read(adminServiceProvider).addProjectMember(arg, userId);
+    final current = state.valueOrNull ?? [];
+    state = AsyncData([...current, member]);
+  }
+
+  Future<void> removeMember(String userId) async {
+    await ref.read(adminServiceProvider).removeProjectMember(arg, userId);
+    final current = state.valueOrNull ?? [];
+    state = AsyncData(current.where((m) => m.userId != userId).toList());
+  }
+}

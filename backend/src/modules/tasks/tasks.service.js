@@ -1,6 +1,7 @@
 const prisma = require("../../prisma/client");
 const AppError = require("../../utils/AppError");
 const { createNotification, notifyAdmins } = require("../notifications/notifications.service");
+const { isMember } = require("../projects/projects.service");
 
 // Map Prisma UPPERCASE status to lowercase for frontend
 const statusToLowercase = {
@@ -106,6 +107,10 @@ const update = async (id, userId, isAdmin, data) => {
   if (data.assigneeId) {
     const assignee = await prisma.user.findUnique({ where: { id: data.assigneeId } });
     if (!assignee) throw new AppError("Assignee not found", 404);
+
+    const projectId = task.story.epic.project.id;
+    const memberCheck = await isMember(projectId, data.assigneeId);
+    if (!memberCheck) throw new AppError("User is not a member of this project", 400);
   }
 
   const updated = await prisma.task.update({ where: { id }, data, include: assigneeInclude });
@@ -200,6 +205,11 @@ const moveTask = async (id, userId, isAdmin, { status, position }) => {
 const listByProject = async (projectId, userId, isAdmin) => {
   const project = await prisma.project.findUnique({ where: { id: projectId } });
   if (!project) throw new AppError("Project not found", 404);
+
+  if (!isAdmin) {
+    const member = await isMember(projectId, userId);
+    if (!member) throw new AppError("Project not found", 404);
+  }
 
   return prisma.task.findMany({
     where: {

@@ -5,7 +5,7 @@ import 'package:ai_task_manager/core/design_system/app_button.dart';
 import 'package:ai_task_manager/core/design_system/app_toast.dart';
 import 'package:ai_task_manager/core/theme/app_colors.dart';
 import 'package:ai_task_manager/core/theme/app_spacing.dart';
-import 'package:ai_task_manager/features/admin/model/admin_user_model.dart';
+import 'package:ai_task_manager/features/admin/model/project_member_model.dart';
 import 'package:ai_task_manager/features/admin/viewmodel/admin_viewmodel.dart';
 import 'package:ai_task_manager/features/auth/viewmodel/auth_viewmodel.dart';
 import 'package:ai_task_manager/features/board/viewmodel/board_viewmodel.dart';
@@ -206,10 +206,10 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> {
     });
   }
 
-  void _onAssigneeChanged(AdminUserModel? user) {
+  void _onAssigneeChanged(ProjectMemberModel? member) {
     setState(() {
-      _assigneeId = user?.id;
-      _assigneeName = user?.name;
+      _assigneeId = member?.userId;
+      _assigneeName = member?.user.name;
       _isDirty = true;
     });
   }
@@ -412,6 +412,7 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> {
                       const SizedBox(height: AppSpacing.xs),
                       if (isAdmin)
                         _AssigneePicker(
+                          projectId: widget.projectId,
                           selectedId: _assigneeId,
                           isDark: isDark,
                           borderColor: borderColor,
@@ -640,6 +641,7 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> {
 
 class _AssigneePicker extends ConsumerWidget {
   const _AssigneePicker({
+    required this.projectId,
     required this.selectedId,
     required this.isDark,
     required this.borderColor,
@@ -648,18 +650,19 @@ class _AssigneePicker extends ConsumerWidget {
     required this.onChanged,
   });
 
+  final String projectId;
   final String? selectedId;
   final bool isDark;
   final Color borderColor;
   final Color titleColor;
   final Color hintColor;
-  final ValueChanged<AdminUserModel?> onChanged;
+  final ValueChanged<ProjectMemberModel?> onChanged;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final usersAsync = ref.watch(approvedUsersProvider);
+    final membersAsync = ref.watch(projectMembersProvider(projectId));
 
-    return usersAsync.when(
+    return membersAsync.when(
       loading: () => Container(
         height: 44,
         decoration: BoxDecoration(
@@ -670,10 +673,7 @@ class _AssigneePicker extends ConsumerWidget {
           child: SizedBox(
             width: 16,
             height: 16,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: hintColor,
-            ),
+            child: CircularProgressIndicator(strokeWidth: 2, color: hintColor),
           ),
         ),
       ),
@@ -685,13 +685,13 @@ class _AssigneePicker extends ConsumerWidget {
         ),
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
         child: Text(
-          'Failed to load users',
+          'Failed to load members',
           style: TextStyle(color: AppColors.error, fontSize: 13),
         ),
       ),
-      data: (users) {
+      data: (members) {
         final selected =
-            users.where((u) => u.id == selectedId).firstOrNull;
+            members.where((m) => m.userId == selectedId).firstOrNull;
 
         return Container(
           width: double.infinity,
@@ -701,40 +701,38 @@ class _AssigneePicker extends ConsumerWidget {
             border: Border.all(color: borderColor),
           ),
           child: DropdownButtonHideUnderline(
-            child: DropdownButton<AdminUserModel?>(
+            child: DropdownButton<ProjectMemberModel?>(
               value: selected,
               isExpanded: true,
-              icon: Icon(
-                Icons.expand_more_rounded,
-                size: 18,
-                color: hintColor,
-              ),
+              icon: Icon(Icons.expand_more_rounded, size: 18, color: hintColor),
               hint: Text(
                 'Unassigned',
                 style: TextStyle(color: hintColor, fontSize: 13),
               ),
               items: [
-                DropdownMenuItem<AdminUserModel?>(
+                DropdownMenuItem<ProjectMemberModel?>(
                   value: null,
                   child: Text(
                     'Unassigned',
                     style: TextStyle(color: hintColor, fontSize: 13),
                   ),
                 ),
-                ...users.map(
-                  (user) => DropdownMenuItem<AdminUserModel?>(
-                    value: user,
+                ...members.map(
+                  (member) => DropdownMenuItem<ProjectMemberModel?>(
+                    value: member,
                     child: Row(
                       children: [
-                        _UserAvatar(user: user, size: 24),
+                        _UserAvatar(
+                          name: member.user.name,
+                          avatarUrl: member.user.avatarUrl,
+                          size: 24,
+                        ),
                         const SizedBox(width: AppSpacing.sm),
                         Expanded(
                           child: Text(
-                            user.name,
-                            style: TextStyle(
-                              color: titleColor,
-                              fontSize: 13,
-                            ),
+                            member.user.name,
+                            style:
+                                TextStyle(color: titleColor, fontSize: 13),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -851,24 +849,29 @@ class _AssigneeReadOnly extends StatelessWidget {
 // =============================================================================
 
 class _UserAvatar extends StatelessWidget {
-  const _UserAvatar({required this.user, required this.size});
+  const _UserAvatar({
+    required this.name,
+    this.avatarUrl,
+    required this.size,
+  });
 
-  final AdminUserModel user;
+  final String name;
+  final String? avatarUrl;
   final double size;
 
   @override
   Widget build(BuildContext context) {
-    if (user.avatarUrl != null) {
+    if (avatarUrl != null) {
       return CircleAvatar(
         radius: size / 2,
-        backgroundImage: NetworkImage(user.avatarUrl!),
+        backgroundImage: NetworkImage(avatarUrl!),
       );
     }
     return CircleAvatar(
       radius: size / 2,
-      backgroundColor: AppColors.primary.withOpacity(0.15),
+      backgroundColor: AppColors.primary.withValues(alpha: 0.15),
       child: Text(
-        user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
+        name.isNotEmpty ? name[0].toUpperCase() : '?',
         style: TextStyle(
           color: AppColors.primary,
           fontSize: size * 0.45,

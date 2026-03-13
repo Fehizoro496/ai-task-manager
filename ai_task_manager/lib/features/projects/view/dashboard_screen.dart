@@ -12,6 +12,7 @@ import 'package:ai_task_manager/features/projects/viewmodel/project_viewmodel.da
 import 'package:ai_task_manager/features/projects/view/project_card.dart';
 import 'package:ai_task_manager/features/auth/viewmodel/auth_viewmodel.dart';
 import 'package:ai_task_manager/features/projects/view/create_project_dialog.dart';
+import 'package:ai_task_manager/features/admin/view/project_members_dialog.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -44,7 +45,7 @@ class DashboardScreen extends ConsumerWidget {
                           ? () => _showCreateProject(context, ref)
                           : null,
                     )
-                  : _ProjectGrid(projects: projects, ref: ref),
+                  : _ProjectGrid(projects: projects, ref: ref, isAdmin: isAdmin),
               loading: () => const _DashboardSkeleton(),
               error: (error, _) => Center(
                 child: Column(
@@ -182,10 +183,15 @@ class _DashboardHeader extends StatelessWidget {
 }
 
 class _ProjectGrid extends StatelessWidget {
-  const _ProjectGrid({required this.projects, required this.ref});
+  const _ProjectGrid({
+    required this.projects,
+    required this.ref,
+    required this.isAdmin,
+  });
 
   final List<ProjectEntity> projects;
   final WidgetRef ref;
+  final bool isAdmin;
 
   @override
   Widget build(BuildContext context) {
@@ -216,11 +222,18 @@ class _ProjectGrid extends StatelessWidget {
                     ref.read(selectedProjectProvider.notifier).state = project;
                     context.go('/board/${project.id}');
                   },
-                  onDelete: () {
-                    ref
-                        .read(projectListProvider.notifier)
-                        .deleteProject(project.id);
-                  },
+                  onDelete: isAdmin
+                      ? () => ref
+                          .read(projectListProvider.notifier)
+                          .deleteProject(project.id)
+                      : null,
+                  onManageMembers: isAdmin
+                      ? () => ProjectMembersDialog.show(
+                            context,
+                            projectId: project.id,
+                            projectName: project.name,
+                          )
+                      : null,
                 )
                 .animate()
                 .fadeIn(

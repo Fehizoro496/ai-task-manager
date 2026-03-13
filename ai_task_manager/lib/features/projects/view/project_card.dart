@@ -11,12 +11,14 @@ class ProjectCard extends StatefulWidget {
     required this.project,
     required this.onTap,
     this.onDelete,
+    this.onManageMembers,
     this.taskCount = 0,
   });
 
   final ProjectEntity project;
   final VoidCallback onTap;
   final VoidCallback? onDelete;
+  final VoidCallback? onManageMembers;
   final int taskCount;
 
   @override
@@ -118,10 +120,13 @@ class _ProjectCardState extends State<ProjectCard> {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          if (_isHovered && widget.onDelete != null)
+                          if (_isHovered &&
+                              (widget.onDelete != null ||
+                                  widget.onManageMembers != null))
                             _ContextMenuButton(
                               isDark: isDark,
-                              onDelete: widget.onDelete!,
+                              onDelete: widget.onDelete,
+                              onManageMembers: widget.onManageMembers,
                             ),
                         ],
                       ),
@@ -211,11 +216,13 @@ class _ProjectCardState extends State<ProjectCard> {
 class _ContextMenuButton extends StatefulWidget {
   const _ContextMenuButton({
     required this.isDark,
-    required this.onDelete,
+    this.onDelete,
+    this.onManageMembers,
   });
 
   final bool isDark;
-  final VoidCallback onDelete;
+  final VoidCallback? onDelete;
+  final VoidCallback? onManageMembers;
 
   @override
   State<_ContextMenuButton> createState() => _ContextMenuButtonState();
@@ -277,28 +284,53 @@ class _ContextMenuButtonState extends State<_ContextMenuButton> {
         ),
       ),
       items: [
-        PopupMenuItem(
-          value: 'delete',
-          child: Row(
-            children: [
-              Icon(Icons.delete_outline_rounded, size: 16, color: AppColors.error),
-              const SizedBox(width: AppSpacing.sm),
-              Text(
-                'Delete Project',
-                style: TextStyle(
-                  color: AppColors.error,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
+        if (widget.onManageMembers != null)
+          PopupMenuItem(
+            value: 'members',
+            child: Row(
+              children: [
+                Icon(Icons.group_rounded,
+                    size: 16,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight),
+                const SizedBox(width: AppSpacing.sm),
+                Text(
+                  'Gérer les membres',
+                  style: TextStyle(
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+        if (widget.onDelete != null)
+          PopupMenuItem(
+            value: 'delete',
+            child: Row(
+              children: [
+                const Icon(Icons.delete_outline_rounded,
+                    size: 16, color: AppColors.error),
+                const SizedBox(width: AppSpacing.sm),
+                const Text(
+                  'Delete Project',
+                  style: TextStyle(
+                    color: AppColors.error,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
       ],
     ).then((value) {
-      if (value == 'delete') {
-        widget.onDelete();
-      }
+      if (value == 'delete') widget.onDelete?.call();
+      if (value == 'members') widget.onManageMembers?.call();
     });
   }
 }
