@@ -41,10 +41,12 @@ final projectListProvider =
 );
 
 class ProjectListViewModel extends AsyncNotifier<List<ProjectEntity>> {
-  late final ProjectService _service;
+  late ProjectService _service;
 
   @override
   Future<List<ProjectEntity>> build() async {
+    final prefs = ref.read(sharedPreferencesProvider);
+    if (prefs.getString(kCachedAuthTokenKey) == null) return [];
     _service = ref.watch(projectServiceProvider);
     return _loadProjects();
   }

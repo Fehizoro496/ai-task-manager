@@ -6,6 +6,7 @@ const authenticate = (req, res, next) => {
   const header = req.headers.authorization;
 
   if (!header || !header.startsWith("Bearer ")) {
+    console.log(`[401 DEBUG] No token on: ${req.method} ${req.originalUrl}`);
     throw new AppError("Authentication required", 401);
   }
 

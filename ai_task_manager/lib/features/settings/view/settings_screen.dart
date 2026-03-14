@@ -19,8 +19,9 @@ class SettingsScreen extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
 
     return Scaffold(
-      backgroundColor:
-          isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+      backgroundColor: isDark
+          ? AppColors.backgroundDark
+          : AppColors.backgroundLight,
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
@@ -89,19 +90,19 @@ class SettingsScreen extends ConsumerWidget {
             Text(
               'Settings',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: isDark
-                        ? AppColors.textPrimaryDark
-                        : AppColors.textPrimaryLight,
-                    fontWeight: FontWeight.w700,
-                  ),
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : AppColors.textPrimaryLight,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             Text(
               'Manage your account and preferences',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight,
-                  ),
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+              ),
             ),
           ],
         ),
@@ -132,12 +133,12 @@ class SettingsScreen extends ConsumerWidget {
             Text(
               title.toUpperCase(),
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.8,
-                  ),
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.8,
+              ),
             ),
           ],
         ),
@@ -163,8 +164,9 @@ class _ProfileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final initials =
-        name.isNotEmpty ? name.trim().split(' ').map((p) => p[0]).take(2).join().toUpperCase() : '?';
+    final initials = name.isNotEmpty
+        ? name.trim().split(' ').map((p) => p[0]).take(2).join().toUpperCase()
+        : '?';
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -199,34 +201,38 @@ class _ProfileCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         name.isNotEmpty ? name : 'Unknown',
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  color: isDark
-                                      ? AppColors.textPrimaryDark
-                                      : AppColors.textPrimaryLight,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              color: isDark
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.textPrimaryLight,
+                              fontWeight: FontWeight.w600,
+                            ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     if (role == 'ADMIN')
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.sm, vertical: 2),
+                          horizontal: AppSpacing.sm,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.primary.withOpacity(0.15),
-                          borderRadius:
-                              BorderRadius.circular(AppSpacing.radiusSm),
+                          borderRadius: BorderRadius.circular(
+                            AppSpacing.radiusSm,
+                          ),
                           border: Border.all(
-                              color: AppColors.primary.withOpacity(0.4)),
+                            color: AppColors.primary.withOpacity(0.4),
+                          ),
                         ),
                         child: Text(
                           'Admin',
-                          style:
-                              Theme.of(context).textTheme.labelSmall?.copyWith(
-                                    color: AppColors.primary,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
                         ),
                       ),
                   ],
@@ -235,10 +241,10 @@ class _ProfileCard extends StatelessWidget {
                 Text(
                   email,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondaryLight,
-                      ),
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
@@ -269,7 +275,7 @@ class _AppearanceCard extends StatelessWidget {
       (
         label: 'System',
         icon: Icons.brightness_auto_rounded,
-        mode: ThemeMode.system
+        mode: ThemeMode.system,
       ),
     ];
 
@@ -291,11 +297,11 @@ class _AppearanceCard extends StatelessWidget {
               Text(
                 'Theme',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: isDark
-                          ? AppColors.textPrimaryDark
-                          : AppColors.textPrimaryLight,
-                      fontWeight: FontWeight.w500,
-                    ),
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimaryLight,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
               Row(
                 children: options.map((opt) {
@@ -342,7 +348,9 @@ class _ThemeChip extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
         decoration: BoxDecoration(
           color: isSelected
               ? AppColors.primary.withOpacity(0.15)
@@ -363,21 +371,20 @@ class _ThemeChip extends StatelessWidget {
               color: isSelected
                   ? AppColors.primary
                   : (isDark
-                      ? AppColors.textSecondaryDark
-                      : AppColors.textSecondaryLight),
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight),
             ),
             const SizedBox(width: AppSpacing.xs),
             Text(
               label,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: isSelected
-                        ? AppColors.primary
-                        : (isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondaryLight),
-                    fontWeight:
-                        isSelected ? FontWeight.w600 : FontWeight.normal,
-                  ),
+                color: isSelected
+                    ? AppColors.primary
+                    : (isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondaryLight),
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              ),
             ),
           ],
         ),
@@ -408,34 +415,11 @@ class _AccountCard extends ConsumerWidget {
         labelColor: AppColors.error,
         isDark: isDark,
         trailing: const SizedBox.shrink(),
-        onTap: () => _confirmLogout(context, ref),
+        onTap: () => ref.read(authStateProvider.notifier).logout(),
       ),
     );
   }
 
-  Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Sign out'),
-        content: const Text('Are you sure you want to sign out?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            style: TextButton.styleFrom(foregroundColor: AppColors.error),
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Sign out'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true) {
-      ref.read(authStateProvider.notifier).logout();
-    }
-  }
 }
 
 class _SettingsTile extends StatelessWidget {
@@ -459,9 +443,11 @@ class _SettingsTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveIconColor = iconColor ??
+    final effectiveIconColor =
+        iconColor ??
         (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight);
-    final effectiveLabelColor = labelColor ??
+    final effectiveLabelColor =
+        labelColor ??
         (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight);
 
     return InkWell(
@@ -469,7 +455,9 @@ class _SettingsTile extends StatelessWidget {
       borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
       child: Padding(
         padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.md,
+        ),
         child: Row(
           children: [
             Container(
@@ -485,9 +473,9 @@ class _SettingsTile extends StatelessWidget {
               child: Text(
                 label,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: effectiveLabelColor,
-                      fontWeight: FontWeight.w500,
-                    ),
+                  color: effectiveLabelColor,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
             if (trailing != null) trailing!,

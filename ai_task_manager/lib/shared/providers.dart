@@ -6,6 +6,8 @@ import 'package:ai_task_manager/core/database/app_database.dart';
 import 'package:ai_task_manager/core/network/api_client.dart';
 import 'package:ai_task_manager/core/network/api_config.dart';
 
+const String kCachedAuthTokenKey = 'cached_auth_token';
+
 final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
   throw UnimplementedError(
     'sharedPreferencesProvider must be overridden in the root ProviderScope.',

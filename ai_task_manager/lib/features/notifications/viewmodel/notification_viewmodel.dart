@@ -17,6 +17,8 @@ class NotificationsViewModel
     extends AsyncNotifier<List<NotificationEntity>> {
   @override
   Future<List<NotificationEntity>> build() async {
+    final prefs = ref.read(sharedPreferencesProvider);
+    if (prefs.getString(kCachedAuthTokenKey) == null) return [];
     return ref.read(notificationServiceProvider).getNotifications();
   }
 
