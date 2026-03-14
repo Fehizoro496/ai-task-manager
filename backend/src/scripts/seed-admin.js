@@ -1,6 +1,7 @@
 const prisma = require("../prisma/client");
 
 const ADMIN_EMAIL = "fehizoroandriantsarafara@gmail.com";
+const ADMIN_NAME = "Fehizoro Andriantsarafara";
 
 async function seedAdmin() {
   const existing = await prisma.user.findUnique({ where: { email: ADMIN_EMAIL } });
@@ -16,7 +17,7 @@ async function seedAdmin() {
     const created = await prisma.user.create({
       data: {
         email: ADMIN_EMAIL,
-        name: "Admin",
+        name: ADMIN_NAME,
         provider: "google",
         role: "ADMIN",
         status: "APPROVED",

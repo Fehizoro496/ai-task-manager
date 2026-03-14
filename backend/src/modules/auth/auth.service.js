@@ -126,7 +126,7 @@ const googleCallback = async (code, state) => {
         // Link Google to existing account
         user = await prisma.user.update({
           where: { id: user.id },
-          data: { googleId, avatarUrl: avatarUrl || user.avatarUrl, provider: "google" },
+          data: { googleId, name: name || user.name, avatarUrl: avatarUrl || user.avatarUrl, provider: "google" },
         });
       }
     }

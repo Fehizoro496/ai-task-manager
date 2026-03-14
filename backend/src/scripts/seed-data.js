@@ -9,7 +9,7 @@ async function main() {
     update: { role: "ADMIN", status: "APPROVED" },
     create: {
       email: "fehizoroandriantsarafara@gmail.com",
-      name: "Fehizo Admin",
+      name: "Fehizoro Andriantsarafara",
       provider: "google",
       role: "ADMIN",
       status: "APPROVED",
@@ -22,7 +22,7 @@ async function main() {
     update: { status: "APPROVED" },
     create: {
       email: "fehizoroandrian496@gmail.com",
-      name: "Fehizo",
+      name: "Fehizoro Andrian",
       provider: "google",
       role: "USER",
       status: "APPROVED",
