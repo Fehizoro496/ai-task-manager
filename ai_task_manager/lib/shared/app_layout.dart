@@ -5,6 +5,7 @@ import 'package:ai_task_manager/core/widgets/sidebar.dart';
 import 'package:ai_task_manager/features/auth/model/user_entity.dart';
 import 'package:ai_task_manager/features/auth/viewmodel/auth_viewmodel.dart';
 import 'package:ai_task_manager/features/notifications/viewmodel/notification_viewmodel.dart';
+import 'package:ai_task_manager/features/messages/viewmodel/chat_viewmodel.dart';
 
 final sidebarCollapsedProvider = StateProvider<bool>((ref) => false);
 final selectedNavIndexProvider = StateProvider<int>((ref) => 0);
@@ -14,7 +15,8 @@ class AppLayout extends ConsumerWidget {
 
   const AppLayout({super.key, required this.child});
 
-  List<SidebarItem> _buildNavItems(UserEntity? user, int unreadCount) {
+  List<SidebarItem> _buildNavItems(
+      UserEntity? user, int unreadCount, int unreadMessages) {
     return [
       if (user?.isAdmin == true)
         const SidebarItem(
@@ -40,6 +42,13 @@ class AppLayout extends ConsumerWidget {
         showBadge: unreadCount > 0,
         badgeCount: unreadCount > 0 ? unreadCount : null,
       ),
+      SidebarItem(
+        icon: Icons.chat_bubble_rounded,
+        label: 'Messages',
+        route: '/messages',
+        showBadge: unreadMessages > 0,
+        badgeCount: unreadMessages > 0 ? unreadMessages : null,
+      ),
       const SidebarItem(
         icon: Icons.settings_rounded,
         label: 'Settings',
@@ -56,7 +65,8 @@ class AppLayout extends ConsumerWidget {
     final user = authState.valueOrNull;
     final userName = user?.name ?? '';
     final unreadCount = ref.watch(unreadCountProvider);
-    final navItems = _buildNavItems(user, unreadCount);
+    final unreadMessages = ref.watch(unreadMessagesCountProvider);
+    final navItems = _buildNavItems(user, unreadCount, unreadMessages);
 
     return Scaffold(
       body: Row(

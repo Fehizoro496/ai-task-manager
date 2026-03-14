@@ -201,6 +201,53 @@ async function main() {
   });
   console.log("✓ Project: API Backend v2");
 
+  // ─── Conversation "general" ───────────────────────────────────────────────
+
+  const approvedUsers = await prisma.user.findMany({
+    where: { status: "APPROVED" },
+    select: { id: true },
+  });
+
+  const general = await prisma.conversation.upsert({
+    where: { id: "general" },
+    update: {
+      members: { set: approvedUsers.map((u) => ({ id: u.id })) },
+    },
+    create: {
+      id: "general",
+      name: "general",
+      isGroup: true,
+      members: { connect: approvedUsers.map((u) => ({ id: u.id })) },
+    },
+  });
+  console.log(`✓ Conversation "general" (${approvedUsers.length} membres)`);
+
+  await prisma.message.create({
+    data: {
+      conversationId: general.id,
+      senderId: admin.id,
+      content: "Bienvenue dans le canal général 👋",
+    },
+  });
+  console.log("✓ Message de bienvenue ajouté");
+
+  // ─── DMs entre tous les membres approuvés ────────────────────────────────
+
+  // Crée une conversation DM pour chaque paire d'utilisateurs approuvés
+  let dmCount = 0;
+  for (let i = 0; i < approvedUsers.length; i++) {
+    for (let j = i + 1; j < approvedUsers.length; j++) {
+      await prisma.conversation.create({
+        data: {
+          isGroup: false,
+          members: { connect: [{ id: approvedUsers[i].id }, { id: approvedUsers[j].id }] },
+        },
+      });
+      dmCount++;
+    }
+  }
+  console.log(`✓ ${dmCount} DMs créés`);
+
   console.log("\n✅ Seed terminé.");
   console.log("   → Connectez-vous en admin pour ajouter des membres aux projets.");
 }

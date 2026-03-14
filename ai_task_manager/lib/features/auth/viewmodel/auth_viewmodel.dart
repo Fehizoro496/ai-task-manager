@@ -5,8 +5,12 @@ import 'package:ai_task_manager/features/admin/viewmodel/admin_viewmodel.dart';
 import 'package:ai_task_manager/features/ai_planning/viewmodel/ai_planning_viewmodel.dart';
 import 'package:ai_task_manager/features/auth/model/user_entity.dart';
 import 'package:ai_task_manager/features/auth/service/auth_service.dart';
+import 'package:ai_task_manager/core/network/api_config.dart';
+import 'package:ai_task_manager/core/network/socket_service.dart';
+import 'package:ai_task_manager/features/messages/viewmodel/chat_viewmodel.dart';
 import 'package:ai_task_manager/features/notifications/viewmodel/notification_viewmodel.dart';
 import 'package:ai_task_manager/features/projects/viewmodel/project_viewmodel.dart';
+import 'package:ai_task_manager/features/tasks/viewmodel/task_viewmodel.dart';
 import 'package:ai_task_manager/shared/app_layout.dart';
 import 'package:ai_task_manager/shared/providers.dart';
 
@@ -35,7 +39,9 @@ class AuthViewModel extends AsyncNotifier<UserEntity?> {
     final service = ref.read(authServiceProvider);
     if (!service.isLoggedIn) return null;
     try {
-      return await service.getCurrentUser();
+      final user = await service.getCurrentUser();
+      if (user?.token != null) _connectSocket(user!.token!);
+      return user;
     } catch (_) {
       return null;
     }
@@ -50,12 +56,30 @@ class AuthViewModel extends AsyncNotifier<UserEntity?> {
     ref.invalidate(adminOverviewProvider);
     ref.invalidate(aiPlanningStateProvider);
     ref.invalidate(selectedNavIndexProvider);
+    ref.invalidate(conversationsProvider);
+    ref.invalidate(messagesProvider);      // invalide toutes les instances family
+    ref.invalidate(boardTasksProvider);    // invalide toutes les instances family
+    ref.invalidate(approvedUsersProvider); // FutureProvider — peut cacher un 403
+    ref.invalidate(taskStreamProvider);    // invalide toutes les instances family
+  }
+
+  void _connectSocket(String token) {
+    ref
+        .read(socketServiceProvider)
+        .connect(token, ApiConfig.baseUrl);
+  }
+
+  void _disconnectSocket() {
+    ref.read(socketServiceProvider).disconnect();
   }
 
   Future<void> login(String email, String password) async {
     state = const AsyncLoading();
     try {
       final user = await ref.read(authServiceProvider).login(email, password);
+      // Connecter le socket avant d'invalider les providers pour qu'ils
+      // trouvent un socket prêt dès leur rebuild.
+      if (user.token != null) _connectSocket(user.token!);
       state = AsyncData(user);
       _invalidateUserProviders();
     } catch (e) {
@@ -80,6 +104,7 @@ class AuthViewModel extends AsyncNotifier<UserEntity?> {
     state = const AsyncLoading();
     try {
       final user = await ref.read(authServiceProvider).loginWithGoogle();
+      if (user.token != null) _connectSocket(user.token!);
       state = AsyncData(user);
       _invalidateUserProviders();
     } on PendingApprovalException catch (e) {
@@ -96,6 +121,7 @@ class AuthViewModel extends AsyncNotifier<UserEntity?> {
   Future<void> logout() async {
     state = const AsyncLoading();
     try {
+      _disconnectSocket();
       await ref.read(authServiceProvider).logout();
       state = const AsyncData(null);
       _invalidateUserProviders();

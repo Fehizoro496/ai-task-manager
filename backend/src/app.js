@@ -12,6 +12,7 @@ const tasksRoutes = require("./modules/tasks/tasks.routes");
 const aiRoutes = require("./modules/ai/ai.routes");
 const adminRoutes = require("./modules/admin/admin.routes");
 const notificationsRoutes = require("./modules/notifications/notifications.routes");
+const chatRoutes = require("./modules/chat/chat.routes");
 
 const app = express();
 
@@ -28,6 +29,7 @@ app.use("/api/tasks", tasksRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/notifications", notificationsRoutes);
+app.use("/api/chat", chatRoutes);
 
 app.use(errorHandler);
 

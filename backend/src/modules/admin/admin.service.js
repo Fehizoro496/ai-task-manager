@@ -1,5 +1,6 @@
 const prisma = require("../../prisma/client");
 const AppError = require("../../utils/AppError");
+const { addUserToGeneral } = require("../chat/chat.service");
 
 const userSelect = {
   id: true,
@@ -21,11 +22,13 @@ const approveUser = async (id) => {
   const user = await prisma.user.findUnique({ where: { id } });
   if (!user) throw new AppError("User not found", 404);
 
-  return prisma.user.update({
+  const updated = await prisma.user.update({
     where: { id },
     data: { status: "APPROVED" },
     select: userSelect,
   });
+  await addUserToGeneral(id);
+  return updated;
 };
 
 const rejectUser = async (id) => {
