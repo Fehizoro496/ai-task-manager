@@ -16,6 +16,8 @@ final adminServiceProvider = Provider<AdminService>((ref) {
 
 /// Approved users available for task assignment (admin use only).
 final approvedUsersProvider = FutureProvider<List<AdminUserModel>>((ref) {
+  final prefs = ref.read(sharedPreferencesProvider);
+  if (prefs.getString(kCachedAuthTokenKey) == null) return Future.value([]);
   return ref.read(adminServiceProvider).getUsers(status: 'APPROVED');
 });
 
@@ -29,6 +31,8 @@ final adminUsersProvider =
 class AdminUsersViewModel extends AsyncNotifier<List<AdminUserModel>> {
   @override
   Future<List<AdminUserModel>> build() async {
+    final prefs = ref.read(sharedPreferencesProvider);
+    if (prefs.getString(kCachedAuthTokenKey) == null) return [];
     final filter = ref.watch(adminUserFilterProvider);
     return ref.read(adminServiceProvider).getUsers(status: filter);
   }
