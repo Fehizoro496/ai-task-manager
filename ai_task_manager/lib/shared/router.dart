@@ -15,6 +15,8 @@ import 'package:ai_task_manager/features/ai_planning/view/ai_planning_screen.dar
 import 'package:ai_task_manager/features/notifications/view/notifications_screen.dart';
 import 'package:ai_task_manager/features/settings/view/settings_screen.dart';
 import 'package:ai_task_manager/features/team/view/team_screen.dart';
+import 'package:ai_task_manager/features/messages/view/messages_screen.dart';
+import 'package:ai_task_manager/features/messages/view/conversation_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -155,6 +157,29 @@ final routerProvider = Provider<GoRouter>((ref) {
             pageBuilder: (context, state) => CustomTransitionPage(
               key: state.pageKey,
               child: const NotificationsScreen(),
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) =>
+                      FadeTransition(opacity: animation, child: child),
+            ),
+          ),
+          GoRoute(
+            path: '/messages',
+            pageBuilder: (context, state) => CustomTransitionPage(
+              key: state.pageKey,
+              child: const MessagesScreen(),
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) =>
+                      FadeTransition(opacity: animation, child: child),
+            ),
+          ),
+          GoRoute(
+            path: '/messages/:conversationId',
+            pageBuilder: (context, state) => CustomTransitionPage(
+              key: state.pageKey,
+              child: ConversationScreen(
+                conversationId:
+                    state.pathParameters['conversationId']!,
+              ),
               transitionsBuilder:
                   (context, animation, secondaryAnimation, child) =>
                       FadeTransition(opacity: animation, child: child),

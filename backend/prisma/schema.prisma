@@ -34,6 +34,28 @@ model User {
   assignedTasks Task[]         @relation("TaskAssignee")
   notifications    Notification[]
   projectMembers   ProjectMember[]
+  conversations Conversation[] @relation("ConversationMembers")
+  sentMessages  Message[]      @relation("SentMessages")
+}
+
+model Conversation {
+  id        String    @id @default(uuid())
+  name      String?
+  isGroup   Boolean   @default(false)
+  members   User[]    @relation("ConversationMembers")
+  messages  Message[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User         @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  content        String
+  createdAt      DateTime     @default(now())
 }
 
 model Project {
