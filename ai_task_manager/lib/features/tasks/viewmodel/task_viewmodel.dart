@@ -27,7 +27,7 @@ final boardTasksProvider = AsyncNotifierProvider.family<BoardTasksViewModel,
 
 class BoardTasksViewModel
     extends FamilyAsyncNotifier<List<TaskEntity>, String> {
-  late final TaskService _service;
+  late TaskService _service;
 
   @override
   Future<List<TaskEntity>> build(String arg) async {

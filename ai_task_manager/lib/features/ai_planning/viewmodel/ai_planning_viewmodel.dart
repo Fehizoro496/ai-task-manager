@@ -68,7 +68,7 @@ final aiPlanningStateProvider =
 );
 
 class AiPlanningViewModel extends AsyncNotifier<AiPlanningState> {
-  late final AiPlanningService _service;
+  late AiPlanningService _service;
 
   @override
   Future<AiPlanningState> build() async {
