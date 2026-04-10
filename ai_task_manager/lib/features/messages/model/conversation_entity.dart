@@ -17,17 +17,19 @@ class MemberSummary extends Equatable {
 
 class MessageSummary extends Equatable {
   final String content;
+  final String senderId;
   final String senderName;
   final DateTime createdAt;
 
   const MessageSummary({
     required this.content,
+    required this.senderId,
     required this.senderName,
     required this.createdAt,
   });
 
   @override
-  List<Object?> get props => [content, senderName, createdAt];
+  List<Object?> get props => [content, senderId, senderName, createdAt];
 }
 
 class ConversationEntity extends Equatable {

@@ -123,6 +123,17 @@ class _ConversationTile extends ConsumerWidget {
     required this.onTap,
   });
 
+  String _lastMessagePreview(
+      MessageSummary msg, String? currentUserId, bool isGroup) {
+    if (msg.senderId == currentUserId) {
+      return 'Moi : ${msg.content}';
+    }
+    if (isGroup) {
+      return '${msg.senderName} : ${msg.content}';
+    }
+    return msg.content;
+  }
+
   String _displayName(ConversationEntity conv, String? currentUserId) {
     if (conv.isGroup) return conv.name ?? 'Groupe';
     final other = conv.members.firstWhere(
@@ -220,7 +231,9 @@ class _ConversationTile extends ConsumerWidget {
                     if (conversation.lastMessage != null) ...[
                       const SizedBox(height: AppSpacing.xxs),
                       Text(
-                        '${conversation.lastMessage!.senderName}: ${conversation.lastMessage!.content}',
+                        _lastMessagePreview(
+                            conversation.lastMessage!, currentUserId,
+                            conversation.isGroup),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: isDark
                                   ? AppColors.textSecondaryDark

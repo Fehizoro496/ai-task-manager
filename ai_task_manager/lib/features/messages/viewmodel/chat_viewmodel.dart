@@ -84,6 +84,7 @@ class ConversationsViewModel extends AsyncNotifier<List<ConversationEntity>> {
       return c.copyWith(
         lastMessage: MessageSummary(
           content: data['content'] as String? ?? '',
+          senderId: data['senderId'] as String? ?? '',
           senderName: data['senderName'] as String? ?? '',
           createdAt: msgDate ?? DateTime.now(),
         ),
