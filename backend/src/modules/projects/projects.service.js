@@ -2,6 +2,11 @@ const prisma = require("../../prisma/client");
 const AppError = require("../../utils/AppError");
 const { createNotification } = require("../notifications/notifications.service");
 
+const serializeMember = (member) => {
+  const { avatarUrl, ...userRest } = member.user;
+  return { ...member, user: { ...userRest, avatar_url: avatarUrl ?? null } };
+};
+
 const create = async (ownerId, data) => {
   const project = await prisma.project.create({
     data: { ...data, ownerId },
@@ -105,7 +110,7 @@ const addMember = async (projectId, userId) => {
     link: `/dashboard`,
   }).catch(() => {});
 
-  return member;
+  return serializeMember(member);
 };
 
 const removeMember = async (projectId, userId) => {
@@ -123,11 +128,12 @@ const listMembers = async (projectId) => {
   const project = await prisma.project.findUnique({ where: { id: projectId } });
   if (!project) throw new AppError("Project not found", 404);
 
-  return prisma.projectMember.findMany({
+  const members = await prisma.projectMember.findMany({
     where: { projectId },
     include: { user: { select: { id: true, name: true, email: true, avatarUrl: true } } },
     orderBy: { createdAt: "asc" },
   });
+  return members.map(serializeMember);
 };
 
 const isMember = async (projectId, userId) => {

@@ -11,6 +11,7 @@ import 'package:ai_task_manager/features/auth/viewmodel/auth_viewmodel.dart';
 import 'package:ai_task_manager/features/board/viewmodel/board_viewmodel.dart';
 import 'package:ai_task_manager/features/tasks/model/task_entity.dart';
 import 'package:ai_task_manager/features/tasks/viewmodel/task_viewmodel.dart';
+import 'package:ai_task_manager/shared/user_avatar.dart';
 
 /// Shows the task detail popup dialog.
 void showTaskDetailDialog(
@@ -722,10 +723,10 @@ class _AssigneePicker extends ConsumerWidget {
                     value: member,
                     child: Row(
                       children: [
-                        _UserAvatar(
+                        UserAvatar(
                           name: member.user.name,
                           avatarUrl: member.user.avatarUrl,
-                          size: 24,
+                          radius: 12,
                         ),
                         const SizedBox(width: AppSpacing.sm),
                         Expanded(
@@ -844,43 +845,6 @@ class _AssigneeReadOnly extends StatelessWidget {
   }
 }
 
-// =============================================================================
-// User Avatar
-// =============================================================================
-
-class _UserAvatar extends StatelessWidget {
-  const _UserAvatar({
-    required this.name,
-    this.avatarUrl,
-    required this.size,
-  });
-
-  final String name;
-  final String? avatarUrl;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    if (avatarUrl != null) {
-      return CircleAvatar(
-        radius: size / 2,
-        backgroundImage: NetworkImage(avatarUrl!),
-      );
-    }
-    return CircleAvatar(
-      radius: size / 2,
-      backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-      child: Text(
-        name.isNotEmpty ? name[0].toUpperCase() : '?',
-        style: TextStyle(
-          color: AppColors.primary,
-          fontSize: size * 0.45,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-}
 
 // =============================================================================
 // Section Label

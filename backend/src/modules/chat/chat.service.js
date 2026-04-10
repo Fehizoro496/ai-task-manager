@@ -10,7 +10,7 @@ const serializeMessage = (msg) => ({
   content: msg.content,
   senderId: msg.senderId,
   senderName: msg.sender.name,
-  senderAvatarUrl: msg.sender.avatarUrl ?? null,
+  sender_avatar_url: msg.sender.avatarUrl ?? null,
   createdAt: msg.createdAt.toISOString(),
 });
 
@@ -21,7 +21,7 @@ const serializeConversation = (conv, lastMessage) => ({
   members: conv.members.map((m) => ({
     id: m.id,
     name: m.name,
-    avatarUrl: m.avatarUrl ?? null,
+    avatar_url: m.avatarUrl ?? null,
   })),
   lastMessage: lastMessage
     ? {

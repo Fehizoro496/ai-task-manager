@@ -32,7 +32,7 @@ class TaskModel extends TaskEntity {
       projectId: (json['projectId'] ?? json['project_id'] ?? '') as String,
       assigneeId: (json['assigneeId'] ?? json['assignee_id']) as String?,
       assigneeName: assigneeJson?['name'] as String?,
-      assigneeAvatar: assigneeJson?['avatarUrl'] as String?,
+      assigneeAvatar: assigneeJson?['avatar_url'] as String?,
       labels: (json['labels'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??

@@ -6,6 +6,7 @@ import 'package:ai_task_manager/core/theme/app_spacing.dart';
 import 'package:ai_task_manager/features/admin/model/admin_user_model.dart';
 import 'package:ai_task_manager/features/admin/model/project_member_model.dart';
 import 'package:ai_task_manager/features/admin/viewmodel/admin_viewmodel.dart';
+import 'package:ai_task_manager/shared/user_avatar.dart';
 
 class ProjectMembersDialog extends ConsumerStatefulWidget {
   final String projectId;
@@ -343,21 +344,7 @@ class _MemberTile extends StatelessWidget {
         ),
         child: Row(
           children: [
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-              backgroundImage:
-                  u.avatarUrl != null ? NetworkImage(u.avatarUrl!) : null,
-              child: u.avatarUrl == null
-                  ? Text(
-                      u.name.isNotEmpty ? u.name[0].toUpperCase() : '?',
-                      style: const TextStyle(
-                          color: AppColors.primary,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700),
-                    )
-                  : null,
-            ),
+            UserAvatar(name: u.name, avatarUrl: u.avatarUrl, radius: 16),
             const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Column(

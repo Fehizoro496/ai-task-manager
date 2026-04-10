@@ -8,6 +8,7 @@ import 'package:ai_task_manager/core/theme/app_spacing.dart';
 import 'package:ai_task_manager/features/auth/viewmodel/auth_viewmodel.dart';
 import 'package:ai_task_manager/features/messages/model/conversation_entity.dart';
 import 'package:ai_task_manager/features/messages/viewmodel/chat_viewmodel.dart';
+import 'package:ai_task_manager/shared/user_avatar.dart';
 
 class MessagesScreen extends ConsumerWidget {
   const MessagesScreen({super.key});
@@ -165,7 +166,7 @@ class _ConversationTile extends ConsumerWidget {
           padding: const EdgeInsets.all(AppSpacing.md),
           child: Row(
             children: [
-              _buildAvatar(context),
+              _buildAvatar(context, currentUserId),
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
@@ -253,18 +254,25 @@ class _ConversationTile extends ConsumerWidget {
     );
   }
 
-  Widget _buildAvatar(BuildContext context) {
-    final icon =
-        conversation.isGroup ? Icons.group_rounded : Icons.person_rounded;
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        color: AppColors.primarySurface,
-        shape: BoxShape.circle,
-      ),
-      child: Icon(icon, size: 20, color: AppColors.primary),
+  Widget _buildAvatar(BuildContext context, String? currentUserId) {
+    if (conversation.isGroup) {
+      return Container(
+        width: 40,
+        height: 40,
+        decoration: const BoxDecoration(
+          color: AppColors.primarySurface,
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(Icons.group_rounded, size: 20, color: AppColors.primary),
+      );
+    }
+    final other = conversation.members.firstWhere(
+      (m) => m.id != currentUserId,
+      orElse: () => conversation.members.isNotEmpty
+          ? conversation.members.first
+          : const MemberSummary(id: '', name: '?'),
     );
+    return UserAvatar(name: other.name, avatarUrl: other.avatarUrl, radius: 20);
   }
 
   String _relativeDate(DateTime date) {

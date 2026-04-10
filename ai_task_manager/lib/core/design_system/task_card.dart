@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:ai_task_manager/core/theme/app_colors.dart';
 import 'package:ai_task_manager/core/theme/app_spacing.dart';
 import 'package:ai_task_manager/core/utils/constants.dart';
+import 'package:ai_task_manager/shared/user_avatar.dart';
 
 enum TaskPriority { urgent, high, medium, low }
 
@@ -249,10 +250,32 @@ class _TaskCardState extends State<TaskCard> {
                               ],
                               const Spacer(),
                               if (widget.assigneeName != null)
-                                _AssigneeAvatar(
-                                  name: widget.assigneeName!,
-                                  avatarUrl: widget.assigneeAvatar,
-                                  isDark: isDark,
+                                Tooltip(
+                                  message: widget.assigneeName!,
+                                  preferBelow: false,
+                                  decoration: BoxDecoration(
+                                    color: isDark ? AppColors.surfaceDark : AppColors.textPrimaryLight,
+                                    borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                                  ),
+                                  textStyle: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                    child: UserAvatar(
+                                      name: widget.assigneeName!,
+                                      avatarUrl: widget.assigneeAvatar,
+                                      radius: 13,
+                                    ),
+                                  ),
                                 ),
                             ],
                           ),
@@ -270,91 +293,3 @@ class _TaskCardState extends State<TaskCard> {
   }
 }
 
-// =============================================================================
-// Assignee Avatar with tooltip
-// =============================================================================
-
-class _AssigneeAvatar extends StatelessWidget {
-  const _AssigneeAvatar({
-    required this.name,
-    required this.isDark,
-    this.avatarUrl,
-  });
-
-  final String name;
-  final String? avatarUrl;
-  final bool isDark;
-
-  String get _initials => name
-      .split(' ')
-      .where((p) => p.isNotEmpty)
-      .take(2)
-      .map((p) => p[0].toUpperCase())
-      .join();
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: name,
-      preferBelow: false,
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : AppColors.textPrimaryLight,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-      ),
-      textStyle: const TextStyle(
-        color: Colors.white,
-        fontSize: 12,
-        fontWeight: FontWeight.w500,
-      ),
-      child: Container(
-        width: 26,
-        height: 26,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: isDark ? AppColors.borderDark : AppColors.borderLight,
-            width: 1.5,
-          ),
-        ),
-        child: ClipOval(
-          child: avatarUrl != null && avatarUrl!.isNotEmpty
-              ? Image.network(
-                  avatarUrl!,
-                  width: 26,
-                  height: 26,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => _InitialsBubble(
-                    initials: _initials,
-                    isDark: isDark,
-                  ),
-                )
-              : _InitialsBubble(initials: _initials, isDark: isDark),
-        ),
-      ),
-    );
-  }
-}
-
-class _InitialsBubble extends StatelessWidget {
-  const _InitialsBubble({required this.initials, required this.isDark});
-
-  final String initials;
-  final bool isDark;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: AppColors.primarySurface,
-      child: Center(
-        child: Text(
-          initials,
-          style: const TextStyle(
-            color: AppColors.primary,
-            fontSize: 9,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ),
-    );
-  }
-}

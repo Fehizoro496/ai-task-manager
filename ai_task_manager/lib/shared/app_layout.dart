@@ -76,6 +76,7 @@ class AppLayout extends ConsumerWidget {
             items: navItems,
             isCollapsed: isCollapsed,
             userName: userName,
+            userAvatarUrl: user?.avatarUrl,
             onItemSelected: (index) {
               ref.read(selectedNavIndexProvider.notifier).state = index;
               context.go(navItems[index].route);

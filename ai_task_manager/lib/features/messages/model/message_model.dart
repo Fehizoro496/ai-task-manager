@@ -18,7 +18,7 @@ class MessageModel extends MessageEntity {
       content: json['content'] as String,
       senderId: json['senderId'] as String,
       senderName: json['senderName'] as String,
-      senderAvatarUrl: json['senderAvatarUrl'] as String?,
+      senderAvatarUrl: json['sender_avatar_url'] as String?,
       createdAt: DateTime.parse(json['createdAt'] as String),
     );
   }

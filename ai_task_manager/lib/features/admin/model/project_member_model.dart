@@ -17,7 +17,7 @@ class ProjectMemberUser {
         id: json['id'] as String,
         name: json['name'] as String,
         email: json['email'] as String,
-        avatarUrl: json['avatarUrl'] as String?,
+        avatarUrl: json['avatar_url'] as String?,
       );
 }
 

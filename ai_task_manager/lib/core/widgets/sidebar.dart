@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:ai_task_manager/core/theme/app_colors.dart';
 import 'package:ai_task_manager/core/theme/app_spacing.dart';
 import 'package:ai_task_manager/core/utils/constants.dart';
+import 'package:ai_task_manager/shared/user_avatar.dart';
 
 class SidebarItem {
   final IconData icon;
@@ -377,32 +378,11 @@ class _AppSidebarState extends State<AppSidebar> {
   }
 
   Widget _buildAvatar(bool isDark) {
-    final initials = _getInitials(widget.userName);
-    return Container(
-      width: 32,
-      height: 32,
-      decoration: BoxDecoration(
-        color: AppColors.primarySurface,
-        shape: BoxShape.circle,
-      ),
-      child: Center(
-        child: Text(
-          initials,
-          style: const TextStyle(
-            color: AppColors.primary,
-            fontWeight: FontWeight.w700,
-            fontSize: 12,
-          ),
-        ),
-      ),
+    return UserAvatar(
+      name: widget.userName,
+      avatarUrl: widget.userAvatarUrl,
+      radius: 16,
     );
-  }
-
-  String _getInitials(String name) {
-    final parts = name.trim().split(RegExp(r'\s+'));
-    if (parts.isEmpty || parts.first.isEmpty) return '?';
-    if (parts.length == 1) return parts.first[0].toUpperCase();
-    return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
   }
 
   Widget _buildCollapseButton(bool isDark) {
