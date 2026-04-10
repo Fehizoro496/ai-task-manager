@@ -9,6 +9,7 @@ import 'package:ai_task_manager/features/auth/viewmodel/auth_viewmodel.dart';
 import 'package:ai_task_manager/features/messages/model/conversation_entity.dart';
 import 'package:ai_task_manager/features/messages/model/message_entity.dart';
 import 'package:ai_task_manager/features/messages/viewmodel/chat_viewmodel.dart';
+import 'package:ai_task_manager/shared/user_avatar.dart';
 
 class ConversationScreen extends ConsumerStatefulWidget {
   final String conversationId;
@@ -78,26 +79,64 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
     return other.name;
   }
 
+  ConversationEntity? _getConversation(List<ConversationEntity> conversations) {
+    try {
+      return conversations.firstWhere((c) => c.id == widget.conversationId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Widget _buildAppBarAvatar(ConversationEntity? conv, String? currentUserId) {
+    if (conv == null) return const SizedBox.shrink();
+    if (conv.isGroup) {
+      return Container(
+        width: 36,
+        height: 36,
+        decoration: const BoxDecoration(
+          color: AppColors.primarySurface,
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(Icons.group_rounded, size: 18, color: AppColors.primary),
+      );
+    }
+    final other = conv.members.firstWhere(
+      (m) => m.id != currentUserId,
+      orElse: () => conv.members.isNotEmpty
+          ? conv.members.first
+          : const MemberSummary(id: '', name: '?'),
+    );
+    return UserAvatar(name: other.name, avatarUrl: other.avatarUrl, radius: 18);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final messagesAsync =
-        ref.watch(messagesProvider(widget.conversationId));
+    final messagesAsync = ref.watch(messagesProvider(widget.conversationId));
     final conversationsAsync = ref.watch(conversationsProvider);
     final authState = ref.watch(authStateProvider);
     final currentUserId = authState.valueOrNull?.id;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final convTitle = conversationsAsync.valueOrNull != null
-        ? _getConvTitle(conversationsAsync.valueOrNull!, currentUserId)
+    final conversations = conversationsAsync.valueOrNull;
+    final conv = conversations != null ? _getConversation(conversations) : null;
+    final isGroup = conv?.isGroup ?? false;
+
+    final convTitle = conversations != null
+        ? _getConvTitle(conversations, currentUserId)
         : 'Conversation';
 
-    // Scroll vers le bas quand les messages changent
     messagesAsync.whenData((_) => _scrollToBottom());
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(convTitle),
         leading: BackButton(onPressed: () => context.go('/messages')),
+        title: Row(
+          children: [
+            _buildAppBarAvatar(conv, currentUserId),
+            const SizedBox(width: AppSpacing.sm),
+            Text(convTitle),
+          ],
+        ),
       ),
       body: Column(
         children: [
@@ -132,14 +171,14 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                     return _MessageBubble(
                       message: msg,
                       isMe: isMe,
+                      isGroup: isGroup,
                       showSender: showSender,
                       isDark: isDark,
                     );
                   },
                 );
               },
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, _) => Center(
                 child: Text('Erreur: $error'),
               ),
@@ -176,12 +215,9 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
               decoration: InputDecoration(
                 hintText: 'Votre message...',
                 border: OutlineInputBorder(
-                  borderRadius:
-                      BorderRadius.circular(AppSpacing.radiusXxl),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusXxl),
                   borderSide: BorderSide(
-                    color: isDark
-                        ? AppColors.borderDark
-                        : AppColors.borderLight,
+                    color: isDark ? AppColors.borderDark : AppColors.borderLight,
                   ),
                 ),
                 contentPadding: const EdgeInsets.symmetric(
@@ -220,12 +256,14 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
 class _MessageBubble extends StatelessWidget {
   final MessageEntity message;
   final bool isMe;
+  final bool isGroup;
   final bool showSender;
   final bool isDark;
 
   const _MessageBubble({
     required this.message,
     required this.isMe,
+    required this.isGroup,
     required this.showSender,
     required this.isDark,
   });
@@ -240,76 +278,80 @@ class _MessageBubble extends StatelessWidget {
         ? Colors.white
         : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight);
 
+    const double avatarDiameter = 28;
+    final showAvatar = isGroup && !isMe;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-      child: Column(
-        crossAxisAlignment:
-            isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      child: Row(
+        mainAxisAlignment:
+            isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (showSender)
-            Padding(
-              padding: const EdgeInsets.only(
-                  left: AppSpacing.sm, bottom: AppSpacing.xxs),
-              child: Text(
-                message.senderName,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: isDark
-                          ? AppColors.textTertiaryDark
-                          : AppColors.textTertiaryLight,
-                      fontWeight: FontWeight.w600,
+          if (showAvatar)
+            showSender
+                ? Padding(
+                    padding: const EdgeInsets.only(right: AppSpacing.xs),
+                    child: UserAvatar(
+                      name: message.senderName,
+                      avatarUrl: message.senderAvatarUrl,
+                      radius: avatarDiameter / 2,
                     ),
+                  )
+                : const SizedBox(width: avatarDiameter + AppSpacing.xs),
+          Flexible(
+            child: Container(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.65,
               ),
-            ),
-          Row(
-            mainAxisAlignment:
-                isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              if (!isMe) const SizedBox(width: AppSpacing.xs),
-              Flexible(
-                child: Container(
-                  constraints: BoxConstraints(
-                    maxWidth: MediaQuery.of(context).size.width * 0.65,
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                    vertical: AppSpacing.sm,
-                  ),
-                  decoration: BoxDecoration(
-                    color: bubbleColor,
-                    borderRadius: BorderRadius.only(
-                      topLeft: const Radius.circular(AppSpacing.radiusLg),
-                      topRight: const Radius.circular(AppSpacing.radiusLg),
-                      bottomLeft: Radius.circular(
-                          isMe ? AppSpacing.radiusLg : AppSpacing.radiusSm),
-                      bottomRight: Radius.circular(
-                          isMe ? AppSpacing.radiusSm : AppSpacing.radiusLg),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: isMe
-                        ? CrossAxisAlignment.end
-                        : CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        message.content,
-                        style: TextStyle(color: textColor, fontSize: 14),
-                      ),
-                      const SizedBox(height: AppSpacing.xxs),
-                      Text(
-                        DateFormat('HH:mm').format(message.createdAt.toLocal()),
-                        style: TextStyle(
-                          color: textColor.withValues(alpha: 0.65),
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
+              ),
+              decoration: BoxDecoration(
+                color: bubbleColor,
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(AppSpacing.radiusLg),
+                  topRight: const Radius.circular(AppSpacing.radiusLg),
+                  bottomLeft: Radius.circular(
+                      isMe ? AppSpacing.radiusLg : AppSpacing.radiusSm),
+                  bottomRight: Radius.circular(
+                      isMe ? AppSpacing.radiusSm : AppSpacing.radiusLg),
                 ),
               ),
-              if (isMe) const SizedBox(width: AppSpacing.xs),
-            ],
+              child: Column(
+                crossAxisAlignment:
+                    isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                children: [
+                  if (isGroup && !isMe && showSender) ...[
+                    Text(
+                      message.senderName,
+                      style: const TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.1,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                  ],
+                  Text(
+                    message.content,
+                    style: TextStyle(color: textColor, fontSize: 14),
+                  ),
+                  const SizedBox(height: AppSpacing.xxs),
+                  Text(
+                    DateFormat('HH:mm').format(message.createdAt.toLocal()),
+                    style: TextStyle(
+                      color: textColor.withValues(alpha: 0.65),
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
+          if (isMe) const SizedBox(width: AppSpacing.xs),
         ],
       ),
     );

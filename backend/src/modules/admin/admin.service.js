@@ -13,9 +13,15 @@ const userSelect = {
   createdAt: true,
 };
 
+const serializeUser = (user) => {
+  const { avatarUrl, ...rest } = user;
+  return { ...rest, avatar_url: avatarUrl ?? null };
+};
+
 const listUsers = async ({ status } = {}) => {
   const where = status ? { status } : {};
-  return prisma.user.findMany({ where, select: userSelect, orderBy: { createdAt: "desc" } });
+  const users = await prisma.user.findMany({ where, select: userSelect, orderBy: { createdAt: "desc" } });
+  return users.map(serializeUser);
 };
 
 const approveUser = async (id) => {
@@ -28,7 +34,7 @@ const approveUser = async (id) => {
     select: userSelect,
   });
   await addUserToGeneral(id);
-  return updated;
+  return serializeUser(updated);
 };
 
 const rejectUser = async (id) => {
@@ -36,11 +42,12 @@ const rejectUser = async (id) => {
   if (!user) throw new AppError("User not found", 404);
   if (user.role === "ADMIN") throw new AppError("Cannot reject an admin account", 403);
 
-  return prisma.user.update({
+  const updated = await prisma.user.update({
     where: { id },
     data: { status: "REJECTED" },
     select: userSelect,
   });
+  return serializeUser(updated);
 };
 
 module.exports = { listUsers, approveUser, rejectUser };

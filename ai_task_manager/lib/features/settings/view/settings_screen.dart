@@ -5,6 +5,7 @@ import 'package:ai_task_manager/core/theme/app_colors.dart';
 import 'package:ai_task_manager/core/theme/app_spacing.dart';
 import 'package:ai_task_manager/features/auth/viewmodel/auth_viewmodel.dart';
 import 'package:ai_task_manager/shared/providers.dart';
+import 'package:ai_task_manager/shared/user_avatar.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -37,6 +38,7 @@ class SettingsScreen extends ConsumerWidget {
               child: _ProfileCard(
                 name: user?.name ?? '',
                 email: user?.email ?? '',
+                avatarUrl: user?.avatarUrl,
                 role: user?.role,
                 isDark: isDark,
               ),
@@ -152,6 +154,7 @@ class SettingsScreen extends ConsumerWidget {
 class _ProfileCard extends StatelessWidget {
   final String name;
   final String email;
+  final String? avatarUrl;
   final String? role;
   final bool isDark;
 
@@ -159,15 +162,12 @@ class _ProfileCard extends StatelessWidget {
     required this.name,
     required this.email,
     required this.isDark,
+    this.avatarUrl,
     this.role,
   });
 
   @override
   Widget build(BuildContext context) {
-    final initials = name.isNotEmpty
-        ? name.trim().split(' ').map((p) => p[0]).take(2).join().toUpperCase()
-        : '?';
-
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
@@ -179,18 +179,7 @@ class _ProfileCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 28,
-            backgroundColor: AppColors.primary.withOpacity(0.15),
-            child: Text(
-              initials,
-              style: const TextStyle(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w700,
-                fontSize: 18,
-              ),
-            ),
-          ),
+          UserAvatar(name: name, avatarUrl: avatarUrl, radius: 28),
           const SizedBox(width: AppSpacing.lg),
           Expanded(
             child: Column(

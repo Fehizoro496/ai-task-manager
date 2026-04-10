@@ -7,6 +7,7 @@ import 'package:ai_task_manager/core/theme/app_colors.dart';
 import 'package:ai_task_manager/core/theme/app_spacing.dart';
 import 'package:ai_task_manager/features/admin/model/admin_user_model.dart';
 import 'package:ai_task_manager/features/admin/viewmodel/admin_viewmodel.dart';
+import 'package:ai_task_manager/shared/user_avatar.dart';
 
 class TeamScreen extends ConsumerWidget {
   const TeamScreen({super.key});
@@ -233,7 +234,7 @@ class _TeamMemberTile extends ConsumerWidget {
       ),
       child: Row(
         children: [
-          _buildAvatar(context),
+          _buildAvatar(),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
@@ -294,22 +295,8 @@ class _TeamMemberTile extends ConsumerWidget {
     );
   }
 
-  Widget _buildAvatar(BuildContext context) {
-    return CircleAvatar(
-      radius: 22,
-      backgroundColor: AppColors.primary.withOpacity(0.15),
-      backgroundImage:
-          user.avatarUrl != null ? NetworkImage(user.avatarUrl!) : null,
-      child: user.avatarUrl == null
-          ? Text(
-              user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
-              style: const TextStyle(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w700,
-              ),
-            )
-          : null,
-    );
+  Widget _buildAvatar() {
+    return UserAvatar(name: user.name, avatarUrl: user.avatarUrl);
   }
 
   Widget _buildStatusBadge(BuildContext context) {

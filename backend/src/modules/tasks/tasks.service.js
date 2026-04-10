@@ -39,7 +39,7 @@ const serializeTask = (task, projectId) => {
       ? {
           id: task.assignee.id,
           name: task.assignee.name,
-          avatarUrl: task.assignee.avatarUrl || null,
+          avatar_url: task.assignee.avatarUrl || null,
         }
       : null,
     labels: task.labels || [],

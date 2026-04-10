@@ -51,7 +51,7 @@ const login = async ({ email, password }) => {
   );
 
   return {
-    user: { id: user.id, email: user.email, name: user.name, role: user.role, status: user.status },
+    user: { id: user.id, email: user.email, name: user.name, avatar_url: user.avatarUrl ?? null, role: user.role, status: user.status },
     token,
   };
 };
@@ -59,14 +59,15 @@ const login = async ({ email, password }) => {
 const getMe = async (userId) => {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, email: true, name: true, role: true, status: true, createdAt: true },
+    select: { id: true, email: true, name: true, avatarUrl: true, role: true, status: true, createdAt: true },
   });
 
   if (!user) {
     throw new AppError("User not found", 404);
   }
 
-  return user;
+  const { avatarUrl, ...rest } = user;
+  return { ...rest, avatar_url: avatarUrl ?? null };
 };
 
 const getGoogleAuthUrl = () => {
@@ -149,7 +150,7 @@ const googleCallback = async (code, state) => {
       id: user.id,
       email: user.email,
       name: user.name,
-      avatarUrl: user.avatarUrl,
+      avatar_url: user.avatarUrl ?? null,
       role: user.role,
       status: user.status,
     };

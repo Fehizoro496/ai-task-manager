@@ -9,6 +9,7 @@ class AdminUserModel {
   final String id;
   final String email;
   final String name;
+  @JsonKey(name: 'avatar_url')
   final String? avatarUrl;
   final String provider;
   final String role;

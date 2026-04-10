@@ -15,7 +15,7 @@ class ConversationModel extends ConversationEntity {
         .map((m) => MemberSummary(
               id: m['id'] as String,
               name: m['name'] as String,
-              avatarUrl: m['avatarUrl'] as String?,
+              avatarUrl: m['avatar_url'] as String?,
             ))
         .toList();
 
