@@ -7,6 +7,13 @@ import 'package:socket_io_client/socket_io_client.dart' as IO;
 class SocketService {
   IO.Socket? _socket;
 
+  // Unique contrôleur broadcast — créé une fois, réutilisé par tous les abonnés.
+  // Évite l'accumulation de listeners socket morts à chaque navigation.
+  final StreamController<Map<String, dynamic>> _messageController =
+      StreamController<Map<String, dynamic>>.broadcast();
+
+  Stream<Map<String, dynamic>> get messages => _messageController.stream;
+
   void connect(String token, String baseUrl) {
     final serverUrl = baseUrl.replaceAll('/api', '');
     dev.log('connect → $serverUrl', name: 'socket');
@@ -15,7 +22,7 @@ class SocketService {
       'transports': ['websocket'],
       'auth': {'token': token},
       'autoConnect': true,
-      'forceNew': true, // force une nouvelle instance au lieu de réutiliser le cache
+      'forceNew': true,
     });
 
     _socket!.onConnect((_) {
@@ -33,50 +40,29 @@ class SocketService {
     _socket!.onError((err) {
       dev.log('✗ erreur socket  err=$err', name: 'socket');
     });
+
+    // Un seul listener socket pour tous les messages.
+    _socket!.on('new_message', (data) {
+      if (data is Map) {
+        final msg = Map<String, dynamic>.from(data as Map);
+        dev.log(
+          '← new_message  conv=${msg['conversationId']}  from=${msg['senderName']}',
+          name: 'socket',
+        );
+        _messageController.add(msg);
+      }
+    });
   }
 
   void disconnect() {
     dev.log('disconnect demandé', name: 'socket');
-    _socket?.dispose(); // retire le socket du cache du manager
+    _socket?.dispose();
     _socket = null;
   }
 
   void joinConversation(String convId) {
     dev.log('join  conv:$convId', name: 'socket');
     _socket?.emit('join_conversation', convId);
-  }
-
-  void leaveConversation(String convId) {
-    dev.log('leave conv:$convId', name: 'socket');
-    _socket?.emit('leave_conversation', convId);
-  }
-
-  Stream<Map<String, dynamic>> onNewMessage(String convId) {
-    final controller = StreamController<Map<String, dynamic>>.broadcast();
-    _socket?.on('new_message', (data) {
-      if (data is Map && data['conversationId'] == convId) {
-        dev.log(
-          '← new_message  conv=$convId  from=${data['senderName']}',
-          name: 'socket',
-        );
-        controller.add(Map<String, dynamic>.from(data as Map));
-      }
-    });
-    return controller.stream;
-  }
-
-  Stream<Map<String, dynamic>> onAnyMessage() {
-    final controller = StreamController<Map<String, dynamic>>.broadcast();
-    _socket?.on('new_message', (data) {
-      if (data is Map) {
-        dev.log(
-          '← new_message (any)  conv=${data['conversationId']}  from=${data['senderName']}',
-          name: 'socket',
-        );
-        controller.add(Map<String, dynamic>.from(data as Map));
-      }
-    });
-    return controller.stream;
   }
 }
 
