@@ -26,6 +26,7 @@ const serializeConversation = (conv, lastMessage) => ({
   lastMessage: lastMessage
     ? {
         content: lastMessage.content,
+        senderId: lastMessage.senderId,
         senderName: lastMessage.sender.name,
         createdAt: lastMessage.createdAt.toISOString(),
       }

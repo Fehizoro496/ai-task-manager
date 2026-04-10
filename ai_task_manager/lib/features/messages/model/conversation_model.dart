@@ -24,6 +24,7 @@ class ConversationModel extends ConversationEntity {
       final lm = json['lastMessage'] as Map<String, dynamic>;
       lastMessage = MessageSummary(
         content: lm['content'] as String,
+        senderId: lm['senderId'] as String? ?? '',
         senderName: lm['senderName'] as String,
         createdAt: DateTime.parse(lm['createdAt'] as String),
       );
