@@ -8,13 +8,59 @@ import 'package:ai_task_manager/core/theme/app_spacing.dart';
 import 'package:ai_task_manager/features/admin/model/admin_user_model.dart';
 import 'package:ai_task_manager/features/admin/viewmodel/admin_viewmodel.dart';
 
-class AdminDashboardScreen extends ConsumerWidget {
+class AdminDashboardScreen extends ConsumerStatefulWidget {
   const AdminDashboardScreen({super.key});
 
   static const String routeName = '/admin';
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AdminDashboardScreen> createState() =>
+      _AdminDashboardScreenState();
+}
+
+class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<AdminUserModel> _filter(List<AdminUserModel> users) {
+    final q = _searchQuery.trim().toLowerCase();
+    if (q.isEmpty) return users;
+    return users
+        .where((u) =>
+            u.name.toLowerCase().contains(q) ||
+            u.email.toLowerCase().contains(q))
+        .toList();
+  }
+
+  Future<bool> _confirm(String title, String message) async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(title),
+            content: Text(message),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text(title),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final filter = ref.watch(adminUserFilterProvider);
     final usersAsync = ref.watch(adminUsersProvider);
@@ -26,7 +72,8 @@ class AdminDashboardScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildHeader(context, isDark),
-          _buildTabs(context, ref, isDark, filter),
+          _buildSearchBar(isDark),
+          _buildTabs(context, isDark, filter),
           Expanded(
             child: usersAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -56,22 +103,49 @@ class AdminDashboardScreen extends ConsumerWidget {
                   ],
                 ),
               ),
-              data: (users) => users.isEmpty
-                  ? _buildEmptyState(context, isDark, filter)
-                  : RefreshIndicator(
-                      onRefresh: () =>
-                          ref.read(adminUsersProvider.notifier).refresh(),
-                      child: ListView.separated(
-                        padding: const EdgeInsets.all(AppSpacing.lg),
-                        itemCount: users.length,
-                        separatorBuilder: (_, __) =>
-                            const SizedBox(height: AppSpacing.sm),
-                        itemBuilder: (context, index) => _UserTile(
-                          user: users[index],
-                          isDark: isDark,
-                        ),
-                      ),
+              data: (users) {
+                final filtered = _filter(users);
+                if (filtered.isEmpty) {
+                  return _buildEmptyState(
+                      context, isDark, filter, _searchQuery.isNotEmpty);
+                }
+                return RefreshIndicator(
+                  onRefresh: () =>
+                      ref.read(adminUsersProvider.notifier).refresh(),
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    itemCount: filtered.length,
+                    separatorBuilder: (_, __) =>
+                        const SizedBox(height: AppSpacing.sm),
+                    itemBuilder: (context, index) => _UserTile(
+                      user: filtered[index],
+                      isDark: isDark,
+                      onApprove: () async {
+                        final ok = await _confirm(
+                          'Approve',
+                          'Approve ${filtered[index].name}?',
+                        );
+                        if (ok) {
+                          ref
+                              .read(adminUsersProvider.notifier)
+                              .approveUser(filtered[index].id);
+                        }
+                      },
+                      onReject: () async {
+                        final ok = await _confirm(
+                          'Reject',
+                          'Reject ${filtered[index].name}? They will not be able to log in.',
+                        );
+                        if (ok) {
+                          ref
+                              .read(adminUsersProvider.notifier)
+                              .rejectUser(filtered[index].id);
+                        }
+                      },
                     ),
+                  ),
+                );
+              },
             ),
           ),
         ],
@@ -83,51 +157,104 @@ class AdminDashboardScreen extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
           AppSpacing.xl, AppSpacing.xl, AppSpacing.xl, AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.sm),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                ),
-                child: const Icon(
-                  Icons.admin_panel_settings_rounded,
-                  color: AppColors.primary,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Text(
-                'Admin Panel',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: isDark
-                          ? AppColors.textPrimaryDark
-                          : AppColors.textPrimaryLight,
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-            ],
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.sm),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+            ),
+            child: const Icon(
+              Icons.admin_panel_settings_rounded,
+              color: AppColors.primary,
+              size: 20,
+            ),
           ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'Manage user registration approvals',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: isDark
-                      ? AppColors.textSecondaryDark
-                      : AppColors.textSecondaryLight,
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Admin Panel',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        color: isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimaryLight,
+                        fontWeight: FontWeight.w700,
+                      ),
                 ),
+                Text(
+                  'Manage user registration approvals',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                      ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded),
+            onPressed: () =>
+                ref.read(adminUsersProvider.notifier).refresh(),
+            tooltip: 'Refresh',
+            color: isDark
+                ? AppColors.textSecondaryDark
+                : AppColors.textSecondaryLight,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildTabs(
-      BuildContext context, WidgetRef ref, bool isDark, String? filter) {
+  Widget _buildSearchBar(bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg, vertical: AppSpacing.xs),
+      child: TextField(
+        controller: _searchController,
+        onChanged: (v) => setState(() => _searchQuery = v),
+        decoration: InputDecoration(
+          hintText: 'Search by name or email…',
+          prefixIcon: const Icon(Icons.search_rounded, size: 20),
+          suffixIcon: _searchQuery.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.close_rounded, size: 18),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() => _searchQuery = '');
+                  },
+                )
+              : null,
+          contentPadding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+          filled: true,
+          fillColor:
+              isDark ? AppColors.surfaceDark : AppColors.cardLight,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+            borderSide: BorderSide(
+                color: isDark ? AppColors.borderDark : AppColors.borderLight),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+            borderSide: BorderSide(
+                color: isDark ? AppColors.borderDark : AppColors.borderLight),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+            borderSide:
+                const BorderSide(color: AppColors.primary, width: 1.5),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabs(BuildContext context, bool isDark, String? filter) {
     final tabs = [
       (label: 'Pending', value: 'PENDING', color: AppColors.warning),
       (label: 'All', value: null, color: AppColors.primary),
@@ -137,8 +264,8 @@ class AdminDashboardScreen extends ConsumerWidget {
 
     return Container(
       height: 44,
-      margin:
-          const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+      margin: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: tabs.map((tab) {
@@ -179,23 +306,29 @@ class AdminDashboardScreen extends ConsumerWidget {
   }
 
   Widget _buildEmptyState(
-      BuildContext context, bool isDark, String? filter) {
-    final message = filter == 'PENDING'
-        ? 'No pending registrations'
-        : filter == 'APPROVED'
-            ? 'No approved users'
-            : filter == 'REJECTED'
-                ? 'No rejected users'
-                : 'No users found';
+      BuildContext context, bool isDark, String? filter, bool isSearch) {
+    final message = isSearch
+        ? 'No users match "$_searchQuery"'
+        : filter == 'PENDING'
+            ? 'No pending registrations'
+            : filter == 'APPROVED'
+                ? 'No approved users'
+                : filter == 'REJECTED'
+                    ? 'No rejected users'
+                    : 'No users found';
 
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            Icons.people_outline_rounded,
+            isSearch
+                ? Icons.search_off_rounded
+                : Icons.people_outline_rounded,
             size: 64,
-            color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+            color: isDark
+                ? AppColors.textTertiaryDark
+                : AppColors.textTertiaryLight,
           ),
           const SizedBox(height: AppSpacing.lg),
           Text(
@@ -205,6 +338,7 @@ class AdminDashboardScreen extends ConsumerWidget {
                       ? AppColors.textSecondaryDark
                       : AppColors.textSecondaryLight,
                 ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -212,14 +346,21 @@ class AdminDashboardScreen extends ConsumerWidget {
   }
 }
 
-class _UserTile extends ConsumerWidget {
+class _UserTile extends StatelessWidget {
   final AdminUserModel user;
   final bool isDark;
+  final VoidCallback? onApprove;
+  final VoidCallback? onReject;
 
-  const _UserTile({required this.user, required this.isDark});
+  const _UserTile({
+    required this.user,
+    required this.isDark,
+    this.onApprove,
+    this.onReject,
+  });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -285,7 +426,7 @@ class _UserTile extends ConsumerWidget {
           ),
           if (user.isPending) ...[
             const SizedBox(width: AppSpacing.sm),
-            _buildActions(context, ref),
+            _buildActions(context),
           ],
         ],
       ),
@@ -381,7 +522,7 @@ class _UserTile extends ConsumerWidget {
     );
   }
 
-  Widget _buildActions(BuildContext context, WidgetRef ref) {
+  Widget _buildActions(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -389,14 +530,14 @@ class _UserTile extends ConsumerWidget {
           icon: Icons.check_rounded,
           color: AppColors.success,
           tooltip: 'Approve',
-          onTap: () => ref.read(adminUsersProvider.notifier).approveUser(user.id),
+          onTap: onApprove,
         ),
         const SizedBox(width: AppSpacing.xs),
         _ActionButton(
           icon: Icons.close_rounded,
           color: AppColors.error,
           tooltip: 'Reject',
-          onTap: () => ref.read(adminUsersProvider.notifier).rejectUser(user.id),
+          onTap: onReject,
         ),
       ],
     );
@@ -407,13 +548,13 @@ class _ActionButton extends StatelessWidget {
   final IconData icon;
   final Color color;
   final String tooltip;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   const _ActionButton({
     required this.icon,
     required this.color,
     required this.tooltip,
-    required this.onTap,
+    this.onTap,
   });
 
   @override

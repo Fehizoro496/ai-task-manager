@@ -56,7 +56,11 @@ class NotificationsScreen extends ConsumerWidget {
                     ref
                         .read(notificationsProvider.notifier)
                         .markAsRead(notification.id);
-                    context.go(notification.link);
+                    final base = notification.link;
+                    final dest = notification.taskId.isNotEmpty
+                        ? '$base?taskId=${notification.taskId}'
+                        : base;
+                    context.go(dest);
                   },
                 );
               },

@@ -20,10 +20,12 @@ class BoardScreen extends ConsumerStatefulWidget {
     super.key,
     required this.projectId,
     this.projectName = 'Project Board',
+    this.highlightTaskId,
   });
 
   final String projectId;
   final String projectName;
+  final String? highlightTaskId;
 
   @override
   ConsumerState<BoardScreen> createState() => _BoardScreenState();
@@ -33,6 +35,19 @@ class _BoardScreenState extends ConsumerState<BoardScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   TaskPriority? _priorityFilter;
+  String? _activeHighlightId;
+
+  @override
+  void initState() {
+    super.initState();
+    _activeHighlightId = widget.highlightTaskId;
+    if (_activeHighlightId != null) {
+      // Clear after animation completes (3 pulses × 700 ms + 400 ms fade-out)
+      Future.delayed(const Duration(milliseconds: 5000), () {
+        if (mounted) setState(() => _activeHighlightId = null);
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -95,6 +110,7 @@ class _BoardScreenState extends ConsumerState<BoardScreen> {
                   isDark: isDark,
                   isAdmin: isAdmin,
                   currentUserId: currentUserId,
+                  highlightTaskId: _activeHighlightId,
                 );
               },
             ),
@@ -339,6 +355,7 @@ class _BoardContent extends ConsumerWidget {
     required this.isDark,
     required this.isAdmin,
     required this.currentUserId,
+    this.highlightTaskId,
   });
 
   final String projectId;
@@ -347,6 +364,7 @@ class _BoardContent extends ConsumerWidget {
   final bool isDark;
   final bool isAdmin;
   final String currentUserId;
+  final String? highlightTaskId;
 
   List<TaskEntity> _tasksForStatus(TaskStatus status) {
     return tasks.where((t) => t.status == status).toList()
@@ -376,6 +394,7 @@ class _BoardContent extends ConsumerWidget {
               isDark: isDark,
               isAdmin: isAdmin,
               currentUserId: currentUserId,
+              highlightTaskId: highlightTaskId,
             ),
           );
         }).toList(),
@@ -396,6 +415,7 @@ class _DragTargetColumn extends ConsumerStatefulWidget {
     required this.isDark,
     required this.isAdmin,
     required this.currentUserId,
+    this.highlightTaskId,
   });
 
   final String projectId;
@@ -404,6 +424,7 @@ class _DragTargetColumn extends ConsumerStatefulWidget {
   final bool isDark;
   final bool isAdmin;
   final String currentUserId;
+  final String? highlightTaskId;
 
   @override
   ConsumerState<_DragTargetColumn> createState() => _DragTargetColumnState();
@@ -466,6 +487,7 @@ class _DragTargetColumnState extends ConsumerState<_DragTargetColumn> {
                     index: entry.key,
                     isAdmin: widget.isAdmin,
                     currentUserId: widget.currentUserId,
+                    isHighlighted: task.id == widget.highlightTaskId,
                   );
                 }),
                 if (_isDragOver && candidateData.isNotEmpty)
@@ -496,12 +518,14 @@ class _DraggableTaskCard extends ConsumerWidget {
     required this.index,
     required this.isAdmin,
     required this.currentUserId,
+    this.isHighlighted = false,
   });
 
   final TaskEntity task;
   final int index;
   final bool isAdmin;
   final String currentUserId;
+  final bool isHighlighted;
 
   ds.TaskPriority _mapPriority(TaskPriority priority) {
     switch (priority) {
@@ -521,7 +545,7 @@ class _DraggableTaskCard extends ConsumerWidget {
     final cardWidth = AppConstants.kanbanColumnWidth - AppSpacing.lg * 2;
 
     Widget buildCard() {
-      return ds.TaskCard(
+      final card = ds.TaskCard(
         title: task.title,
         description: task.description,
         priority: _mapPriority(task.priority),
@@ -532,6 +556,14 @@ class _DraggableTaskCard extends ConsumerWidget {
         onTap: () {
           ref.read(selectedTaskProvider.notifier).state = task;
         },
+      );
+      if (!isHighlighted) return card;
+      return Stack(
+        clipBehavior: Clip.none,
+        children: [
+          card,
+          Positioned.fill(child: _HighlightBorder()),
+        ],
       );
     }
 
@@ -569,6 +601,71 @@ class _DraggableTaskCard extends ConsumerWidget {
           delay: Duration(milliseconds: 50 * index),
           curve: Curves.easeOutCubic,
         );
+  }
+}
+
+// =============================================================================
+// Highlight Border (pulsing outline for deep-linked tasks)
+// =============================================================================
+
+class _HighlightBorder extends StatefulWidget {
+  const _HighlightBorder();
+
+  @override
+  State<_HighlightBorder> createState() => _HighlightBorderState();
+}
+
+class _HighlightBorderState extends State<_HighlightBorder>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    )..repeat(reverse: true);
+
+    // Stop pulsing after 3 cycles (~4.2 s) then fade out
+    Future.delayed(const Duration(milliseconds: 4200), () {
+      if (mounted) {
+        _ctrl.animateTo(0, duration: const Duration(milliseconds: 400));
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: AnimatedBuilder(
+        animation: _ctrl,
+        builder: (context, child) => DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+            border: Border.all(
+              color: AppColors.warning
+                  .withValues(alpha: 0.4 + _ctrl.value * 0.6),
+              width: 2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.warning
+                    .withValues(alpha: _ctrl.value * 0.28),
+                blurRadius: 12,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
