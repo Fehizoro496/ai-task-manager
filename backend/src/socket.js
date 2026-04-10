@@ -21,10 +21,26 @@ const init = (httpServer) => {
     }
   });
 
-  io.on('connection', (socket) => {
+  io.on('connection', async (socket) => {
     const userId = socket.user?.id ?? '?';
     const userName = socket.user?.name ?? socket.user?.email ?? '?';
     console.log(`[socket] ✓ Connecté  — user=${userName} (${userId})  id=${socket.id}`);
+
+    // Auto-rejoindre toutes les conversations de l'utilisateur
+    // pour recevoir les nouveaux messages même sans ouvrir la conversation
+    try {
+      const prisma = require('./prisma/client');
+      const convs = await prisma.conversation.findMany({
+        where: { members: { some: { id: userId } } },
+        select: { id: true },
+      });
+      for (const conv of convs) {
+        socket.join(`conv:${conv.id}`);
+      }
+      console.log(`[socket]   auto-join  ${convs.length} conversations  ← ${userName}`);
+    } catch (err) {
+      console.error(`[socket] ✗ auto-join échoué  err=${err.message}`);
+    }
 
     socket.on('join_conversation', (convId) => {
       socket.join(`conv:${convId}`);

@@ -1,7 +1,7 @@
 import 'dart:async';
 
+import 'package:ai_task_manager/features/auth/viewmodel/auth_viewmodel.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:ai_task_manager/core/network/api_client.dart';
 import 'package:ai_task_manager/core/network/socket_service.dart';
@@ -19,9 +19,9 @@ List<ConversationEntity> _sortedByLastMessage(List<ConversationEntity> list) {
     final aDate = a.lastMessage?.createdAt;
     final bDate = b.lastMessage?.createdAt;
     if (aDate == null && bDate == null) return 0;
-    if (aDate == null) return 1;   // sans message → fin de liste
-    if (bDate == null) return -1;  // sans message → fin de liste
-    return bDate.compareTo(aDate); // plus récent en premier
+    if (aDate == null) return 1;
+    if (bDate == null) return -1;
+    return bDate.compareTo(aDate);
   });
   return sorted;
 }
@@ -33,29 +33,14 @@ final chatServiceProvider = Provider<ChatService>((ref) {
   return ChatService(apiClient: apiClient);
 });
 
-String _lastReadKey(String convId) => 'chat_last_read_$convId';
-
-int _computeUnread(
-  List<MessageEntity> messages,
-  String currentUserId,
-  DateTime? lastRead,
-) {
-  if (lastRead == null) {
-    return messages.where((m) => m.senderId != currentUserId).length;
-  }
-  return messages
-      .where((m) =>
-          m.senderId != currentUserId && m.createdAt.isAfter(lastRead))
-      .length;
-}
-
 // ─── Conversations ────────────────────────────────────────────────────────────
 
-final conversationsProvider = AsyncNotifierProvider<ConversationsViewModel,
-    List<ConversationEntity>>(ConversationsViewModel.new);
+final conversationsProvider =
+    AsyncNotifierProvider<ConversationsViewModel, List<ConversationEntity>>(
+      ConversationsViewModel.new,
+    );
 
-class ConversationsViewModel
-    extends AsyncNotifier<List<ConversationEntity>> {
+class ConversationsViewModel extends AsyncNotifier<List<ConversationEntity>> {
   StreamSubscription<Map<String, dynamic>>? _sub;
 
   @override
@@ -63,41 +48,23 @@ class ConversationsViewModel
     final prefs = ref.read(sharedPreferencesProvider);
     if (prefs.getString(kCachedAuthTokenKey) == null) return [];
 
-    final conversations =
-        await ref.read(chatServiceProvider).getConversations();
+    final conversations = await ref.read(chatServiceProvider).getConversations();
 
-    // Calculer unreadCount depuis SharedPreferences
-    final withUnread = await _attachUnreadCounts(conversations, prefs);
+    // unreadCount géré uniquement en mémoire : démarre à 0 au chargement,
+    // incrémenté par socket, remis à 0 à l'ouverture de la conversation.
+    final initial = conversations
+        .map((c) => c.copyWith(unreadCount: 0))
+        .toList();
 
-    // Écouter les nouveaux messages socket pour mettre à jour lastMessage
     _sub?.cancel();
     _sub = ref
         .read(socketServiceProvider)
-        .onAnyMessage()
+        .messages
         .listen(_onSocketMessage);
 
     ref.onDispose(() => _sub?.cancel());
 
-    return _sortedByLastMessage(withUnread);
-  }
-
-  Future<List<ConversationEntity>> _attachUnreadCounts(
-    List<ConversationEntity> conversations,
-    SharedPreferences prefs,
-  ) async {
-    // On ne peut pas calculer le unread sans récupérer les messages,
-    // donc on utilise lastMessage.createdAt comme proxy simple :
-    // unread = 1 si lastMessage existe et createdAt > lastRead, sinon 0.
-    return conversations.map((c) {
-      final lastReadStr = prefs.getString(_lastReadKey(c.id));
-      if (lastReadStr == null || c.lastMessage == null) {
-        return c.copyWith(unreadCount: 0);
-      }
-      final lastRead = DateTime.tryParse(lastReadStr);
-      if (lastRead == null) return c.copyWith(unreadCount: 0);
-      final isUnread = c.lastMessage!.createdAt.isAfter(lastRead);
-      return c.copyWith(unreadCount: isUnread ? 1 : 0);
-    }).toList();
+    return _sortedByLastMessage(initial);
   }
 
   void _onSocketMessage(Map<String, dynamic> data) {
@@ -106,23 +73,20 @@ class ConversationsViewModel
     final convId = data['conversationId'] as String?;
     if (convId == null) return;
 
-    final prefs = ref.read(sharedPreferencesProvider);
-    final lastReadStr = prefs.getString(_lastReadKey(convId));
-    final lastRead =
-        lastReadStr != null ? DateTime.tryParse(lastReadStr) : null;
+    final currentUserId = ref.read(authStateProvider).valueOrNull?.id;
+    final senderId = data['senderId'] as String?;
+    final isUnread = senderId != null && senderId != currentUserId;
+
     final msgDate = DateTime.tryParse(data['createdAt'] as String? ?? '');
 
     final updated = current.map((c) {
       if (c.id != convId) return c;
-      final newLastMessage = MessageSummary(
-        content: data['content'] as String? ?? '',
-        senderName: data['senderName'] as String? ?? '',
-        createdAt: msgDate ?? DateTime.now(),
-      );
-      final isUnread = lastRead == null ||
-          (msgDate != null && msgDate.isAfter(lastRead));
       return c.copyWith(
-        lastMessage: newLastMessage,
+        lastMessage: MessageSummary(
+          content: data['content'] as String? ?? '',
+          senderName: data['senderName'] as String? ?? '',
+          createdAt: msgDate ?? DateTime.now(),
+        ),
         unreadCount: isUnread ? c.unreadCount + 1 : c.unreadCount,
       );
     }).toList();
@@ -130,8 +94,7 @@ class ConversationsViewModel
   }
 
   Future<ConversationEntity> createDM(String otherUserId) async {
-    final conv =
-        await ref.read(chatServiceProvider).createDM(otherUserId);
+    final conv = await ref.read(chatServiceProvider).createDM(otherUserId);
     final current = state.valueOrNull ?? [];
     final exists = current.any((c) => c.id == conv.id);
     if (!exists) {
@@ -141,15 +104,14 @@ class ConversationsViewModel
   }
 
   void markRead(String convId) {
-    final prefs = ref.read(sharedPreferencesProvider);
-    prefs.setString(_lastReadKey(convId), DateTime.now().toIso8601String());
-
     final current = state.valueOrNull;
     if (current == null) return;
-    state = AsyncData(current.map((c) {
-      if (c.id != convId) return c;
-      return c.copyWith(unreadCount: 0);
-    }).toList());
+    state = AsyncData(
+      current.map((c) {
+        if (c.id != convId) return c;
+        return c.copyWith(unreadCount: 0);
+      }).toList(),
+    );
   }
 
   Future<void> refresh() async {
@@ -169,11 +131,13 @@ final unreadMessagesCountProvider = Provider<int>((ref) {
 
 // ─── Messages d'une conversation ─────────────────────────────────────────────
 
-final messagesProvider = AsyncNotifierProviderFamily<MessagesViewModel,
-    List<MessageEntity>, String>(MessagesViewModel.new);
+final messagesProvider = AsyncNotifierProvider.autoDispose
+    .family<MessagesViewModel, List<MessageEntity>, String>(
+      MessagesViewModel.new,
+    );
 
 class MessagesViewModel
-    extends FamilyAsyncNotifier<List<MessageEntity>, String> {
+    extends AutoDisposeFamilyAsyncNotifier<List<MessageEntity>, String> {
   StreamSubscription<Map<String, dynamic>>? _sub;
 
   @override
@@ -184,27 +148,17 @@ class MessagesViewModel
     final messages =
         await ref.read(chatServiceProvider).getMessages(conversationId);
 
-    // Rejoindre la room socket
     ref.read(socketServiceProvider).joinConversation(conversationId);
+    ref.read(conversationsProvider.notifier).markRead(conversationId);
 
-    // Marquer comme lu
-    ref
-        .read(conversationsProvider.notifier)
-        .markRead(conversationId);
-
-    // Écouter les nouveaux messages
     _sub?.cancel();
     _sub = ref
         .read(socketServiceProvider)
-        .onNewMessage(conversationId)
+        .messages
+        .where((data) => data['conversationId'] == conversationId)
         .listen(_onNewMessage);
 
-    ref.onDispose(() {
-      _sub?.cancel();
-      ref
-          .read(socketServiceProvider)
-          .leaveConversation(conversationId);
-    });
+    ref.onDispose(() => _sub?.cancel());
 
     return messages;
   }
@@ -213,14 +167,10 @@ class MessagesViewModel
     final current = state.valueOrNull ?? [];
     final msg = MessageModel.fromJson(data);
     state = AsyncData([...current, msg]);
-
-    // Marquer comme lu car on est dans la conversation
     ref.read(conversationsProvider.notifier).markRead(arg);
   }
 
   Future<void> sendMessage(String content) async {
     await ref.read(chatServiceProvider).sendMessage(arg, content);
-    // Le socket diffuse aux autres ; pour l'expéditeur, le serveur renvoie
-    // le message via l'event socket également.
   }
 }
