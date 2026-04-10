@@ -56,17 +56,49 @@ class AdminOverviewData {
   final List<ProjectEntity> projects;
   final Map<String, List<TaskEntity>> tasksByProject;
   final List<AdminUserModel> approvedUsers;
+  final int pendingCount;
 
   const AdminOverviewData({
     required this.projects,
     required this.tasksByProject,
     required this.approvedUsers,
+    required this.pendingCount,
   });
 
   int get totalProjects => projects.length;
   int get totalTasks =>
       tasksByProject.values.fold(0, (sum, list) => sum + list.length);
   int get totalMembers => approvedUsers.length;
+  int get doneTasks => tasksByProject.values.fold(
+      0, (sum, list) => sum + list.where((t) => t.status == TaskStatus.done).length);
+  int get completionRate =>
+      totalTasks == 0 ? 0 : ((doneTasks / totalTasks) * 100).round();
+
+  /// Tasks not done, with dueDate within the next [withinDays] days or overdue.
+  List<({TaskEntity task, String projectName})> urgentTasks({
+    int withinDays = 7,
+  }) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final threshold = today.add(Duration(days: withinDays));
+    final projectNames = {for (final p in projects) p.id: p.name};
+
+    final result = <({TaskEntity task, String projectName})>[];
+    for (final entry in tasksByProject.entries) {
+      final name = projectNames[entry.key] ?? '';
+      for (final task in entry.value) {
+        if (task.status == TaskStatus.done) continue;
+        final due = task.dueDate;
+        if (due == null) continue;
+        final dueDay = DateTime(due.year, due.month, due.day);
+        if (dueDay.isAfter(threshold)) continue;
+        result.add((task: task, projectName: name));
+      }
+    }
+
+    result.sort((a, b) => a.task.dueDate!.compareTo(b.task.dueDate!));
+    return result;
+  }
 }
 
 final adminOverviewProvider = FutureProvider<AdminOverviewData>((ref) async {
@@ -80,10 +112,14 @@ final adminOverviewProvider = FutureProvider<AdminOverviewData>((ref) async {
     }),
   );
 
+  final pendingUsers =
+      await ref.read(adminServiceProvider).getUsers(status: 'PENDING');
+
   return AdminOverviewData(
     projects: projects,
     tasksByProject: Map.fromEntries(taskEntries),
     approvedUsers: approvedUsers,
+    pendingCount: pendingUsers.length,
   );
 });
 

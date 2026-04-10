@@ -103,6 +103,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               key: state.pageKey,
               child: BoardScreen(
                 projectId: state.pathParameters['projectId'] ?? 'default',
+                highlightTaskId: state.uri.queryParameters['taskId'],
               ),
               transitionsBuilder:
                   (context, animation, secondaryAnimation, child) {
