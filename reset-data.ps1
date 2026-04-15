@@ -102,7 +102,7 @@ Write-Host "Reset complet." -ForegroundColor Green
 Write-Host ""
 Write-Host "Comptes disponibles :" -ForegroundColor White
 Write-Host "  Admin  : fehizoroandriantsarafara@gmail.com  (Google)" -ForegroundColor Gray
-Write-Host "  User   : fehizoroandrian496@gmail.com        (Google)" -ForegroundColor Gray
+# Write-Host "  User   : fehizoroandrian496@gmail.com        (Google)" -ForegroundColor Gray
 Write-Host "  User1  : user1@gmail.com  / 123456           (local)" -ForegroundColor Gray
 Write-Host "  User2  : user2@gmail.com  / 123456           (local)" -ForegroundColor Gray
 Write-Host ""
