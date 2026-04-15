@@ -60,6 +60,7 @@ class AuthViewModel extends AsyncNotifier<UserEntity?> {
     ref.invalidate(messagesProvider);      // invalide toutes les instances family
     ref.invalidate(boardTasksProvider);    // invalide toutes les instances family
     ref.invalidate(approvedUsersProvider); // FutureProvider — peut cacher un 403
+    ref.invalidate(pendingUsersCountProvider);
     ref.invalidate(taskStreamProvider);    // invalide toutes les instances family
   }
 

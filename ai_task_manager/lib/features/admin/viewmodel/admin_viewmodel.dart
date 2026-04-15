@@ -21,6 +21,14 @@ final approvedUsersProvider = FutureProvider<List<AdminUserModel>>((ref) {
   return ref.read(adminServiceProvider).getUsers(status: 'APPROVED');
 });
 
+/// Count of PENDING users — drives the Team sidebar badge.
+final pendingUsersCountProvider = FutureProvider<int>((ref) async {
+  final prefs = ref.read(sharedPreferencesProvider);
+  if (prefs.getString(kCachedAuthTokenKey) == null) return 0;
+  final users = await ref.read(adminServiceProvider).getUsers(status: 'PENDING');
+  return users.length;
+});
+
 /// Filter: null = all, 'PENDING', 'APPROVED', 'REJECTED'
 final adminUserFilterProvider = StateProvider<String?>((ref) => 'PENDING');
 
@@ -44,11 +52,13 @@ class AdminUsersViewModel extends AsyncNotifier<List<AdminUserModel>> {
   Future<void> approveUser(String id) async {
     await ref.read(adminServiceProvider).approveUser(id);
     ref.invalidateSelf();
+    ref.invalidate(pendingUsersCountProvider);
   }
 
   Future<void> rejectUser(String id) async {
     await ref.read(adminServiceProvider).rejectUser(id);
     ref.invalidateSelf();
+    ref.invalidate(pendingUsersCountProvider);
   }
 }
 

@@ -17,19 +17,6 @@ async function main() {
   });
   console.log("✓ Admin:", admin.email);
 
-  await prisma.user.upsert({
-    where: { email: "fehizoroandrian496@gmail.com" },
-    update: { status: "APPROVED" },
-    create: {
-      email: "fehizoroandrian496@gmail.com",
-      name: "Fehizoro Andrian",
-      provider: "google",
-      role: "USER",
-      status: "APPROVED",
-    },
-  });
-  console.log("✓ User (Google): fehizoroandrian496@gmail.com");
-
   const hash = await bcrypt.hash("123456", 10);
 
   await prisma.user.upsert({

@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ai_task_manager/core/widgets/sidebar.dart';
+import 'package:ai_task_manager/features/admin/viewmodel/admin_viewmodel.dart';
 import 'package:ai_task_manager/features/auth/model/user_entity.dart';
 import 'package:ai_task_manager/features/auth/viewmodel/auth_viewmodel.dart';
 import 'package:ai_task_manager/features/notifications/viewmodel/notification_viewmodel.dart';
 import 'package:ai_task_manager/features/messages/viewmodel/chat_viewmodel.dart';
 
 final sidebarCollapsedProvider = StateProvider<bool>((ref) => false);
+// Kept for logout invalidation only — active index is derived from route location.
 final selectedNavIndexProvider = StateProvider<int>((ref) => 0);
 
 class AppLayout extends ConsumerWidget {
@@ -16,7 +18,7 @@ class AppLayout extends ConsumerWidget {
   const AppLayout({super.key, required this.child});
 
   List<SidebarItem> _buildNavItems(
-      UserEntity? user, int unreadCount, int unreadMessages) {
+      UserEntity? user, int unreadCount, int unreadMessages, int pendingCount) {
     return [
       if (user?.isAdmin == true)
         const SidebarItem(
@@ -30,10 +32,12 @@ class AppLayout extends ConsumerWidget {
         route: '/dashboard',
       ),
       if (user?.isAdmin == true)
-        const SidebarItem(
+        SidebarItem(
           icon: Icons.people_rounded,
           label: 'Team',
           route: '/team',
+          showBadge: pendingCount > 0,
+          badgeCount: pendingCount > 0 ? pendingCount : null,
         ),
       SidebarItem(
         icon: Icons.notifications_rounded,
@@ -57,16 +61,34 @@ class AppLayout extends ConsumerWidget {
     ];
   }
 
+  int _selectedIndexFromLocation(String location, List<SidebarItem> items) {
+    for (int i = 0; i < items.length; i++) {
+      final route = items[i].route;
+      if (location == route || location.startsWith('$route/')) return i;
+    }
+    // /board/* is under Projects (/dashboard)
+    if (location.startsWith('/board/')) {
+      final idx = items.indexWhere((e) => e.route == '/dashboard');
+      if (idx != -1) return idx;
+    }
+    return 0;
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isCollapsed = ref.watch(sidebarCollapsedProvider);
-    final selectedIndex = ref.watch(selectedNavIndexProvider);
     final authState = ref.watch(authStateProvider);
     final user = authState.valueOrNull;
     final userName = user?.name ?? '';
     final unreadCount = ref.watch(unreadCountProvider);
     final unreadMessages = ref.watch(unreadMessagesCountProvider);
-    final navItems = _buildNavItems(user, unreadCount, unreadMessages);
+    final pendingCount = user?.isAdmin == true
+        ? ref.watch(pendingUsersCountProvider).valueOrNull ?? 0
+        : 0;
+    final navItems = _buildNavItems(user, unreadCount, unreadMessages, pendingCount);
+
+    final location = GoRouterState.of(context).uri.path;
+    final selectedIndex = _selectedIndexFromLocation(location, navItems);
 
     return Scaffold(
       body: Row(
@@ -77,10 +99,7 @@ class AppLayout extends ConsumerWidget {
             isCollapsed: isCollapsed,
             userName: userName,
             userAvatarUrl: user?.avatarUrl,
-            onItemSelected: (index) {
-              ref.read(selectedNavIndexProvider.notifier).state = index;
-              context.go(navItems[index].route);
-            },
+            onItemSelected: (index) => context.go(navItems[index].route),
             onToggleCollapse: () {
               ref.read(sidebarCollapsedProvider.notifier).state = !isCollapsed;
             },
