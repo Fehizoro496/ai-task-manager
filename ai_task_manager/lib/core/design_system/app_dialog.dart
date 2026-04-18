@@ -68,25 +68,33 @@ class AppDialog extends StatelessWidget {
     return Center(
       child: Material(
         color: Colors.transparent,
-        child: Container(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
+            child: Container(
           width: 480,
           constraints: BoxConstraints(
             maxWidth: MediaQuery.of(context).size.width * 0.9,
             maxHeight: MediaQuery.of(context).size.height * 0.85,
           ),
           decoration: BoxDecoration(
-            color: backgroundColor,
+            color: isDark
+                ? const Color(0xFF1D1D1F).withOpacity(0.88)
+                : Colors.white.withOpacity(0.88),
             borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(isDark ? 0.4 : 0.15),
-                blurRadius: 24,
-                offset: const Offset(0, 8),
+                color: Colors.black.withOpacity(isDark ? 0.5 : 0.18),
+                blurRadius: 40,
+                offset: const Offset(0, 10),
               ),
             ],
             border: Border.all(
-              color: isDark ? AppColors.borderDark : AppColors.borderLight,
-              width: 1.0,
+              color: isDark
+                  ? Colors.white.withOpacity(0.10)
+                  : Colors.black.withOpacity(0.06),
+              width: 1,
             ),
           ),
           child: Column(
@@ -143,6 +151,8 @@ class AppDialog extends StatelessWidget {
                 ),
               ],
             ],
+          ),
+            ),
           ),
         ),
       ),

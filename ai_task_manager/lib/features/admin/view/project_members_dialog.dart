@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:ai_task_manager/core/design_system/app_button.dart';
 import 'package:ai_task_manager/core/theme/app_colors.dart';
 import 'package:ai_task_manager/core/theme/app_spacing.dart';
 import 'package:ai_task_manager/features/admin/model/admin_user_model.dart';
@@ -51,8 +52,9 @@ class _ProjectMembersDialogState extends ConsumerState<ProjectMembersDialog> {
       backgroundColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        side: BorderSide(
-            color: isDark ? AppColors.borderDark : AppColors.borderLight),
+        side: isDark
+            ? BorderSide(color: AppColors.borderDark)
+            : BorderSide.none,
       ),
       child: SizedBox(
         width: 480,
@@ -214,7 +216,9 @@ class _ProjectMembersDialogState extends ConsumerState<ProjectMembersDialog> {
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
-            FilledButton(
+            AppButton(
+              label: 'Add',
+              icon: Icons.add_rounded,
               onPressed: _selectedUserId == null
                   ? null
                   : () async {
@@ -236,15 +240,8 @@ class _ProjectMembersDialogState extends ConsumerState<ProjectMembersDialog> {
                         }
                       }
                     },
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md, vertical: AppSpacing.md),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                ),
-              ),
-              child: const Icon(Icons.add_rounded, size: 18),
+              variant: AppButtonVariant.primary,
+              size: AppButtonSize.md,
             ),
           ],
         ),

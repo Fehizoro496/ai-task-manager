@@ -1,8 +1,11 @@
+import 'dart:ui';
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:ai_task_manager/core/design_system/app_button.dart';
 import 'package:ai_task_manager/core/design_system/loading_skeleton.dart';
 import 'package:ai_task_manager/core/errors/exceptions.dart';
 import 'package:ai_task_manager/core/theme/app_colors.dart';
@@ -40,8 +43,7 @@ class AdminOverviewScreen extends ConsumerWidget {
     final overviewAsync = ref.watch(adminOverviewProvider);
 
     return Scaffold(
-      backgroundColor:
-          isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+      backgroundColor: Colors.transparent,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -86,53 +88,74 @@ class AdminOverviewScreen extends ConsumerWidget {
   }
 
   Widget _buildHeader(BuildContext context, WidgetRef ref, bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-          AppSpacing.xl, AppSpacing.xl, AppSpacing.md, AppSpacing.sm),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.sm),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha:0.12),
-              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          decoration: BoxDecoration(
+            color: isDark
+                ? const Color(0xFF000000).withOpacity(0.80)
+                : Colors.white.withOpacity(0.82),
+            border: Border(
+              bottom: BorderSide(
+                color: isDark
+                    ? Colors.white.withOpacity(0.08)
+                    : Colors.black.withOpacity(0.07),
+                width: 1,
+              ),
             ),
-            child: const Icon(Icons.bar_chart_rounded,
-                color: AppColors.primary, size: 20),
           ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+                AppSpacing.xl, AppSpacing.xl, AppSpacing.md, AppSpacing.sm),
+            child: Row(
               children: [
-                Text('Dashboard',
-                    style: Theme.of(context)
-                        .textTheme
-                        .headlineSmall
-                        ?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: isDark
-                              ? AppColors.textPrimaryDark
-                              : AppColors.textPrimaryLight,
-                        )),
-                Text('Overview & analytics',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: isDark
-                              ? AppColors.textSecondaryDark
-                              : AppColors.textSecondaryLight,
-                        )),
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  ),
+                  child: const Icon(Icons.bar_chart_rounded,
+                      color: AppColors.primary, size: 20),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Dashboard',
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineSmall
+                              ?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: isDark
+                                    ? AppColors.textPrimaryDark
+                                    : AppColors.textPrimaryLight,
+                              )),
+                      Text('Overview & analytics',
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: isDark
+                                        ? AppColors.textSecondaryDark
+                                        : AppColors.textSecondaryLight,
+                                  )),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.refresh_rounded, size: 20),
+                  tooltip: 'Refresh',
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight,
+                  onPressed: () => ref.invalidate(adminOverviewProvider),
+                ),
               ],
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded, size: 20),
-            tooltip: 'Refresh',
-            color: isDark
-                ? AppColors.textSecondaryDark
-                : AppColors.textSecondaryLight,
-            onPressed: () => ref.invalidate(adminOverviewProvider),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -192,10 +215,12 @@ class _ErrorState extends StatelessWidget {
                   ?.copyWith(color: AppColors.error),
               textAlign: TextAlign.center),
           const SizedBox(height: AppSpacing.lg),
-          TextButton.icon(
+          AppButton(
+            label: 'Retry',
+            icon: Icons.refresh_rounded,
             onPressed: onRetry,
-            icon: const Icon(Icons.refresh_rounded),
-            label: const Text('Retry'),
+            variant: AppButtonVariant.secondary,
+            size: AppButtonSize.sm,
           ),
         ],
       ),
@@ -270,59 +295,92 @@ class _KpiGrid extends StatelessWidget {
   }
 }
 
-class _KpiCard extends StatelessWidget {
+class _KpiCard extends StatefulWidget {
   final ({IconData icon, Color color, int value, String label, VoidCallback onTap}) item;
   final bool isDark;
 
   const _KpiCard({required this.item, required this.isDark});
 
   @override
+  State<_KpiCard> createState() => _KpiCardState();
+}
+
+class _KpiCardState extends State<_KpiCard> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    return Material(
-      color: isDark ? AppColors.surfaceDark : AppColors.cardLight,
-      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-      child: InkWell(
-        onTap: item.onTap,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        child: Container(
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.item.onTap,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
           padding: const EdgeInsets.all(AppSpacing.lg),
           decoration: BoxDecoration(
+            color: widget.isDark
+                ? Colors.white.withOpacity(_hovered ? 0.11 : 0.07)
+                : Colors.white.withOpacity(_hovered ? 0.88 : 0.74),
             borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
             border: Border.all(
-              color: isDark ? AppColors.borderDark : AppColors.borderLight,
+              color: _hovered
+                  ? widget.item.color.withOpacity(widget.isDark ? 0.35 : 0.25)
+                  : (widget.isDark
+                      ? Colors.white.withOpacity(0.10)
+                      : Colors.white.withOpacity(0.85)),
             ),
+            boxShadow: [
+              BoxShadow(
+                color: _hovered
+                    ? widget.item.color.withOpacity(widget.isDark ? 0.20 : 0.12)
+                    : Colors.black.withOpacity(widget.isDark ? 0.25 : 0.06),
+                blurRadius: _hovered ? 24 : 12,
+                offset: Offset(0, _hovered ? 8 : 3),
+              ),
+            ],
           ),
           child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: item.color.withValues(alpha:0.12),
-              borderRadius: BorderRadius.circular(8),
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: widget.item.color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(widget.item.icon,
+                    color: widget.item.color, size: 18),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                '${widget.item.value}',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.5,
+                      color: widget.isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight,
+                    ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                widget.item.label,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      letterSpacing: -0.1,
+                      color: widget.isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondaryLight,
+                    ),
+              ),
+            ],
+          ),
             ),
-            child: Icon(item.icon, color: item.color, size: 18),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            '${item.value}',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: isDark
-                      ? AppColors.textPrimaryDark
-                      : AppColors.textPrimaryLight,
-                ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            item.label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: isDark
-                      ? AppColors.textSecondaryDark
-                      : AppColors.textSecondaryLight,
-                ),
-          ),
-        ],
           ),
         ),
       ),
@@ -351,14 +409,25 @@ class _TaskDistributionCard extends StatelessWidget {
     final completionRate =
         total == 0 ? 0 : ((done / total) * 100).round();
 
-    return Container(
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : AppColors.cardLight,
+        color: isDark ? Colors.white.withOpacity(0.07) : Colors.white.withOpacity(0.76),
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         border: Border.all(
-          color: isDark ? AppColors.borderDark : AppColors.borderLight,
+          color: isDark ? Colors.white.withOpacity(0.10) : Colors.white.withOpacity(0.85),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.25 : 0.06),
+            blurRadius: 18,
+            offset: const Offset(0, 5),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -446,6 +515,8 @@ class _TaskDistributionCard extends StatelessWidget {
                   ],
                 ),
         ],
+      ),
+        ),
       ),
     );
   }
@@ -673,19 +744,23 @@ class _UrgentDeadlinesSection extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.md),
         if (items.isEmpty)
-          Container(
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              child: Container(
             width: double.infinity,
             padding: const EdgeInsets.all(AppSpacing.lg),
             decoration: BoxDecoration(
-              color: isDark ? AppColors.surfaceDark : AppColors.cardLight,
+              color: isDark ? Colors.white.withOpacity(0.07) : Colors.white.withOpacity(0.76),
               borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
               border: Border.all(
-                color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                color: isDark ? Colors.white.withOpacity(0.10) : Colors.white.withOpacity(0.85),
               ),
             ),
             child: Row(
               children: [
-                Icon(Icons.check_circle_outline_rounded,
+                const Icon(Icons.check_circle_outline_rounded,
                     color: AppColors.success, size: 20),
                 const SizedBox(width: AppSpacing.sm),
                 Text(
@@ -697,6 +772,8 @@ class _UrgentDeadlinesSection extends StatelessWidget {
                       ),
                 ),
               ],
+            ),
+              ),
             ),
           )
         else
@@ -753,24 +830,32 @@ class _DeadlineCard extends StatelessWidget {
       TaskPriority.low => (AppColors.kanbanTodo, 'Low'),
     };
 
-    return Material(
-      color: isDark ? AppColors.surfaceDark : AppColors.cardLight,
-      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-      child: InkWell(
-        onTap: onTap,
+    return GestureDetector(
+      onTap: onTap,
+      child: ClipRRect(
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        child: Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        border: Border.all(
-          color: diff < 0
-              ? AppColors.error.withValues(alpha: 0.35)
-              : isDark
-                  ? AppColors.borderDark
-                  : AppColors.borderLight,
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          child: Container(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: isDark ? Colors.white.withOpacity(0.07) : Colors.white.withOpacity(0.76),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+          border: Border.all(
+            color: diff < 0
+                ? AppColors.error.withOpacity(isDark ? 0.35 : 0.25)
+                : (isDark
+                    ? Colors.white.withOpacity(0.10)
+                    : Colors.white.withOpacity(0.85)),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(isDark ? 0.22 : 0.05),
+              blurRadius: 14,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -895,6 +980,7 @@ class _DeadlineCard extends StatelessWidget {
           ),
         ],
       ),
+          ),
         ),
       ),
     );
@@ -1004,20 +1090,28 @@ class _ProjectCard extends StatelessWidget {
       } catch (_) {}
     }
 
-    return Material(
-      color: isDark ? AppColors.surfaceDark : AppColors.cardLight,
-      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-      child: InkWell(
-        onTap: onTap,
+    return GestureDetector(
+      onTap: onTap,
+      child: ClipRRect(
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        child: Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        border: Border.all(
-          color: isDark ? AppColors.borderDark : AppColors.borderLight,
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: Container(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: isDark ? Colors.white.withOpacity(0.07) : Colors.white.withOpacity(0.76),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+          border: Border.all(
+            color: isDark ? Colors.white.withOpacity(0.10) : Colors.white.withOpacity(0.85),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(isDark ? 0.22 : 0.06),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1119,6 +1213,7 @@ class _ProjectCard extends StatelessWidget {
           ),
         ],
       ),
+          ),
         ),
       ),
     );

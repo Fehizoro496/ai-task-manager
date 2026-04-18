@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:ai_task_manager/core/theme/app_colors.dart';
 import 'package:ai_task_manager/core/theme/app_spacing.dart';
@@ -61,19 +63,27 @@ class _AppSidebarState extends State<AppSidebar> {
       duration: AppConstants.animationDuration,
       curve: Curves.easeInOut,
       width: sidebarWidth,
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-        border: Border(
-          right: BorderSide(
-            color: isDark ? AppColors.borderDark : AppColors.borderLight,
-            width: 1,
-          ),
-        ),
-      ),
-      child: Column(
+      child: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: isDark
+                  ? const Color(0xFF000000).withOpacity(0.72)
+                  : Colors.white.withOpacity(0.72),
+              border: Border(
+                right: BorderSide(
+                  color: isDark
+                      ? Colors.white.withOpacity(0.08)
+                      : Colors.black.withOpacity(0.07),
+                  width: 1,
+                ),
+              ),
+            ),
+            child: Column(
         children: [
-          _buildHeader(isDark),
-          const SizedBox(height: AppSpacing.sm),
+          _buildHeader(context, isDark),
+          const SizedBox(height: AppSpacing.xs),
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(
@@ -89,63 +99,58 @@ class _AppSidebarState extends State<AppSidebar> {
               ),
             ),
           ),
-          _buildUserSection(isDark),
+          _buildUserSection(context, isDark),
           _buildCollapseButton(isDark),
         ],
+            ),
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildHeader(bool isDark) {
+  Widget _buildHeader(BuildContext context, bool isDark) {
+    final logoColor = AppColors.primary;
+    final titleColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+
+    final logo = Container(
+      width: 30,
+      height: 30,
+      decoration: BoxDecoration(
+        color: logoColor,
+        borderRadius: BorderRadius.circular(7),
+      ),
+      child: const Center(
+        child: Text(
+          'A',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+            fontSize: 15,
+            letterSpacing: -0.3,
+          ),
+        ),
+      ),
+    );
+
     return Container(
-      height: 64,
+      height: 60,
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       alignment: widget.isCollapsed ? Alignment.center : Alignment.centerLeft,
       child: widget.isCollapsed
-          ? Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-              ),
-              child: const Center(
-                child: Text(
-                  'A',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-            )
+          ? logo
           : Row(
               children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                  ),
-                  child: const Center(
-                    child: Text(
-                      'A',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                ),
+                logo,
                 const SizedBox(width: AppSpacing.md),
                 Text(
                   'AI Tasks',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                  style: TextStyle(
+                    color: titleColor,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.3,
+                  ),
                 ),
               ],
             ),
@@ -161,9 +166,12 @@ class _AppSidebarState extends State<AppSidebar> {
     final isSelected = widget.selectedIndex == index;
     final isHovered = _hoveredIndex == index;
 
+    // Apple-style: selected = very subtle blue tint; hover = light gray
     Color bgColor;
     if (isSelected) {
-      bgColor = AppColors.primarySurface;
+      bgColor = isDark
+          ? AppColors.primary.withOpacity(0.14)
+          : AppColors.primary.withOpacity(0.08);
     } else if (isHovered) {
       bgColor = isDark ? AppColors.hoverDark : AppColors.hoverLight;
     } else {
@@ -172,18 +180,14 @@ class _AppSidebarState extends State<AppSidebar> {
 
     final iconColor = isSelected
         ? AppColors.primary
-        : isDark
-            ? AppColors.textSecondaryDark
-            : AppColors.textSecondaryLight;
+        : (isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight);
 
     final textColor = isSelected
         ? AppColors.primary
-        : isDark
-            ? AppColors.textPrimaryDark
-            : AppColors.textPrimaryLight;
+        : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight);
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.xxs),
+      padding: const EdgeInsets.only(bottom: 1),
       child: MouseRegion(
         onEnter: (_) => setState(() => _hoveredIndex = index),
         onExit: (_) => setState(() => _hoveredIndex = -1),
@@ -191,10 +195,10 @@ class _AppSidebarState extends State<AppSidebar> {
         child: GestureDetector(
           onTap: () => widget.onItemSelected(index),
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
+            duration: const Duration(milliseconds: 120),
             padding: EdgeInsets.symmetric(
-              horizontal: widget.isCollapsed ? AppSpacing.md : AppSpacing.md,
-              vertical: AppSpacing.sm + 2,
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm + 1,
             ),
             decoration: BoxDecoration(
               color: bgColor,
@@ -205,43 +209,22 @@ class _AppSidebarState extends State<AppSidebar> {
                     child: Stack(
                       clipBehavior: Clip.none,
                       children: [
-                        Icon(item.icon, size: 20, color: iconColor),
+                        Icon(item.icon, size: 19, color: iconColor),
                         if (item.badgeCount != null && item.badgeCount! > 0)
                           Positioned(
                             top: -4,
                             right: -6,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 4,
-                                vertical: 1,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.error,
-                                borderRadius: BorderRadius.circular(
-                                    AppSpacing.radiusFull),
-                              ),
-                              child: Text(
-                                item.badgeCount! > 99
-                                    ? '99+'
-                                    : '${item.badgeCount}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w700,
-                                  height: 1,
-                                ),
-                              ),
-                            ),
+                            child: _Badge(count: item.badgeCount!),
                           )
                         else if (item.showBadge)
                           Positioned(
                             top: -2,
                             right: -2,
                             child: Container(
-                              width: 7,
-                              height: 7,
+                              width: 6,
+                              height: 6,
                               decoration: const BoxDecoration(
-                                color: AppColors.accent,
+                                color: AppColors.error,
                                 shape: BoxShape.circle,
                               ),
                             ),
@@ -251,50 +234,28 @@ class _AppSidebarState extends State<AppSidebar> {
                   )
                 : Row(
                     children: [
-                      Icon(item.icon, size: 20, color: iconColor),
+                      Icon(item.icon, size: 19, color: iconColor),
                       const SizedBox(width: AppSpacing.md),
                       Expanded(
                         child: Text(
                           item.label,
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: textColor,
-                                    fontWeight: isSelected
-                                        ? FontWeight.w600
-                                        : FontWeight.w400,
-                                  ),
+                          style: TextStyle(
+                            color: textColor,
+                            fontSize: 13,
+                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                            letterSpacing: -0.15,
+                          ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       if (item.badgeCount != null && item.badgeCount! > 0)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.error,
-                            borderRadius:
-                                BorderRadius.circular(AppSpacing.radiusFull),
-                          ),
-                          child: Text(
-                            item.badgeCount! > 99
-                                ? '99+'
-                                : '${item.badgeCount}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              height: 1,
-                            ),
-                          ),
-                        )
+                        _Badge(count: item.badgeCount!)
                       else if (item.showBadge)
                         Container(
-                          width: 8,
-                          height: 8,
+                          width: 7,
+                          height: 7,
                           decoration: const BoxDecoration(
-                            color: AppColors.accent,
+                            color: AppColors.error,
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -306,38 +267,43 @@ class _AppSidebarState extends State<AppSidebar> {
     );
   }
 
-  Widget _buildUserSection(bool isDark) {
+  Widget _buildUserSection(BuildContext context, bool isDark) {
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
-    final textSecondary = isDark
-        ? AppColors.textSecondaryDark
-        : AppColors.textSecondaryLight;
-    final textTertiary = isDark
-        ? AppColors.textTertiaryDark
-        : AppColors.textTertiaryLight;
+    final nameColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
 
     return Container(
       decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(color: borderColor),
-        ),
+        border: Border(top: BorderSide(color: borderColor)),
       ),
-      padding: EdgeInsets.symmetric(
+      padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.sm,
         vertical: AppSpacing.sm,
       ),
       child: widget.isCollapsed
-          ? Center(child: _buildAvatar(isDark))
+          ? Center(
+              child: UserAvatar(
+                name: widget.userName,
+                avatarUrl: widget.userAvatarUrl,
+                radius: 15,
+              ),
+            )
           : Row(
               children: [
-                _buildAvatar(isDark),
+                UserAvatar(
+                  name: widget.userName,
+                  avatarUrl: widget.userAvatarUrl,
+                  radius: 15,
+                ),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
                     widget.userName,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: textSecondary,
-                          fontWeight: FontWeight.w600,
-                        ),
+                    style: TextStyle(
+                      color: nameColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: -0.12,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -350,23 +316,22 @@ class _AppSidebarState extends State<AppSidebar> {
                     child: Tooltip(
                       message: 'Se déconnecter',
                       child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 150),
+                        duration: const Duration(milliseconds: 120),
                         padding: const EdgeInsets.all(AppSpacing.xs),
                         decoration: BoxDecoration(
                           color: _logoutHovered
-                              ? (isDark
-                                  ? AppColors.hoverDark
-                                  : AppColors.hoverLight)
+                              ? (isDark ? AppColors.hoverDark : AppColors.hoverLight)
                               : Colors.transparent,
-                          borderRadius:
-                              BorderRadius.circular(AppSpacing.radiusSm),
+                          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                         ),
                         child: Icon(
                           Icons.logout_rounded,
-                          size: 16,
+                          size: 15,
                           color: _logoutHovered
                               ? AppColors.error
-                              : textTertiary,
+                              : (isDark
+                                  ? AppColors.textTertiaryDark
+                                  : AppColors.textTertiaryLight),
                         ),
                       ),
                     ),
@@ -377,16 +342,8 @@ class _AppSidebarState extends State<AppSidebar> {
     );
   }
 
-  Widget _buildAvatar(bool isDark) {
-    return UserAvatar(
-      name: widget.userName,
-      avatarUrl: widget.userAvatarUrl,
-      radius: 16,
-    );
-  }
-
   Widget _buildCollapseButton(bool isDark) {
-    return Container(
+    return Padding(
       padding: const EdgeInsets.all(AppSpacing.sm),
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
@@ -394,19 +351,44 @@ class _AppSidebarState extends State<AppSidebar> {
           onTap: widget.onToggleCollapse,
           child: Container(
             padding: const EdgeInsets.all(AppSpacing.sm),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-            ),
             child: Icon(
               widget.isCollapsed
                   ? Icons.chevron_right_rounded
                   : Icons.chevron_left_rounded,
-              size: 20,
+              size: 18,
               color: isDark
                   ? AppColors.textTertiaryDark
                   : AppColors.textTertiaryLight,
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Badge ─────────────────────────────────────────────────────────────────────
+
+class _Badge extends StatelessWidget {
+  const _Badge({required this.count});
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      decoration: BoxDecoration(
+        color: AppColors.error,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+      ),
+      child: Text(
+        count > 99 ? '99+' : '$count',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 9,
+          fontWeight: FontWeight.w600,
+          height: 1.3,
+          letterSpacing: 0,
         ),
       ),
     );

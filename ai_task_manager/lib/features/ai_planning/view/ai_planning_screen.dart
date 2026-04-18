@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -44,8 +46,7 @@ class _AiPlanningScreenState extends ConsumerState<AiPlanningScreen> {
     }
 
     return Scaffold(
-      backgroundColor:
-          isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+      backgroundColor: Colors.transparent,
       body: Column(
         children: [
           _buildHeader(isDark),
@@ -86,16 +87,23 @@ class _AiPlanningScreenState extends ConsumerState<AiPlanningScreen> {
   }
 
   Widget _buildHeader(bool isDark) {
-    return Container(
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.xxxl,
         vertical: AppSpacing.xxl,
       ),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+        color: isDark
+            ? const Color(0xFF000000).withOpacity(0.80)
+            : Colors.white.withOpacity(0.82),
         border: Border(
           bottom: BorderSide(
-            color: isDark ? AppColors.borderDark : AppColors.borderLight,
+            color: isDark
+                ? Colors.white.withOpacity(0.08)
+                : Colors.black.withOpacity(0.07),
             width: 1,
           ),
         ),
@@ -146,6 +154,8 @@ class _AiPlanningScreenState extends ConsumerState<AiPlanningScreen> {
             ),
           ),
         ],
+        ),
+        ),
       ),
     ).animate().fadeIn(duration: 300.ms);
   }
@@ -155,8 +165,8 @@ class _AiPlanningScreenState extends ConsumerState<AiPlanningScreen> {
         isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
     final textTertiary =
         isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight;
-    final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
-    final fillColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final borderColor = isDark ? Colors.white.withOpacity(0.10) : Colors.white.withOpacity(0.78);
+    final fillColor = isDark ? Colors.white.withOpacity(0.06) : Colors.white.withOpacity(0.68);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.xxxl),
@@ -252,9 +262,8 @@ class _AiPlanningScreenState extends ConsumerState<AiPlanningScreen> {
     final plan = draft.generatedPlan!;
     final textPrimary =
         isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
-    final surfaceColor =
-        isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final borderColor = isDark ? Colors.white.withOpacity(0.10) : Colors.white.withOpacity(0.75);
+    final surfaceColor = isDark ? Colors.white.withOpacity(0.07) : Colors.white.withOpacity(0.82);
 
     return Container(
       decoration: BoxDecoration(
@@ -367,26 +376,16 @@ class _AiPlanningScreenState extends ConsumerState<AiPlanningScreen> {
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
                   flex: 2,
-                  child: ElevatedButton.icon(
+                  child: AppButton(
+                    label: 'Approve & Create All',
+                    icon: Icons.check_rounded,
                     onPressed: () {
                       ref
                           .read(aiPlanningStateProvider.notifier)
                           .approveDraft();
                     },
-                    icon: const Icon(Icons.check_rounded, size: 18),
-                    label: const Text('Approve & Create All'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.success,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(
-                        vertical: AppSpacing.md,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppSpacing.radiusMd),
-                      ),
-                    ),
+                    variant: AppButtonVariant.success,
+                    size: AppButtonSize.md,
                   ),
                 ),
               ],

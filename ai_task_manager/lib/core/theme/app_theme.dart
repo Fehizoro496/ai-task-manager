@@ -6,6 +6,23 @@ import 'app_spacing.dart';
 class AppTheme {
   AppTheme._();
 
+  // Apple-style soft shadow: rgba(0,0,0,0.22) 3px 5px 30px
+  static const _cardShadowLight = [
+    BoxShadow(
+      color: Color(0x38000000),
+      blurRadius: 30,
+      offset: Offset(3, 5),
+    ),
+  ];
+  static const _cardShadowDark = [
+    BoxShadow(
+      color: Color(0x66000000),
+      blurRadius: 24,
+      offset: Offset(0, 4),
+    ),
+  ];
+
+  // ── Light theme ────────────────────────────────────────────────────────────
   static ThemeData get lightTheme => ThemeData(
         useMaterial3: true,
         brightness: Brightness.light,
@@ -26,9 +43,9 @@ class AppTheme {
         cardTheme: CardThemeData(
           color: AppColors.cardLight,
           elevation: 0,
+          shadowColor: Colors.transparent,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-            side: const BorderSide(color: AppColors.borderLight, width: 1),
           ),
           margin: EdgeInsets.zero,
         ),
@@ -39,7 +56,7 @@ class AppTheme {
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: AppColors.backgroundLight,
+          fillColor: AppColors.surfaceLight,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.lg,
             vertical: AppSpacing.md,
@@ -67,32 +84,36 @@ class AppTheme {
             elevation: 0,
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.xl,
-              vertical: AppSpacing.md,
+              vertical: AppSpacing.sm + 2,
             ),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
             ),
-            textStyle: AppTypography.textTheme.labelLarge,
+            textStyle: AppTypography.textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w400,
+            ),
           ),
         ),
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
-            foregroundColor: AppColors.textPrimaryLight,
+            foregroundColor: AppColors.primary,
             elevation: 0,
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.xl,
-              vertical: AppSpacing.md,
+              vertical: AppSpacing.sm + 2,
             ),
-            side: const BorderSide(color: AppColors.borderLight),
+            side: const BorderSide(color: AppColors.primary),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
             ),
-            textStyle: AppTypography.textTheme.labelLarge,
+            textStyle: AppTypography.textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w400,
+            ),
           ),
         ),
         textButtonTheme: TextButtonThemeData(
           style: TextButton.styleFrom(
-            foregroundColor: AppColors.primary,
+            foregroundColor: AppColors.primaryDark,
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.lg,
               vertical: AppSpacing.sm,
@@ -102,7 +123,8 @@ class AppTheme {
         ),
         dialogTheme: DialogThemeData(
           backgroundColor: AppColors.surfaceLight,
-          elevation: 8,
+          elevation: 0,
+          shadowColor: Colors.transparent,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
           ),
@@ -110,12 +132,16 @@ class AppTheme {
         snackBarTheme: SnackBarThemeData(
           behavior: SnackBarBehavior.floating,
           backgroundColor: AppColors.textPrimaryLight,
+          contentTextStyle: AppTypography.textTheme.bodyMedium?.copyWith(
+            color: Colors.white,
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           ),
         ),
       );
 
+  // ── Dark theme ─────────────────────────────────────────────────────────────
   static ThemeData get darkTheme => ThemeData(
         useMaterial3: true,
         brightness: Brightness.dark,
@@ -136,6 +162,7 @@ class AppTheme {
         cardTheme: CardThemeData(
           color: AppColors.cardDark,
           elevation: 0,
+          shadowColor: Colors.transparent,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
             side: const BorderSide(color: AppColors.borderDark, width: 1),
@@ -149,7 +176,7 @@ class AppTheme {
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: AppColors.backgroundDark,
+          fillColor: AppColors.surfaceDark,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.lg,
             vertical: AppSpacing.md,
@@ -177,27 +204,31 @@ class AppTheme {
             elevation: 0,
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.xl,
-              vertical: AppSpacing.md,
+              vertical: AppSpacing.sm + 2,
             ),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
             ),
-            textStyle: AppTypography.textTheme.labelLarge,
+            textStyle: AppTypography.textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w400,
+            ),
           ),
         ),
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
-            foregroundColor: AppColors.textPrimaryDark,
+            foregroundColor: AppColors.primaryLight,
             elevation: 0,
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.xl,
-              vertical: AppSpacing.md,
+              vertical: AppSpacing.sm + 2,
             ),
-            side: const BorderSide(color: AppColors.borderDark),
+            side: const BorderSide(color: AppColors.primaryLight),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
             ),
-            textStyle: AppTypography.textTheme.labelLarge,
+            textStyle: AppTypography.textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w400,
+            ),
           ),
         ),
         textButtonTheme: TextButtonThemeData(
@@ -212,17 +243,27 @@ class AppTheme {
         ),
         dialogTheme: DialogThemeData(
           backgroundColor: AppColors.surfaceDark,
-          elevation: 8,
+          elevation: 0,
+          shadowColor: Colors.transparent,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+            side: const BorderSide(color: AppColors.borderDark),
           ),
         ),
         snackBarTheme: SnackBarThemeData(
           behavior: SnackBarBehavior.floating,
           backgroundColor: AppColors.cardDark,
+          contentTextStyle: AppTypography.textTheme.bodyMedium?.copyWith(
+            color: AppColors.textPrimaryDark,
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+            side: const BorderSide(color: AppColors.borderDark),
           ),
         ),
       );
+
+  // Exposed for components that need the card shadow directly
+  static List<BoxShadow> cardShadow(bool isDark) =>
+      isDark ? _cardShadowDark : _cardShadowLight;
 }

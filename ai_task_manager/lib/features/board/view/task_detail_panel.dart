@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -234,20 +236,31 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> {
     return Center(
       child: Material(
         color: Colors.transparent,
-        child: Container(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
+            child: Container(
           width: 480,
           constraints: BoxConstraints(
             maxHeight: MediaQuery.of(context).size.height * 0.85,
           ),
           decoration: BoxDecoration(
-            color: surfaceColor,
+            color: isDark
+                ? const Color(0xFF1D1D1F).withOpacity(0.88)
+                : Colors.white.withOpacity(0.88),
             borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-            border: Border.all(color: borderColor),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withOpacity(0.10)
+                  : Colors.black.withOpacity(0.06),
+              width: 1,
+            ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(isDark ? 0.5 : 0.15),
-                blurRadius: 24,
-                offset: const Offset(0, 8),
+                color: Colors.black.withOpacity(isDark ? 0.55 : 0.18),
+                blurRadius: 48,
+                offset: const Offset(0, 10),
               ),
             ],
           ),
@@ -278,19 +291,16 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> {
                     ),
                     const Spacer(),
                     if (isAdmin)
-                      IconButton(
-                        onPressed: _deleteTask,
-                        icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                      _HeaderIconButton(
+                        onTap: _deleteTask,
+                        icon: Icons.delete_outline_rounded,
                         color: AppColors.error.withOpacity(0.7),
-                        tooltip: 'Delete task',
-                        splashRadius: 18,
+                        hoverColor: AppColors.error.withOpacity(0.1),
                       ),
-                    IconButton(
-                      onPressed: _close,
-                      icon: const Icon(Icons.close_rounded, size: 18),
+                    _HeaderIconButton(
+                      onTap: _close,
+                      icon: Icons.close_rounded,
                       color: labelColor,
-                      tooltip: 'Close',
-                      splashRadius: 18,
                     ),
                   ],
                 ),
@@ -510,13 +520,11 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> {
                               ),
                             ),
                             const SizedBox(width: AppSpacing.sm),
-                            IconButton(
-                              onPressed: () =>
-                                  _addLabel(_labelInputController.text),
-                              icon: const Icon(Icons.add_rounded, size: 18),
+                            _HeaderIconButton(
+                              onTap: () => _addLabel(_labelInputController.text),
+                              icon: Icons.add_rounded,
                               color: AppColors.primary,
-                              tooltip: 'Add label',
-                              splashRadius: 18,
+                              hoverColor: AppColors.primary.withOpacity(0.1),
                             ),
                           ],
                         ),
@@ -620,7 +628,7 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> {
                   child: SizedBox(
                     width: double.infinity,
                     child: AppButton(
-                      label: 'Enregistrer',
+                      label: 'Save Changes',
                       isLoading: _isSaving,
                       onPressed: _isSaving ? null : () => _saveChanges(isAdmin),
                       size: AppButtonSize.lg,
@@ -629,6 +637,8 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> {
                 ),
               ],
             ],
+          ),
+            ),
           ),
         ),
       ),
@@ -862,7 +872,56 @@ class _SectionLabel extends StatelessWidget {
         color: color,
         fontSize: 11,
         fontWeight: FontWeight.w600,
-        letterSpacing: 0.5,
+        letterSpacing: -0.1,
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// Header Icon Button (no ripple)
+// =============================================================================
+
+class _HeaderIconButton extends StatefulWidget {
+  const _HeaderIconButton({
+    required this.onTap,
+    required this.icon,
+    required this.color,
+    this.hoverColor,
+  });
+
+  final VoidCallback onTap;
+  final IconData icon;
+  final Color color;
+  final Color? hoverColor;
+
+  @override
+  State<_HeaderIconButton> createState() => _HeaderIconButtonState();
+}
+
+class _HeaderIconButtonState extends State<_HeaderIconButton> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 140),
+          width: 30,
+          height: 30,
+          decoration: BoxDecoration(
+            color: _hovered
+                ? (widget.hoverColor ?? Colors.black.withOpacity(0.06))
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+          ),
+          child: Icon(widget.icon, size: 17, color: widget.color),
+        ),
       ),
     );
   }
