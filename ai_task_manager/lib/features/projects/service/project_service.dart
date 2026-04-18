@@ -69,12 +69,14 @@ class ProjectService {
     required String name,
     String? description,
     String? color,
+    String? githubRepoUrl,
   }) async {
     try {
       final body = <String, dynamic>{
         'name': name,
         'description': ?description,
         'color': ?color,
+        'githubRepoUrl': ?githubRepoUrl,
       };
 
       final response = await _apiClient.post<Map<String, dynamic>>(

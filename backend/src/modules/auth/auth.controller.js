@@ -45,4 +45,32 @@ const googleStatus = asyncHandler(async (req, res) => {
   res.json(result);
 });
 
-module.exports = { register, login, getMe, googleInit, googleCallback, googleStatus };
+const githubInit = asyncHandler(async (req, res) => {
+  const result = authService.getGithubAuthUrl();
+  res.json(result);
+});
+
+const githubCallback = asyncHandler(async (req, res) => {
+  const { code, state } = req.query;
+
+  if (!code) {
+    return res
+      .status(400)
+      .send(buildOAuthPage({ success: false, message: "Authorization code missing." }));
+  }
+
+  try {
+    await authService.githubCallback(code, state);
+    res.send(buildOAuthPage({ success: true }));
+  } catch {
+    res.status(400).send(buildOAuthPage({ success: false }));
+  }
+});
+
+const githubStatus = asyncHandler(async (req, res) => {
+  const { state } = req.params;
+  const result = authService.getGithubStatus(state);
+  res.json(result);
+});
+
+module.exports = { register, login, getMe, googleInit, googleCallback, googleStatus, githubInit, githubCallback, githubStatus };

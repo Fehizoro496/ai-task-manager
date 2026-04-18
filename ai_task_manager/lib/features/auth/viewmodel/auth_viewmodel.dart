@@ -115,6 +115,20 @@ class AuthViewModel extends AsyncNotifier<UserEntity?> {
     }
   }
 
+  Future<void> loginWithGithub() async {
+    state = const AsyncLoading();
+    try {
+      final user = await ref.read(authServiceProvider).loginWithGithub();
+      if (user.token != null) _connectSocket(user.token!);
+      state = AsyncData(user);
+      _invalidateUserProviders();
+    } on PendingApprovalException catch (e) {
+      state = AsyncError(e, StackTrace.current);
+    } catch (e) {
+      state = AsyncError(e, StackTrace.current);
+    }
+  }
+
   void clearError() {
     state = const AsyncData(null);
   }

@@ -13,6 +13,7 @@ class TaskCard extends StatefulWidget {
   const TaskCard({
     super.key,
     required this.title,
+    this.identifier,
     this.description,
     this.priority = TaskPriority.medium,
     this.assigneeName,
@@ -23,6 +24,8 @@ class TaskCard extends StatefulWidget {
   });
 
   final String title;
+  /// Identifiant lisible de la tâche, ex : "AM-001"
+  final String? identifier;
   final String? description;
   final TaskPriority priority;
   final String? assigneeName;
@@ -145,23 +148,58 @@ class _TaskCardState extends State<TaskCard> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Priority badge
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _priorityColor.withOpacity(0.10),
-                            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                          ),
-                          child: Text(
-                            _priorityLabel,
-                            style: TextStyle(
-                              color: _priorityColor,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: -0.05,
+                        // Identifier + Priority badge row
+                        Row(
+                          children: [
+                            if (widget.identifier != null) ...[
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.sm,
+                                  vertical: AppSpacing.xxs,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isDark
+                                      ? AppColors.surfaceDark
+                                      : AppColors.hoverLight,
+                                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                                  border: Border.all(
+                                    color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                                    width: 0.8,
+                                  ),
+                                ),
+                                child: Text(
+                                  widget.identifier!,
+                                  style: TextStyle(
+                                    color: isDark
+                                        ? AppColors.textTertiaryDark
+                                        : AppColors.textTertiaryLight,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.4,
+                                    fontFamily: 'monospace',
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.xs),
+                            ],
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.sm,
+                                vertical: AppSpacing.xxs,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _priorityColor.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                              ),
+                              child: Text(
+                                _priorityLabel,
+                                style: TextStyle(
+                                  color: _priorityColor,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
                             ),
                           ),
                         ),

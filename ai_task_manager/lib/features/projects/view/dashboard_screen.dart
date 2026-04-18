@@ -174,6 +174,7 @@ class _DashboardHeader extends StatelessWidget {
                             name: result.name,
                             description: result.description,
                             color: result.color,
+                            githubRepoUrl: result.githubRepoUrl,
                           );
                     }
                   },
