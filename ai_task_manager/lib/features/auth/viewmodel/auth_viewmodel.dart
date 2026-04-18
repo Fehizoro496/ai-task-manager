@@ -40,7 +40,7 @@ class AuthViewModel extends AsyncNotifier<UserEntity?> {
     if (!service.isLoggedIn) return null;
     try {
       final user = await service.getCurrentUser();
-      if (user?.token != null) _connectSocket(user!.token!);
+      if (user.token != null) _connectSocket(user.token!);
       return user;
     } catch (_) {
       return null;

@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:ai_task_manager/features/auth/viewmodel/auth_viewmodel.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:ai_task_manager/core/network/api_client.dart';
 import 'package:ai_task_manager/core/network/socket_service.dart';
 import 'package:ai_task_manager/features/messages/model/conversation_entity.dart';
 import 'package:ai_task_manager/features/messages/model/message_entity.dart';

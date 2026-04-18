@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:ai_task_manager/core/widgets/sidebar.dart';
 import 'package:ai_task_manager/features/admin/viewmodel/admin_viewmodel.dart';
 import 'package:ai_task_manager/features/auth/model/user_entity.dart';
+import 'package:ai_task_manager/features/auth/view/widgets/auth_layout.dart';
 import 'package:ai_task_manager/features/auth/viewmodel/auth_viewmodel.dart';
 import 'package:ai_task_manager/features/notifications/viewmodel/notification_viewmodel.dart';
 import 'package:ai_task_manager/features/messages/viewmodel/chat_viewmodel.dart';
@@ -91,22 +92,25 @@ class AppLayout extends ConsumerWidget {
     final selectedIndex = _selectedIndexFromLocation(location, navItems);
 
     return Scaffold(
-      body: Row(
-        children: [
-          AppSidebar(
-            selectedIndex: selectedIndex,
-            items: navItems,
-            isCollapsed: isCollapsed,
-            userName: userName,
-            userAvatarUrl: user?.avatarUrl,
-            onItemSelected: (index) => context.go(navItems[index].route),
-            onToggleCollapse: () {
-              ref.read(sidebarCollapsedProvider.notifier).state = !isCollapsed;
-            },
-            onLogout: () => ref.read(authStateProvider.notifier).logout(),
-          ),
-          Expanded(child: child),
-        ],
+      backgroundColor: Colors.transparent,
+      body: AuthBackground(
+        child: Row(
+          children: [
+            AppSidebar(
+              selectedIndex: selectedIndex,
+              items: navItems,
+              isCollapsed: isCollapsed,
+              userName: userName,
+              userAvatarUrl: user?.avatarUrl,
+              onItemSelected: (index) => context.go(navItems[index].route),
+              onToggleCollapse: () {
+                ref.read(sidebarCollapsedProvider.notifier).state = !isCollapsed;
+              },
+              onLogout: () => ref.read(authStateProvider.notifier).logout(),
+            ),
+            Expanded(child: child),
+          ],
+        ),
       ),
     );
   }

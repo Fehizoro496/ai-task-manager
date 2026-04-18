@@ -40,14 +40,14 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
   final bool _isSubmitting = false;
 
   static const List<_PresetColor> _presetColors = [
-    _PresetColor('6C5CE7', 'Purple'),
-    _PresetColor('00B894', 'Green'),
-    _PresetColor('74B9FF', 'Blue'),
-    _PresetColor('FDAA5E', 'Orange'),
-    _PresetColor('FF6B6B', 'Red'),
-    _PresetColor('00D2D3', 'Teal'),
-    _PresetColor('FDA7DF', 'Pink'),
-    _PresetColor('FFEAA7', 'Yellow'),
+    _PresetColor('0071E3', 'Blue'),
+    _PresetColor('34C759', 'Green'),
+    _PresetColor('FF9500', 'Orange'),
+    _PresetColor('FF3B30', 'Red'),
+    _PresetColor('5856D6', 'Purple'),
+    _PresetColor('5AC8FA', 'Teal'),
+    _PresetColor('FF2D55', 'Pink'),
+    _PresetColor('FFCC00', 'Yellow'),
   ];
 
   @override

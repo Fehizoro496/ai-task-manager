@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:ai_task_manager/core/design_system/app_button.dart';
 import 'package:ai_task_manager/core/theme/app_colors.dart';
 import 'package:ai_task_manager/core/theme/app_spacing.dart';
 import 'package:ai_task_manager/features/tasks/model/task_entity.dart';
@@ -130,52 +131,19 @@ class _AddTaskInlineState extends ConsumerState<AddTaskInline> {
                 },
               ),
               const Spacer(),
-              SizedBox(
-                height: 28,
-                child: TextButton(
-                  onPressed: widget.onClose,
-                  style: TextButton.styleFrom(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-                    foregroundColor: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight,
-                    textStyle: const TextStyle(fontSize: 12),
-                  ),
-                  child: const Text('Cancel'),
-                ),
+              AppButton(
+                label: 'Cancel',
+                onPressed: widget.onClose,
+                variant: AppButtonVariant.ghost,
+                size: AppButtonSize.sm,
               ),
               const SizedBox(width: AppSpacing.xs),
-              SizedBox(
-                height: 28,
-                child: ElevatedButton(
-                  onPressed: _isSubmitting ? null : _submit,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                    textStyle: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(AppSpacing.radiusSm),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: _isSubmitting
-                      ? const SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text('Add'),
-                ),
+              AppButton(
+                label: 'Add',
+                onPressed: _isSubmitting ? null : _submit,
+                isLoading: _isSubmitting,
+                variant: AppButtonVariant.primary,
+                size: AppButtonSize.sm,
               ),
             ],
           ),

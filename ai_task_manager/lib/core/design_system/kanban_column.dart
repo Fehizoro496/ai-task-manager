@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:ai_task_manager/core/theme/app_colors.dart';
 import 'package:ai_task_manager/core/theme/app_spacing.dart';
@@ -22,25 +24,28 @@ class KanbanColumn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor =
-        isDark ? AppColors.surfaceDark : AppColors.backgroundLight;
-    final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
-    final titleColor =
-        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final countColor =
-        isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight;
 
-    return Container(
+    final titleColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final countColor = isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: Container(
       width: AppConstants.kanbanColumnWidth,
       decoration: BoxDecoration(
-        color: backgroundColor,
+        color: isDark ? Colors.white.withOpacity(0.07) : Colors.white.withOpacity(0.62),
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        border: Border.all(color: borderColor, width: 1.0),
+        border: Border.all(
+          color: isDark ? Colors.white.withOpacity(0.10) : Colors.white.withOpacity(0.80),
+          width: 1.0,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Header
+          // ── Column header ────────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.lg,
@@ -48,50 +53,53 @@ class KanbanColumn extends StatelessWidget {
             ),
             child: Row(
               children: [
-                // Colored dot
+                // Status dot
                 Container(
-                  width: 10,
-                  height: 10,
+                  width: 8,
+                  height: 8,
                   decoration: BoxDecoration(
                     color: color,
                     shape: BoxShape.circle,
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
-                // Title
                 Text(
                   title,
                   style: TextStyle(
                     color: titleColor,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.1,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.15,
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
-                // Count badge
+                // Count chip — minimal Apple style
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sm,
-                    vertical: AppSpacing.xxs,
+                    horizontal: 6,
+                    vertical: 1,
                   ),
                   decoration: BoxDecoration(
                     color: isDark
                         ? AppColors.hoverDark
-                        : AppColors.hoverLight,
+                        : AppColors.surfaceLight,
                     borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+                    border: Border.all(
+                      color: isDark ? Colors.white.withOpacity(0.10) : Colors.white.withOpacity(0.70),
+                      width: 1,
+                    ),
                   ),
                   child: Text(
                     '$taskCount',
                     style: TextStyle(
                       color: countColor,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: -0.05,
                     ),
                   ),
                 ),
                 const Spacer(),
-                // Add button
                 if (onAddTask != null) _AddButton(onTap: onAddTask!),
               ],
             ),
@@ -100,10 +108,10 @@ class KanbanColumn extends StatelessWidget {
             height: 1,
             color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
           ),
-          // Scrollable body
+          // ── Scrollable body ───────────────────────────────────────────────
           Expanded(
             child: children.isEmpty
-                ? _EmptyColumnBody(isDark: isDark)
+                ? _EmptyBody(isDark: isDark)
                 : ListView.separated(
                     padding: const EdgeInsets.all(AppSpacing.sm),
                     itemCount: children.length,
@@ -114,13 +122,16 @@ class KanbanColumn extends StatelessWidget {
           ),
         ],
       ),
+        ),
+      ),
     );
   }
 }
 
+// ── Add button ────────────────────────────────────────────────────────────────
+
 class _AddButton extends StatefulWidget {
   const _AddButton({required this.onTap});
-
   final VoidCallback onTap;
 
   @override
@@ -142,8 +153,8 @@ class _AddButtonState extends State<_AddButton> {
         onTap: widget.onTap,
         child: AnimatedContainer(
           duration: AppConstants.animationDuration,
-          width: 28,
-          height: 28,
+          width: 26,
+          height: 26,
           decoration: BoxDecoration(
             color: _isHovered
                 ? (isDark ? AppColors.hoverDark : AppColors.hoverLight)
@@ -152,10 +163,12 @@ class _AddButtonState extends State<_AddButton> {
           ),
           child: Icon(
             Icons.add_rounded,
-            size: 18,
-            color: isDark
-                ? AppColors.textSecondaryDark
-                : AppColors.textSecondaryLight,
+            size: 16,
+            color: _isHovered
+                ? AppColors.primary
+                : (isDark
+                    ? AppColors.textTertiaryDark
+                    : AppColors.textTertiaryLight),
           ),
         ),
       ),
@@ -163,9 +176,10 @@ class _AddButtonState extends State<_AddButton> {
   }
 }
 
-class _EmptyColumnBody extends StatelessWidget {
-  const _EmptyColumnBody({required this.isDark});
+// ── Empty state ───────────────────────────────────────────────────────────────
 
+class _EmptyBody extends StatelessWidget {
+  const _EmptyBody({required this.isDark});
   final bool isDark;
 
   @override
@@ -174,12 +188,13 @@ class _EmptyColumnBody extends StatelessWidget {
       child: Padding(
         padding: AppSpacing.paddingXl,
         child: Text(
-          'No tasks yet',
+          'No tasks',
           style: TextStyle(
             color: isDark
                 ? AppColors.textTertiaryDark
                 : AppColors.textTertiaryLight,
-            fontSize: 13,
+            fontSize: 12,
+            letterSpacing: -0.12,
           ),
         ),
       ),

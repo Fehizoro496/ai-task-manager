@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:ai_task_manager/core/theme/app_colors.dart';
 import 'package:ai_task_manager/core/theme/app_spacing.dart';
@@ -44,9 +46,6 @@ class _ProjectCardState extends State<ProjectCard> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardColor = isDark ? AppColors.cardDark : AppColors.cardLight;
-    final borderColor = _isHovered
-        ? _accentColor.withOpacity(0.4)
-        : (isDark ? AppColors.borderDark : AppColors.borderLight);
     final textPrimary = isDark
         ? AppColors.textPrimaryDark
         : AppColors.textPrimaryLight;
@@ -63,22 +62,44 @@ class _ProjectCardState extends State<ProjectCard> {
       onExit: (_) => setState(() => _isHovered = false),
       child: GestureDetector(
         onTap: widget.onTap,
-        child: AnimatedContainer(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: AnimatedContainer(
           duration: AppConstants.animationDuration,
           curve: Curves.easeInOut,
           decoration: BoxDecoration(
-            color: cardColor,
+            color: isDark
+                ? Colors.white.withOpacity(_isHovered ? 0.11 : 0.07)
+                : Colors.white.withOpacity(_isHovered ? 0.88 : 0.74),
             borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-            border: Border.all(color: borderColor, width: 1.0),
-            boxShadow: [
-              BoxShadow(
-                color: isDark
-                    ? Colors.black.withOpacity(_isHovered ? 0.3 : 0.15)
-                    : Colors.black.withOpacity(_isHovered ? 0.08 : 0.03),
-                blurRadius: _isHovered ? 16 : 6,
-                offset: Offset(0, _isHovered ? 6 : 2),
-              ),
-            ],
+            border: Border.all(
+              color: _isHovered
+                  ? _accentColor.withOpacity(isDark ? 0.45 : 0.35)
+                  : (isDark
+                      ? Colors.white.withOpacity(0.10)
+                      : Colors.white.withOpacity(0.85)),
+              width: 1.0,
+            ),
+            boxShadow: isDark
+                ? [
+                    BoxShadow(
+                      color: Colors.black
+                          .withOpacity(_isHovered ? 0.40 : 0.20),
+                      blurRadius: _isHovered ? 24 : 10,
+                      offset: Offset(0, _isHovered ? 8 : 3),
+                    ),
+                  ]
+                : [
+                    BoxShadow(
+                      color: _isHovered
+                          ? _accentColor.withOpacity(0.18)
+                          : Colors.black.withOpacity(0.07),
+                      blurRadius: _isHovered ? 28 : 16,
+                      offset: Offset(0, _isHovered ? 10 : 4),
+                    ),
+                  ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -212,6 +233,8 @@ class _ProjectCardState extends State<ProjectCard> {
               ),
             ],
           ),
+            ),
+          ),
         ),
       ),
     );
@@ -283,7 +306,7 @@ class _ContextMenuButtonState extends State<_ContextMenuButton> {
     showMenu<String>(
       context: context,
       position: position,
-      color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+      color: isDark ? const Color(0xFF1D1D1F) : Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         side: BorderSide(

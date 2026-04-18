@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,9 +27,7 @@ class DashboardScreen extends ConsumerWidget {
     final isAdmin = userAsync.valueOrNull?.isAdmin ?? false;
 
     return Scaffold(
-      backgroundColor: isDark
-          ? AppColors.backgroundDark
-          : AppColors.backgroundLight,
+      backgroundColor: Colors.transparent,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -112,16 +112,23 @@ class _DashboardHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.xxxl,
             vertical: AppSpacing.xxl,
           ),
           decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+            color: isDark
+                ? const Color(0xFF000000).withOpacity(0.80)
+                : Colors.white.withOpacity(0.82),
             border: Border(
               bottom: BorderSide(
-                color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                color: isDark
+                    ? Colors.white.withOpacity(0.08)
+                    : Colors.black.withOpacity(0.07),
                 width: 1,
               ),
             ),
@@ -175,10 +182,12 @@ class _DashboardHeader extends StatelessWidget {
                 ),
             ],
           ),
-        )
-        .animate()
-        .fadeIn(duration: 300.ms)
-        .slideY(begin: -0.05, end: 0, duration: 300.ms);
+        ),
+      ),
+    )
+    .animate()
+    .fadeIn(duration: 300.ms)
+    .slideY(begin: -0.05, end: 0, duration: 300.ms);
   }
 }
 

@@ -1,7 +1,11 @@
+import 'dart:async';
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:ai_task_manager/core/design_system/app_button.dart';
 import 'package:ai_task_manager/core/design_system/kanban_column.dart';
 import 'package:ai_task_manager/core/design_system/task_card.dart' as ds;
 import 'package:ai_task_manager/core/theme/app_colors.dart';
@@ -73,20 +77,12 @@ class _BoardScreenState extends ConsumerState<BoardScreen> {
     });
 
     return Scaffold(
-      backgroundColor:
-          isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
-      body: Column(
+      backgroundColor: Colors.transparent,
+      body: Stack(
         children: [
-          _TopBar(
-            projectName: widget.projectName,
-            searchController: _searchController,
-            priorityFilter: _priorityFilter,
-            isDark: isDark,
-            onSearchChanged: (value) => setState(() => _searchQuery = value),
-            onPriorityFilterChanged: (value) =>
-                setState(() => _priorityFilter = value),
-          ),
-          Expanded(
+          // Board content starts from y=0, will be visible through glass top bar
+          Positioned.fill(
+            top: 64,
             child: boardState.when(
               loading: () => _BoardSkeleton(
                 columns: columns,
@@ -113,6 +109,19 @@ class _BoardScreenState extends ConsumerState<BoardScreen> {
                   highlightTaskId: _activeHighlightId,
                 );
               },
+            ),
+          ),
+          // Glass top bar floating over board content
+          Positioned(
+            top: 0, left: 0, right: 0,
+            child: _TopBar(
+              projectName: widget.projectName,
+              searchController: _searchController,
+              priorityFilter: _priorityFilter,
+              isDark: isDark,
+              onSearchChanged: (value) => setState(() => _searchQuery = value),
+              onPriorityFilterChanged: (value) =>
+                  setState(() => _priorityFilter = value),
             ),
           ),
         ],
@@ -172,12 +181,24 @@ class _TopBar extends StatelessWidget {
     final hintColor =
         isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight;
 
-    return Container(
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
       height: 64,
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
       decoration: BoxDecoration(
-        color: surfaceColor,
-        border: Border(bottom: BorderSide(color: borderColor, width: 1)),
+        color: isDark
+            ? const Color(0xFF000000).withOpacity(0.72)
+            : Colors.white.withOpacity(0.72),
+        border: Border(
+          bottom: BorderSide(
+            color: isDark
+                ? Colors.white.withOpacity(0.08)
+                : Colors.black.withOpacity(0.07),
+            width: 1,
+          ),
+        ),
       ),
       child: Row(
         children: [
@@ -204,8 +225,9 @@ class _TopBar extends StatelessWidget {
                 prefixIcon: Icon(Icons.search_rounded,
                     size: 18, color: hintColor),
                 filled: true,
-                fillColor:
-                    isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+                fillColor: isDark
+                    ? Colors.white.withOpacity(0.08)
+                    : Colors.black.withOpacity(0.04),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.md,
                 ),
@@ -229,6 +251,8 @@ class _TopBar extends StatelessWidget {
           ..._buildFilterChips(),
           const Spacer(),
         ],
+        ),
+        ),
       ),
     );
   }
@@ -347,7 +371,7 @@ class _FilterChip extends StatelessWidget {
 // Board Content
 // =============================================================================
 
-class _BoardContent extends ConsumerWidget {
+class _BoardContent extends ConsumerStatefulWidget {
   const _BoardContent({
     required this.projectId,
     required this.columns,
@@ -366,38 +390,56 @@ class _BoardContent extends ConsumerWidget {
   final String currentUserId;
   final String? highlightTaskId;
 
+  @override
+  ConsumerState<_BoardContent> createState() => _BoardContentState();
+}
+
+class _BoardContentState extends ConsumerState<_BoardContent> {
+  final _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
   List<TaskEntity> _tasksForStatus(TaskStatus status) {
-    return tasks.where((t) => t.status == status).toList()
+    return widget.tasks.where((t) => t.status == status).toList()
       ..sort((a, b) => a.order.compareTo(b.order));
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: columns.asMap().entries.map((entry) {
-          final index = entry.key;
-          final column = entry.value;
-          final columnTasks = _tasksForStatus(column.status);
+  Widget build(BuildContext context) {
+    return _FloatingScrollbar(
+      controller: _scrollController,
+      isDark: widget.isDark,
+      child: SingleChildScrollView(
+        controller: _scrollController,
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: widget.columns.asMap().entries.map((entry) {
+            final index = entry.key;
+            final column = entry.value;
+            final columnTasks = _tasksForStatus(column.status);
 
-          return Padding(
-            padding: EdgeInsets.only(
-              right: index < columns.length - 1 ? AppSpacing.lg : 0,
-            ),
-            child: _DragTargetColumn(
-              projectId: projectId,
-              column: column,
-              tasks: columnTasks,
-              isDark: isDark,
-              isAdmin: isAdmin,
-              currentUserId: currentUserId,
-              highlightTaskId: highlightTaskId,
-            ),
-          );
-        }).toList(),
+            return Padding(
+              padding: EdgeInsets.only(
+                right: index < widget.columns.length - 1 ? AppSpacing.lg : 0,
+              ),
+              child: _DragTargetColumn(
+                projectId: widget.projectId,
+                column: column,
+                tasks: columnTasks,
+                isDark: widget.isDark,
+                isAdmin: widget.isAdmin,
+                currentUserId: widget.currentUserId,
+                highlightTaskId: widget.highlightTaskId,
+              ),
+            );
+          }).toList(),
+        ),
       ),
     );
   }
@@ -705,7 +747,7 @@ class _DragPlaceholder extends StatelessWidget {
 // Loading Skeleton
 // =============================================================================
 
-class _BoardSkeleton extends StatelessWidget {
+class _BoardSkeleton extends StatefulWidget {
   const _BoardSkeleton({
     required this.columns,
     required this.isDark,
@@ -715,33 +757,51 @@ class _BoardSkeleton extends StatelessWidget {
   final bool isDark;
 
   @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: columns.asMap().entries.map((entry) {
-          final index = entry.key;
-          final column = entry.value;
+  State<_BoardSkeleton> createState() => _BoardSkeletonState();
+}
 
-          return Padding(
-            padding: EdgeInsets.only(
-              right: index < columns.length - 1 ? AppSpacing.lg : 0,
-            ),
-            child: SizedBox(
-              height: MediaQuery.of(context).size.height - 140,
-              child: KanbanColumn(
-                title: column.title,
-                color: column.color,
-                taskCount: 0,
-                children: List.generate(3, (i) {
-                  return _SkeletonCard(isDark: isDark, index: i);
-                }),
+class _BoardSkeletonState extends State<_BoardSkeleton> {
+  final _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _FloatingScrollbar(
+      controller: _scrollController,
+      isDark: widget.isDark,
+      child: SingleChildScrollView(
+        controller: _scrollController,
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: widget.columns.asMap().entries.map((entry) {
+            final index = entry.key;
+            final column = entry.value;
+
+            return Padding(
+              padding: EdgeInsets.only(
+                right: index < widget.columns.length - 1 ? AppSpacing.lg : 0,
               ),
-            ),
-          );
-        }).toList(),
+              child: SizedBox(
+                height: MediaQuery.of(context).size.height - 140,
+                child: KanbanColumn(
+                  title: column.title,
+                  color: column.color,
+                  taskCount: 0,
+                  children: List.generate(3, (i) {
+                    return _SkeletonCard(isDark: widget.isDark, index: i);
+                  }),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
       ),
     );
   }
@@ -766,9 +826,14 @@ class _SkeletonCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: baseColor,
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        border: Border.all(
-          color: isDark ? AppColors.borderDark : AppColors.borderLight,
-        ),
+        border: isDark ? Border.all(color: AppColors.borderDark) : null,
+        boxShadow: isDark ? null : [
+          const BoxShadow(
+            color: Color(0x18000000),
+            blurRadius: 12,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.sm),
@@ -812,6 +877,206 @@ class _SkeletonCard extends StatelessWidget {
           delay: Duration(milliseconds: 200 * index),
           color: shimmerColor.withOpacity(0.3),
         );
+  }
+}
+
+// =============================================================================
+// Floating Scrollbar
+// =============================================================================
+
+class _FloatingScrollbar extends StatefulWidget {
+  const _FloatingScrollbar({
+    required this.controller,
+    required this.isDark,
+    required this.child,
+  });
+
+  final ScrollController controller;
+  final bool isDark;
+  final Widget child;
+
+  @override
+  State<_FloatingScrollbar> createState() => _FloatingScrollbarState();
+}
+
+class _FloatingScrollbarState extends State<_FloatingScrollbar> {
+  Timer? _activeTimer;
+
+  double _scrollFraction = 0;
+  double _thumbFraction = 1;
+  bool _hasOverflow = false;
+  bool _isActive = false; // scrolling or hovering
+  bool _isDragging = false;
+  bool _isHovered = false;
+
+  // Drag tracking
+  double _trackWidth = 0;
+  double _dragStartLocalX = 0;
+  double _dragStartScrollPixels = 0;
+
+  double get _thumbWidth => (_trackWidth * _thumbFraction).clamp(40.0, _trackWidth);
+  double get _thumbOffset => (_trackWidth - _thumbWidth) * _scrollFraction;
+
+  // Idle: translucent but always visible; active/hover: fully opaque
+  double get _opacity {
+    if (!_hasOverflow) return 0.0;
+    if (_isDragging || _isActive || _isHovered) return 1.0;
+    return 0.38;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_onScroll);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _onScroll());
+  }
+
+  @override
+  void dispose() {
+    _activeTimer?.cancel();
+    widget.controller.removeListener(_onScroll);
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!widget.controller.hasClients) return;
+    final pos = widget.controller.position;
+    if (!pos.hasContentDimensions) return;
+
+    final max = pos.maxScrollExtent;
+    final viewport = pos.viewportDimension;
+    final content = max + viewport;
+
+    setState(() {
+      _hasOverflow = max > 0;
+      _scrollFraction = max > 0 ? (pos.pixels / max).clamp(0.0, 1.0) : 0.0;
+      _thumbFraction = content > 0 ? (viewport / content).clamp(0.1, 1.0) : 1.0;
+      _isActive = true;
+    });
+
+    _activeTimer?.cancel();
+    _activeTimer = Timer(const Duration(milliseconds: 1000), () {
+      if (mounted) setState(() => _isActive = false);
+    });
+  }
+
+  void _onDragStart(DragStartDetails d) {
+    setState(() {
+      _isDragging = true;
+      _dragStartLocalX = d.localPosition.dx;
+      _dragStartScrollPixels = widget.controller.offset;
+    });
+  }
+
+  void _onDragUpdate(DragUpdateDetails d) {
+    if (!_isDragging) return;
+    final usable = _trackWidth - _thumbWidth;
+    if (usable <= 0) return;
+    final delta = d.localPosition.dx - _dragStartLocalX;
+    final max = widget.controller.position.maxScrollExtent;
+    final newOffset = (_dragStartScrollPixels + delta / usable * max).clamp(0.0, max);
+    widget.controller.jumpTo(newOffset);
+  }
+
+  void _onDragEnd(DragEndDetails d) => setState(() => _isDragging = false);
+
+  void _onTapUp(TapUpDetails d) {
+    // Tap outside the thumb → jump scroll to that position
+    final tapX = d.localPosition.dx;
+    if (tapX < _thumbOffset || tapX > _thumbOffset + _thumbWidth) {
+      final usable = _trackWidth - _thumbWidth;
+      if (usable <= 0) return;
+      final ratio = ((tapX - _thumbWidth / 2) / usable).clamp(0.0, 1.0);
+      widget.controller.animateTo(
+        ratio * widget.controller.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const hPad = AppSpacing.xl;
+    const barHeight = 6.0;
+    const hitHeight = 24.0; // larger touch/click target
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        _trackWidth = constraints.maxWidth - hPad * 2;
+
+        return MouseRegion(
+          onEnter: (_) => setState(() => _isHovered = true),
+          onExit: (_) => setState(() => _isHovered = false),
+          child: Stack(
+            children: [
+              widget.child,
+              if (_hasOverflow)
+                Positioned(
+                  left: hPad,
+                  right: hPad,
+                  bottom: 10,
+                  height: hitHeight,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onHorizontalDragStart: _onDragStart,
+                    onHorizontalDragUpdate: _onDragUpdate,
+                    onHorizontalDragEnd: _onDragEnd,
+                    onTapUp: _onTapUp,
+                    child: AnimatedOpacity(
+                      opacity: _opacity,
+                      duration: const Duration(milliseconds: 180),
+                      child: Center(
+                        child: SizedBox(
+                          height: barHeight,
+                          child: Stack(
+                            children: [
+                              // Track
+                              Positioned.fill(
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    color: widget.isDark
+                                        ? Colors.white.withOpacity(0.09)
+                                        : Colors.black.withOpacity(0.08),
+                                    borderRadius: BorderRadius.circular(99),
+                                  ),
+                                ),
+                              ),
+                              // Thumb
+                              Positioned(
+                                left: _thumbOffset,
+                                width: _thumbWidth,
+                                top: 0,
+                                bottom: 0,
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 120),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary.withOpacity(
+                                      _isDragging ? 0.85 : 0.6,
+                                    ),
+                                    borderRadius: BorderRadius.circular(99),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppColors.primary.withOpacity(0.3),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }
 
@@ -861,13 +1126,12 @@ class _BoardError extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppSpacing.xl),
-          TextButton.icon(
+          AppButton(
+            label: 'Retry',
+            icon: Icons.refresh_rounded,
             onPressed: onRetry,
-            icon: const Icon(Icons.refresh_rounded, size: 18),
-            label: const Text('Retry'),
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.primary,
-            ),
+            variant: AppButtonVariant.secondary,
+            size: AppButtonSize.sm,
           ),
         ],
       ),

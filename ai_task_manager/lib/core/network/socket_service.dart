@@ -44,7 +44,7 @@ class SocketService {
     // Un seul listener socket pour tous les messages.
     _socket!.on('new_message', (data) {
       if (data is Map) {
-        final msg = Map<String, dynamic>.from(data as Map);
+        final msg = Map<String, dynamic>.from(data);
         dev.log(
           '← new_message  conv=${msg['conversationId']}  from=${msg['senderName']}',
           name: 'socket',

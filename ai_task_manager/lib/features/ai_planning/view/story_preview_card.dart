@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:ai_task_manager/core/theme/app_colors.dart';
 import 'package:ai_task_manager/core/theme/app_spacing.dart';
@@ -32,18 +34,31 @@ class _StoryPreviewCardState extends State<StoryPreviewCard> {
     final textSecondary =
         isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
 
-    return Container(
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        child: Container(
       decoration: BoxDecoration(
-        color: bgColor,
+        color: isDark ? Colors.white.withOpacity(0.06) : Colors.white.withOpacity(0.68),
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        border: Border.all(color: borderColor, width: 1),
+        border: Border.all(
+          color: isDark ? Colors.white.withOpacity(0.09) : Colors.white.withOpacity(0.80),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.20 : 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          InkWell(
+          GestureDetector(
             onTap: () => setState(() => _isExpanded = !_isExpanded),
-            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
             child: Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.md,
@@ -130,6 +145,8 @@ class _StoryPreviewCardState extends State<StoryPreviewCard> {
             duration: AppConstants.animationDuration,
           ),
         ],
+      ),
+        ),
       ),
     );
   }

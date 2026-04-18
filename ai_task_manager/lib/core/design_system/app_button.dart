@@ -3,7 +3,7 @@ import 'package:ai_task_manager/core/theme/app_colors.dart';
 import 'package:ai_task_manager/core/theme/app_spacing.dart';
 import 'package:ai_task_manager/core/utils/constants.dart';
 
-enum AppButtonVariant { primary, secondary, ghost, danger }
+enum AppButtonVariant { primary, secondary, ghost, danger, success }
 
 enum AppButtonSize { sm, md, lg }
 
@@ -31,83 +31,69 @@ class AppButton extends StatefulWidget {
 
 class _AppButtonState extends State<AppButton> {
   bool _isHovered = false;
+  bool _isPressed = false;
 
   double get _height {
     switch (widget.size) {
-      case AppButtonSize.sm:
-        return 32.0;
-      case AppButtonSize.md:
-        return 40.0;
-      case AppButtonSize.lg:
-        return 48.0;
+      case AppButtonSize.sm: return 30.0;
+      case AppButtonSize.md: return 38.0;
+      case AppButtonSize.lg: return 46.0;
     }
   }
 
   EdgeInsets get _padding {
     switch (widget.size) {
       case AppButtonSize.sm:
-        return const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.xs,
-        );
+        return const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs);
       case AppButtonSize.md:
-        return const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg,
-          vertical: AppSpacing.sm,
-        );
+        return const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm);
       case AppButtonSize.lg:
-        return const EdgeInsets.symmetric(
-          horizontal: AppSpacing.xl,
-          vertical: AppSpacing.md,
-        );
+        return const EdgeInsets.symmetric(horizontal: AppSpacing.xl, vertical: AppSpacing.md);
     }
   }
 
   double get _fontSize {
     switch (widget.size) {
-      case AppButtonSize.sm:
-        return 12.0;
-      case AppButtonSize.md:
-        return 14.0;
-      case AppButtonSize.lg:
-        return 16.0;
+      case AppButtonSize.sm: return 12.0;
+      case AppButtonSize.md: return 14.0;
+      case AppButtonSize.lg: return 16.0;
     }
   }
 
   double get _iconSize {
     switch (widget.size) {
-      case AppButtonSize.sm:
-        return 14.0;
-      case AppButtonSize.md:
-        return 18.0;
-      case AppButtonSize.lg:
-        return 20.0;
+      case AppButtonSize.sm: return 13.0;
+      case AppButtonSize.md: return 15.0;
+      case AppButtonSize.lg: return 18.0;
     }
   }
 
   Color _backgroundColor(bool isDark) {
-    if (widget.onPressed == null) {
+    final disabled = widget.onPressed == null;
+    if (disabled) {
       return isDark
           ? AppColors.surfaceDark.withOpacity(0.5)
-          : AppColors.borderLight;
+          : AppColors.hoverLight;
     }
     switch (widget.variant) {
       case AppButtonVariant.primary:
-        return _isHovered ? AppColors.primaryDark : AppColors.primary;
+        // Apple: hover brightens slightly, press dims to #EDEDF2-equivalent
+        if (_isPressed) return AppColors.primary.withOpacity(0.80);
+        return _isHovered ? const Color(0xFF0077ED) : AppColors.primary;
       case AppButtonVariant.secondary:
-        return _isHovered
-            ? (isDark
-                ? AppColors.hoverDark
-                : AppColors.primarySurface)
+        return _isHovered || _isPressed
+            ? (isDark ? AppColors.hoverDark : AppColors.hoverLight)
             : Colors.transparent;
       case AppButtonVariant.ghost:
-        return _isHovered
+        return _isHovered || _isPressed
             ? (isDark ? AppColors.hoverDark : AppColors.hoverLight)
             : Colors.transparent;
       case AppButtonVariant.danger:
-        return _isHovered
-            ? AppColors.error.withOpacity(0.85)
-            : AppColors.error;
+        if (_isPressed) return AppColors.error.withOpacity(0.80);
+        return _isHovered ? AppColors.error.withOpacity(0.85) : AppColors.error;
+      case AppButtonVariant.success:
+        if (_isPressed) return AppColors.success.withOpacity(0.80);
+        return _isHovered ? AppColors.success.withOpacity(0.85) : AppColors.success;
     }
   }
 
@@ -116,26 +102,23 @@ class _AppButtonState extends State<AppButton> {
       return isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight;
     }
     switch (widget.variant) {
-      case AppButtonVariant.primary:
-        return Colors.white;
-      case AppButtonVariant.secondary:
-        return AppColors.primary;
+      case AppButtonVariant.primary:  return Colors.white;
+      case AppButtonVariant.secondary: return isDark ? AppColors.primaryLight : AppColors.primaryDark;
       case AppButtonVariant.ghost:
         return isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-      case AppButtonVariant.danger:
-        return Colors.white;
+      case AppButtonVariant.danger:   return Colors.white;
+      case AppButtonVariant.success:  return Colors.white;
     }
   }
 
-  Border? _border(bool isDark) {
+  BorderSide? _borderSide(bool isDark) {
     if (widget.variant == AppButtonVariant.secondary) {
-      return Border.all(
-        color: widget.onPressed == null
+      final disabled = widget.onPressed == null;
+      return BorderSide(
+        color: disabled
             ? (isDark ? AppColors.borderDark : AppColors.borderLight)
-            : _isHovered
-                ? AppColors.primaryLight
-                : AppColors.primary.withOpacity(0.4),
-        width: 1.5,
+            : (isDark ? AppColors.primaryLight : AppColors.primary),
+        width: 1,
       );
     }
     return null;
@@ -146,35 +129,31 @@ class _AppButtonState extends State<AppButton> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = _backgroundColor(isDark);
     final fgColor = _foregroundColor(isDark);
+    final border = _borderSide(isDark);
 
     return MouseRegion(
       cursor: widget.onPressed != null
           ? SystemMouseCursors.click
           : SystemMouseCursors.basic,
       onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
+      onExit: (_) => setState(() {
+        _isHovered = false;
+        _isPressed = false;
+      }),
       child: GestureDetector(
         onTap: widget.isLoading ? null : widget.onPressed,
+        onTapDown: (_) => setState(() => _isPressed = true),
+        onTapUp: (_) => setState(() => _isPressed = false),
+        onTapCancel: () => setState(() => _isPressed = false),
         child: AnimatedContainer(
           duration: AppConstants.animationDuration,
-          curve: Curves.easeInOut,
+          curve: Curves.easeOut,
           height: _height,
           padding: _padding,
           decoration: BoxDecoration(
             color: bgColor,
             borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-            border: _border(isDark),
-            boxShadow: widget.variant == AppButtonVariant.primary &&
-                    _isHovered &&
-                    widget.onPressed != null
-                ? [
-                    BoxShadow(
-                      color: AppColors.primary.withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ]
-                : null,
+            border: border != null ? Border.fromBorderSide(border) : null,
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -185,22 +164,22 @@ class _AppButtonState extends State<AppButton> {
                   width: _iconSize,
                   height: _iconSize,
                   child: CircularProgressIndicator(
-                    strokeWidth: 2.0,
+                    strokeWidth: 1.5,
                     valueColor: AlwaysStoppedAnimation<Color>(fgColor),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
               ] else if (widget.icon != null) ...[
                 Icon(widget.icon, size: _iconSize, color: fgColor),
-                const SizedBox(width: AppSpacing.sm),
+                const SizedBox(width: AppSpacing.xs + 2),
               ],
               Text(
                 widget.label,
                 style: TextStyle(
                   color: fgColor,
                   fontSize: _fontSize,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.2,
+                  fontWeight: FontWeight.w400,
+                  letterSpacing: -0.15,
                 ),
               ),
             ],

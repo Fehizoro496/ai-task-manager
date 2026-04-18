@@ -58,8 +58,8 @@ class EmptyState extends StatelessWidget {
               style: TextStyle(
                 color: titleColor,
                 fontSize: 16,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.1,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -0.3,
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -72,6 +72,7 @@ class EmptyState extends StatelessWidget {
                 style: TextStyle(
                   color: descriptionColor,
                   fontSize: 13,
+                  letterSpacing: -0.1,
                   height: 1.5,
                 ),
               ),

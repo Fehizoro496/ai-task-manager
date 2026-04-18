@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:ai_task_manager/core/theme/app_colors.dart';
 import 'package:ai_task_manager/core/theme/app_spacing.dart';
@@ -32,18 +34,31 @@ class _EpicPreviewCardState extends State<EpicPreviewCard> {
     final textSecondary =
         isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
 
-    return Container(
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: Container(
       decoration: BoxDecoration(
-        color: cardColor,
+        color: isDark ? Colors.white.withOpacity(0.07) : Colors.white.withOpacity(0.74),
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        border: Border.all(color: borderColor, width: 1),
+        border: Border.all(
+          color: isDark ? Colors.white.withOpacity(0.10) : Colors.white.withOpacity(0.85),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.25 : 0.06),
+            blurRadius: 18,
+            offset: const Offset(0, 5),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          InkWell(
+          GestureDetector(
             onTap: () => setState(() => _isExpanded = !_isExpanded),
-            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.lg),
               child: Row(
@@ -149,6 +164,8 @@ class _EpicPreviewCardState extends State<EpicPreviewCard> {
             duration: AppConstants.animationDuration,
           ),
         ],
+      ),
+        ),
       ),
     );
   }

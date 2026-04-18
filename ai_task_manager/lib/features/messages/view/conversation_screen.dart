@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -68,13 +70,13 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
         members: [],
       ),
     );
-    if (conv.isGroup) return conv.name ?? 'Groupe';
+    if (conv.isGroup) return conv.name ?? 'Group';
     if (userId == null) return 'Conversation';
     final other = conv.members.firstWhere(
       (m) => m.id != userId,
       orElse: () => conv.members.isNotEmpty
           ? conv.members.first
-          : const MemberSummary(id: '', name: 'Inconnu'),
+          : const MemberSummary(id: '', name: 'Unknown'),
     );
     return other.name;
   }
@@ -87,17 +89,18 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
     }
   }
 
-  Widget _buildAppBarAvatar(ConversationEntity? conv, String? currentUserId) {
+  Widget _buildAvatar(ConversationEntity? conv, String? currentUserId) {
     if (conv == null) return const SizedBox.shrink();
     if (conv.isGroup) {
       return Container(
-        width: 36,
-        height: 36,
+        width: 32,
+        height: 32,
         decoration: const BoxDecoration(
           color: AppColors.primarySurface,
           shape: BoxShape.circle,
         ),
-        child: const Icon(Icons.group_rounded, size: 18, color: AppColors.primary),
+        child: const Icon(Icons.group_rounded,
+            size: 16, color: AppColors.primary),
       );
     }
     final other = conv.members.firstWhere(
@@ -106,7 +109,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
           ? conv.members.first
           : const MemberSummary(id: '', name: '?'),
     );
-    return UserAvatar(name: other.name, avatarUrl: other.avatarUrl, radius: 18);
+    return UserAvatar(name: other.name, avatarUrl: other.avatarUrl, radius: 16);
   }
 
   @override
@@ -128,30 +131,24 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
     messagesAsync.whenData((_) => _scrollToBottom());
 
     return Scaffold(
-      appBar: AppBar(
-        leading: BackButton(onPressed: () => context.go('/messages')),
-        title: Row(
-          children: [
-            _buildAppBarAvatar(conv, currentUserId),
-            const SizedBox(width: AppSpacing.sm),
-            Text(convTitle),
-          ],
-        ),
-      ),
+      backgroundColor: Colors.transparent,
       body: Column(
         children: [
+          _buildHeader(context, isDark, conv, currentUserId, convTitle),
           Expanded(
             child: messagesAsync.when(
               data: (messages) {
                 if (messages.isEmpty) {
                   return Center(
                     child: Text(
-                      'Aucun message. Commencez la conversation !',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: isDark
-                                ? AppColors.textSecondaryDark
-                                : AppColors.textSecondaryLight,
-                          ),
+                      'No messages yet. Start the conversation!',
+                      style: TextStyle(
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                        fontSize: 13,
+                        letterSpacing: -0.1,
+                      ),
                     ),
                   );
                 }
@@ -178,9 +175,14 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                   },
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(
+                child: CircularProgressIndicator(color: AppColors.primary),
+              ),
               error: (error, _) => Center(
-                child: Text('Erreur: $error'),
+                child: Text(
+                  'Error: $error',
+                  style: const TextStyle(color: AppColors.error, fontSize: 13),
+                ),
               ),
             ),
           ),
@@ -190,17 +192,89 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
     );
   }
 
+  Widget _buildHeader(
+    BuildContext context,
+    bool isDark,
+    ConversationEntity? conv,
+    String? currentUserId,
+    String title,
+  ) {
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
+          decoration: BoxDecoration(
+            color: isDark
+                ? const Color(0xFF000000).withOpacity(0.80)
+                : Colors.white.withOpacity(0.82),
+            border: Border(
+              bottom: BorderSide(
+                color: isDark
+                    ? Colors.white.withOpacity(0.08)
+                    : Colors.black.withOpacity(0.07),
+                width: 1,
+              ),
+            ),
+          ),
+          child: Row(
+            children: [
+              _BackButton(isDark: isDark),
+              const SizedBox(width: AppSpacing.sm),
+              _buildAvatar(conv, currentUserId),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.2,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildInputBar(bool isDark) {
-    return Container(
+    final borderColor =
+        isDark ? AppColors.borderDark : Colors.black.withOpacity(0.10);
+    final fillColor =
+        isDark ? AppColors.cardDark : Colors.white;
+    final hintColor = isDark
+        ? AppColors.textTertiaryDark
+        : Colors.black.withOpacity(0.28);
+    final textColor =
+        isDark ? AppColors.textPrimaryDark : const Color(0xFF1D1D1F);
+
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
         vertical: AppSpacing.sm,
       ),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+        color: isDark
+            ? const Color(0xFF000000).withOpacity(0.80)
+            : Colors.white.withOpacity(0.82),
         border: Border(
           top: BorderSide(
-            color: isDark ? AppColors.borderDark : AppColors.borderLight,
+            color: isDark
+                ? Colors.white.withOpacity(0.08)
+                : Colors.black.withOpacity(0.07),
           ),
         ),
       ),
@@ -212,17 +286,37 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
               minLines: 1,
               maxLines: 4,
               textInputAction: TextInputAction.newline,
+              style: TextStyle(
+                color: textColor,
+                fontSize: 14,
+                letterSpacing: -0.1,
+              ),
               decoration: InputDecoration(
-                hintText: 'Votre message...',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusXxl),
-                  borderSide: BorderSide(
-                    color: isDark ? AppColors.borderDark : AppColors.borderLight,
-                  ),
+                hintText: 'Your message…',
+                hintStyle: TextStyle(
+                  color: hintColor,
+                  fontSize: 14,
+                  letterSpacing: -0.1,
                 ),
+                filled: true,
+                fillColor: fillColor,
+                isDense: true,
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.lg,
-                  vertical: AppSpacing.sm,
+                  vertical: AppSpacing.sm + 2,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusXxl),
+                  borderSide: BorderSide(color: borderColor),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusXxl),
+                  borderSide: BorderSide(color: borderColor),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusXxl),
+                  borderSide:
+                      const BorderSide(color: AppColors.primary, width: 1.5),
                 ),
               ),
               onSubmitted: (_) => _sendMessage(),
@@ -231,27 +325,118 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
           const SizedBox(width: AppSpacing.sm),
           _sending
               ? const SizedBox(
-                  width: 40,
-                  height: 40,
+                  width: 36,
+                  height: 36,
                   child: Center(
                     child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.primary,
+                      ),
                     ),
                   ),
                 )
-              : IconButton(
-                  onPressed: _sendMessage,
-                  icon: const Icon(Icons.send_rounded),
-                  color: AppColors.primary,
-                  tooltip: 'Envoyer',
-                ),
+              : _SendButton(onTap: _sendMessage, isDark: isDark),
         ],
+      ),
+        ),
       ),
     );
   }
 }
+
+// ── Back button ───────────────────────────────────────────────────────────────
+
+class _BackButton extends StatefulWidget {
+  const _BackButton({required this.isDark});
+  final bool isDark;
+
+  @override
+  State<_BackButton> createState() => _BackButtonState();
+}
+
+class _BackButtonState extends State<_BackButton> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: () => context.go('/messages'),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 140),
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: _hovered
+                ? (widget.isDark
+                    ? Colors.white.withOpacity(0.08)
+                    : Colors.black.withOpacity(0.05))
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+          ),
+          child: Icon(
+            Icons.arrow_back_ios_new_rounded,
+            size: 16,
+            color: widget.isDark
+                ? AppColors.textSecondaryDark
+                : AppColors.textSecondaryLight,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Send button ───────────────────────────────────────────────────────────────
+
+class _SendButton extends StatefulWidget {
+  const _SendButton({required this.onTap, required this.isDark});
+  final VoidCallback onTap;
+  final bool isDark;
+
+  @override
+  State<_SendButton> createState() => _SendButtonState();
+}
+
+class _SendButtonState extends State<_SendButton> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 140),
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: _hovered
+                ? AppColors.primaryDark
+                : AppColors.primary,
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(
+            Icons.send_rounded,
+            size: 16,
+            color: Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Message bubble ────────────────────────────────────────────────────────────
 
 class _MessageBubble extends StatelessWidget {
   final MessageEntity message;
@@ -330,14 +515,18 @@ class _MessageBubble extends StatelessWidget {
                         color: AppColors.primary,
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
-                        letterSpacing: 0.1,
+                        letterSpacing: -0.1,
                       ),
                     ),
                     const SizedBox(height: 3),
                   ],
                   Text(
                     message.content,
-                    style: TextStyle(color: textColor, fontSize: 14),
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 14,
+                      letterSpacing: -0.1,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.xxs),
                   Text(

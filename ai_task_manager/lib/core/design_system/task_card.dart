@@ -1,6 +1,9 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:ai_task_manager/core/theme/app_colors.dart';
 import 'package:ai_task_manager/core/theme/app_spacing.dart';
+import 'package:ai_task_manager/core/theme/app_theme.dart';
 import 'package:ai_task_manager/core/utils/constants.dart';
 import 'package:ai_task_manager/shared/user_avatar.dart';
 
@@ -37,27 +40,19 @@ class _TaskCardState extends State<TaskCard> {
 
   Color get _priorityColor {
     switch (widget.priority) {
-      case TaskPriority.urgent:
-        return AppColors.priorityUrgent;
-      case TaskPriority.high:
-        return AppColors.priorityHigh;
-      case TaskPriority.medium:
-        return AppColors.priorityMedium;
-      case TaskPriority.low:
-        return AppColors.priorityLow;
+      case TaskPriority.urgent: return AppColors.priorityUrgent;
+      case TaskPriority.high:   return AppColors.priorityHigh;
+      case TaskPriority.medium: return AppColors.priorityMedium;
+      case TaskPriority.low:    return AppColors.priorityLow;
     }
   }
 
   String get _priorityLabel {
     switch (widget.priority) {
-      case TaskPriority.urgent:
-        return 'Urgent';
-      case TaskPriority.high:
-        return 'High';
-      case TaskPriority.medium:
-        return 'Medium';
-      case TaskPriority.low:
-        return 'Low';
+      case TaskPriority.urgent: return 'Urgent';
+      case TaskPriority.high:   return 'High';
+      case TaskPriority.medium: return 'Medium';
+      case TaskPriority.low:    return 'Low';
     }
   }
 
@@ -66,15 +61,10 @@ class _TaskCardState extends State<TaskCard> {
     final today = DateTime(now.year, now.month, now.day);
     final d = DateTime(date.year, date.month, date.day);
     final diff = d.difference(today).inDays;
-
     if (diff == 0) return 'Today';
     if (diff == 1) return 'Tomorrow';
     if (diff == -1) return 'Yesterday';
-
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-    ];
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     return '${months[date.month - 1]} ${date.day}';
   }
 
@@ -87,13 +77,23 @@ class _TaskCardState extends State<TaskCard> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardColor = isDark ? AppColors.cardDark : AppColors.cardLight;
-    final borderColor = _isHovered
-        ? (isDark ? AppColors.borderDark.withOpacity(0.8) : AppColors.primary.withOpacity(0.15))
-        : (isDark ? AppColors.borderDark : AppColors.borderLight);
+    final cardColor = isDark ? AppColors.cardDark : AppColors.surfaceLight;
     final titleColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
     final subtitleColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
     final tertiaryColor = isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight;
+
+    // Apple shadow: soft, wide, barely visible at rest; more pronounced on hover
+    final shadows = _isHovered
+        ? [
+            BoxShadow(
+              color: isDark
+                  ? Colors.black.withOpacity(0.40)
+                  : Colors.black.withOpacity(0.14),
+              blurRadius: 30,
+              offset: const Offset(0, 8),
+            ),
+          ]
+        : AppTheme.cardShadow(isDark);
 
     return MouseRegion(
       cursor: widget.onTap != null ? SystemMouseCursors.click : MouseCursor.defer,
@@ -101,33 +101,34 @@ class _TaskCardState extends State<TaskCard> {
       onExit: (_) => setState(() => _isHovered = false),
       child: GestureDetector(
         onTap: widget.onTap,
-        child: AnimatedContainer(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+            child: AnimatedContainer(
           duration: AppConstants.animationDuration,
-          curve: Curves.easeInOut,
-          constraints: const BoxConstraints(
-            minHeight: AppConstants.taskCardMinHeight,
-          ),
+          curve: Curves.easeOut,
+          constraints: const BoxConstraints(minHeight: AppConstants.taskCardMinHeight),
           decoration: BoxDecoration(
-            color: cardColor,
+            color: isDark
+                ? Colors.white.withOpacity(_isHovered ? 0.11 : 0.08)
+                : Colors.white.withOpacity(_isHovered ? 0.92 : 0.78),
             borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-            border: Border.all(color: borderColor, width: 1.0),
-            boxShadow: [
-              BoxShadow(
-                color: isDark
-                    ? Colors.black.withOpacity(_isHovered ? 0.25 : 0.12)
-                    : Colors.black.withOpacity(_isHovered ? 0.07 : 0.02),
-                blurRadius: _isHovered ? 10 : 4,
-                offset: Offset(0, _isHovered ? 3 : 1),
-              ),
-            ],
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withOpacity(0.10)
+                  : Colors.white.withOpacity(0.88),
+              width: 1,
+            ),
+            boxShadow: shadows,
           ),
           child: IntrinsicHeight(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Priority indicator bar
+                // Priority accent bar — thin, refined
                 Container(
-                  width: 4,
+                  width: 3,
                   decoration: BoxDecoration(
                     color: _priorityColor,
                     borderRadius: const BorderRadius.only(
@@ -144,29 +145,25 @@ class _TaskCardState extends State<TaskCard> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Priority badge row
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.sm,
-                                vertical: AppSpacing.xxs,
-                              ),
-                              decoration: BoxDecoration(
-                                color: _priorityColor.withOpacity(0.12),
-                                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                              ),
-                              child: Text(
-                                _priorityLabel,
-                                style: TextStyle(
-                                  color: _priorityColor,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 0.3,
-                                ),
-                              ),
+                        // Priority badge
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _priorityColor.withOpacity(0.10),
+                            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                          ),
+                          child: Text(
+                            _priorityLabel,
+                            style: TextStyle(
+                              color: _priorityColor,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: -0.05,
                             ),
-                          ],
+                          ),
                         ),
                         const SizedBox(height: AppSpacing.sm),
                         // Title
@@ -176,7 +173,8 @@ class _TaskCardState extends State<TaskCard> {
                             color: titleColor,
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
-                            height: 1.3,
+                            letterSpacing: -0.15,
+                            height: 1.30,
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -189,7 +187,8 @@ class _TaskCardState extends State<TaskCard> {
                             style: TextStyle(
                               color: subtitleColor,
                               fontSize: 12,
-                              height: 1.4,
+                              letterSpacing: -0.12,
+                              height: 1.40,
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -201,31 +200,30 @@ class _TaskCardState extends State<TaskCard> {
                           Wrap(
                             spacing: AppSpacing.xs,
                             runSpacing: AppSpacing.xs,
-                            children: widget.labels.map((label) {
-                              return Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: AppSpacing.sm,
-                                  vertical: AppSpacing.xxs,
+                            children: widget.labels.map((label) => Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? AppColors.hoverDark
+                                    : AppColors.backgroundLight,
+                                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                              ),
+                              child: Text(
+                                label,
+                                style: TextStyle(
+                                  color: tertiaryColor,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w500,
+                                  letterSpacing: -0.05,
                                 ),
-                                decoration: BoxDecoration(
-                                  color: isDark
-                                      ? AppColors.surfaceDark
-                                      : AppColors.hoverLight,
-                                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                                ),
-                                child: Text(
-                                  label,
-                                  style: TextStyle(
-                                    color: tertiaryColor,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              );
-                            }).toList(),
+                              ),
+                            )).toList(),
                           ),
                         ],
-                        // Bottom row: due date + assignee avatar
+                        // Footer: due date + assignee
                         if (widget.dueDate != null || widget.assigneeName != null) ...[
                           const SizedBox(height: AppSpacing.sm),
                           Row(
@@ -235,15 +233,16 @@ class _TaskCardState extends State<TaskCard> {
                                   _isOverdue
                                       ? Icons.warning_amber_rounded
                                       : Icons.calendar_today_rounded,
-                                  size: 11,
+                                  size: 10,
                                   color: _isOverdue ? AppColors.error : tertiaryColor,
                                 ),
-                                const SizedBox(width: AppSpacing.xxs + 2),
+                                const SizedBox(width: 3),
                                 Text(
                                   _formatDate(widget.dueDate!),
                                   style: TextStyle(
                                     color: _isOverdue ? AppColors.error : tertiaryColor,
                                     fontSize: 11,
+                                    letterSpacing: -0.08,
                                     fontWeight: _isOverdue ? FontWeight.w600 : FontWeight.w400,
                                   ),
                                 ),
@@ -254,27 +253,19 @@ class _TaskCardState extends State<TaskCard> {
                                   message: widget.assigneeName!,
                                   preferBelow: false,
                                   decoration: BoxDecoration(
-                                    color: isDark ? AppColors.surfaceDark : AppColors.textPrimaryLight,
+                                    color: isDark
+                                        ? AppColors.surfaceDark
+                                        : AppColors.textPrimaryLight,
                                     borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                                   ),
                                   textStyle: const TextStyle(
                                     color: Colors.white,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
+                                    fontSize: 11,
                                   ),
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: isDark ? AppColors.borderDark : AppColors.borderLight,
-                                        width: 1.5,
-                                      ),
-                                    ),
-                                    child: UserAvatar(
-                                      name: widget.assigneeName!,
-                                      avatarUrl: widget.assigneeAvatar,
-                                      radius: 13,
-                                    ),
+                                  child: UserAvatar(
+                                    name: widget.assigneeName!,
+                                    avatarUrl: widget.assigneeAvatar,
+                                    radius: 12,
                                   ),
                                 ),
                             ],
@@ -287,9 +278,10 @@ class _TaskCardState extends State<TaskCard> {
               ],
             ),
           ),
+            ),
+          ),
         ),
       ),
     );
   }
 }
-
