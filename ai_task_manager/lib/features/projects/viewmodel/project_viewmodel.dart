@@ -64,11 +64,13 @@ class ProjectListViewModel extends AsyncNotifier<List<ProjectEntity>> {
     required String name,
     String? description,
     String? color,
+    String? githubRepoUrl,
   }) async {
     final project = await _service.createProject(
       name: name,
       description: description,
       color: color,
+      githubRepoUrl: githubRepoUrl,
     );
 
     final current = state.valueOrNull ?? [];

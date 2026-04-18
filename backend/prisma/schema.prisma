@@ -24,6 +24,7 @@ model User {
   password      String?
   name          String
   googleId      String?        @unique
+  githubId      String?        @unique
   avatarUrl     String?
   provider      String         @default("local")
   role          UserRole       @default(USER)
@@ -59,17 +60,22 @@ model Message {
 }
 
 model Project {
-  id          String          @id @default(uuid())
-  name        String
-  description String?
-  color       String?
-  ownerId     String
-  owner       User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  epics       Epic[]
-  aiDrafts    AiDraft[]
-  members     ProjectMember[]
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  id                String          @id @default(uuid())
+  name              String
+  description       String?
+  color             String?
+  ownerId           String
+  owner             User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  epics             Epic[]
+  aiDrafts          AiDraft[]
+  members           ProjectMember[]
+  githubRepoUrl     String?
+  githubOwner       String?
+  githubRepo        String?
+  identifierPrefix  String          @default("PROJ")
+  taskCounter       Int             @default(0)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
 }
 
 model ProjectMember {
@@ -116,6 +122,7 @@ enum TaskStatus {
 
 model Task {
   id          String     @id @default(uuid())
+  identifier  String?    @unique
   title       String
   description String?
   status      TaskStatus @default(TODO)

@@ -151,4 +151,64 @@ router.get("/google/callback", authController.googleCallback);
  */
 router.get("/google/status/:state", authController.googleStatus);
 
+/**
+ * @swagger
+ * /auth/github:
+ *   get:
+ *     tags: [Auth]
+ *     summary: Get GitHub OAuth consent URL
+ *     responses:
+ *       200:
+ *         description: Returns the OAuth URL and state token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 url:
+ *                   type: string
+ *                 state:
+ *                   type: string
+ */
+router.get("/github", authController.githubInit);
+
+/**
+ * @swagger
+ * /auth/github/callback:
+ *   get:
+ *     tags: [Auth]
+ *     summary: GitHub OAuth callback (called by GitHub)
+ *     parameters:
+ *       - in: query
+ *         name: code
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: state
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: HTML success/error page
+ */
+router.get("/github/callback", authController.githubCallback);
+
+/**
+ * @swagger
+ * /auth/github/status/{state}:
+ *   get:
+ *     tags: [Auth]
+ *     summary: Poll for GitHub OAuth result
+ *     parameters:
+ *       - in: path
+ *         name: state
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: OAuth status (pending / success / error / expired)
+ */
+router.get("/github/status/:state", authController.githubStatus);
+
 module.exports = router;

@@ -23,6 +23,7 @@ const serializeTask = (task, projectId) => {
 
   return {
     id: task.id,
+    identifier: task.identifier || null,
     title: task.title,
     description: task.description,
     status: statusToLowercase[task.status] || task.status,
@@ -52,6 +53,19 @@ const serializeTask = (task, projectId) => {
   };
 };
 
+/**
+ * Génère un identifiant unique pour une tâche (ex: "AM-001") en incrémentant
+ * atomiquement le compteur du projet via une transaction Prisma.
+ */
+const generateTaskIdentifier = async (projectId) => {
+  const updated = await prisma.project.update({
+    where: { id: projectId },
+    data: { taskCounter: { increment: 1 } },
+    select: { taskCounter: true, identifierPrefix: true },
+  });
+  return `${updated.identifierPrefix}-${String(updated.taskCounter).padStart(3, "0")}`;
+};
+
 const verifyStoryOwnership = async (storyId, userId, isAdmin) => {
   const story = await prisma.story.findUnique({
     where: { id: storyId },
@@ -64,8 +78,10 @@ const verifyStoryOwnership = async (storyId, userId, isAdmin) => {
 };
 
 const create = async (userId, isAdmin, data) => {
-  await verifyStoryOwnership(data.storyId, userId, isAdmin);
-  return prisma.task.create({ data, include: assigneeInclude });
+  const story = await verifyStoryOwnership(data.storyId, userId, isAdmin);
+  const projectId = story.epic.project.id;
+  const identifier = await generateTaskIdentifier(projectId);
+  return prisma.task.create({ data: { ...data, identifier }, include: assigneeInclude });
 };
 
 const listByStory = async (storyId, userId, isAdmin) => {
@@ -239,6 +255,7 @@ const createForProject = async (userId, isAdmin, projectId, data) => {
     if (!story) {
       throw new AppError("Story not found in this project", 404);
     }
+    const identifier = await generateTaskIdentifier(projectId);
     return prisma.task.create({
       data: {
         title: data.title,
@@ -246,6 +263,7 @@ const createForProject = async (userId, isAdmin, projectId, data) => {
         priority: data.priority || "medium",
         status: data.status || "TODO",
         storyId,
+        identifier,
       },
       include: assigneeInclude,
     });
@@ -266,6 +284,7 @@ const createForProject = async (userId, isAdmin, projectId, data) => {
     });
   }
 
+  const identifier = await generateTaskIdentifier(projectId);
   return prisma.task.create({
     data: {
       title: data.title,
@@ -273,6 +292,7 @@ const createForProject = async (userId, isAdmin, projectId, data) => {
       priority: data.priority || "medium",
       status: data.status || "TODO",
       storyId: story.id,
+      identifier,
     },
     include: assigneeInclude,
   });

@@ -8,6 +8,7 @@ import 'package:ai_task_manager/core/errors/exceptions.dart';
 import 'package:ai_task_manager/core/theme/app_colors.dart';
 import 'package:ai_task_manager/core/theme/app_spacing.dart';
 import 'package:ai_task_manager/core/utils/constants.dart';
+import 'package:ai_task_manager/features/auth/view/widgets/github_sign_in_button.dart';
 import 'package:ai_task_manager/features/auth/view/widgets/google_sign_in_button.dart';
 import 'package:ai_task_manager/features/auth/viewmodel/auth_viewmodel.dart';
 import 'package:go_router/go_router.dart';
@@ -46,6 +47,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   void _onGoogleSignIn() {
     ref.read(authStateProvider.notifier).loginWithGoogle();
+  }
+
+  void _onGithubSignIn() {
+    ref.read(authStateProvider.notifier).loginWithGithub();
   }
 
   void _navigateToRegister() {
@@ -322,6 +327,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             const SizedBox(height: AppSpacing.lg),
             GoogleSignInButton(
               onPressed: isLoading ? null : _onGoogleSignIn,
+              isLoading: isLoading,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            GithubSignInButton(
+              onPressed: isLoading ? null : _onGithubSignIn,
               isLoading: isLoading,
             ),
             const SizedBox(height: AppSpacing.xl),

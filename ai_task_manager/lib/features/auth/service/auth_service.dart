@@ -106,13 +106,32 @@ class AuthService {
   }
 
   Future<UserEntity> loginWithGoogle() async {
+    return _loginWithOAuth(
+      initEndpoint: AuthApi.googleInit,
+      statusEndpoint: AuthApi.googleStatus,
+      providerName: 'Google',
+    );
+  }
+
+  Future<UserEntity> loginWithGithub() async {
+    return _loginWithOAuth(
+      initEndpoint: AuthApi.githubInit,
+      statusEndpoint: AuthApi.githubStatus,
+      providerName: 'GitHub',
+    );
+  }
+
+  /// Generic OAuth polling flow shared by Google and GitHub.
+  Future<UserEntity> _loginWithOAuth({
+    required String initEndpoint,
+    required String Function(String state) statusEndpoint,
+    required String providerName,
+  }) async {
     try {
-      // Step 1: Get the Google auth URL and state from backend
-      final initResponse = await _apiClient.get<Map<String, dynamic>>(
-        AuthApi.googleInit,
-      );
+      // Step 1: Get the OAuth URL and state from backend
+      final initResponse = await _apiClient.get<Map<String, dynamic>>(initEndpoint);
       if (initResponse.data == null) {
-        throw const ServerException(message: 'Failed to initiate Google sign-in');
+        throw ServerException(message: 'Failed to initiate $providerName sign-in');
       }
 
       final url = initResponse.data!['url'] as String?;
@@ -125,7 +144,7 @@ class AuthService {
       // Step 2: Open the URL in the default browser
       final uri = Uri.parse(url);
       if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-        throw const ServerException(message: 'Could not open browser for sign-in');
+        throw ServerException(message: 'Could not open browser for $providerName sign-in');
       }
 
       // Step 3: Poll for the result (every 2s, max 60 attempts = 2 minutes)
@@ -133,7 +152,7 @@ class AuthService {
         await Future.delayed(const Duration(seconds: 2));
 
         final statusResponse = await _apiClient.get<Map<String, dynamic>>(
-          AuthApi.googleStatus(state),
+          statusEndpoint(state),
         );
 
         if (statusResponse.data == null) continue;
@@ -149,7 +168,8 @@ class AuthService {
         } else if (status == 'pending_approval') {
           throw const PendingApprovalException();
         } else if (status == 'error') {
-          final error = statusResponse.data!['error'] as String? ?? 'Google sign-in failed';
+          final error = statusResponse.data!['error'] as String?
+              ?? '$providerName sign-in failed';
           throw ServerException(message: error);
         } else if (status == 'expired') {
           throw const ServerException(message: 'Sign-in session expired. Please try again.');

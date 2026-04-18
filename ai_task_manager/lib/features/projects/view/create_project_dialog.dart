@@ -9,11 +9,13 @@ class CreateProjectResult {
   final String name;
   final String? description;
   final String? color;
+  final String? githubRepoUrl;
 
   const CreateProjectResult({
     required this.name,
     this.description,
     this.color,
+    this.githubRepoUrl,
   });
 }
 
@@ -35,6 +37,7 @@ class CreateProjectDialog extends StatefulWidget {
 class _CreateProjectDialogState extends State<CreateProjectDialog> {
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _githubRepoUrlController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   String? _selectedColor;
   final bool _isSubmitting = false;
@@ -54,18 +57,21 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
   void dispose() {
     _nameController.dispose();
     _descriptionController.dispose();
+    _githubRepoUrlController.dispose();
     super.dispose();
   }
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
 
+    final rawGithubUrl = _githubRepoUrlController.text.trim();
     final result = CreateProjectResult(
       name: _nameController.text.trim(),
       description: _descriptionController.text.trim().isNotEmpty
           ? _descriptionController.text.trim()
           : null,
       color: _selectedColor != null ? '#$_selectedColor' : null,
+      githubRepoUrl: rawGithubUrl.isNotEmpty ? rawGithubUrl : null,
     );
 
     Navigator.of(context).pop(result);
@@ -180,6 +186,60 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
                 ),
               ),
             ),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          _FieldLabel(label: 'GitHub Repository (optionnel)', isRequired: false, isDark: isDark),
+          const SizedBox(height: AppSpacing.sm),
+          TextFormField(
+            controller: _githubRepoUrlController,
+            style: TextStyle(color: textPrimary, fontSize: 14),
+            decoration: InputDecoration(
+              hintText: 'https://github.com/owner/repo',
+              hintStyle: TextStyle(
+                color: isDark
+                    ? AppColors.textTertiaryDark
+                    : AppColors.textTertiaryLight,
+                fontSize: 14,
+              ),
+              prefixIcon: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Icon(
+                  Icons.code_rounded,
+                  size: 20,
+                  color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                ),
+              ),
+              filled: true,
+              fillColor: fillColor,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.md,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                borderSide: BorderSide(color: borderColor),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                borderSide: BorderSide(color: borderColor),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                borderSide: const BorderSide(color: AppColors.error),
+              ),
+            ),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) return null;
+              final uri = Uri.tryParse(value.trim());
+              if (uri == null || !uri.hasScheme || !value.trim().contains('github.com')) {
+                return 'Entrez une URL GitHub valide';
+              }
+              return null;
+            },
           ),
           const SizedBox(height: AppSpacing.xl),
           _FieldLabel(label: 'Color', isRequired: false, isDark: isDark),

@@ -2,14 +2,55 @@ const prisma = require("../../prisma/client");
 const AppError = require("../../utils/AppError");
 const { createNotification } = require("../notifications/notifications.service");
 
+/**
+ * Génère un préfixe d'identifiant à partir du nom du projet.
+ * "AI Manager" → "AIM", "Mon Projet" → "MP", "Task" → "TAS"
+ */
+const generateIdentifierPrefix = (name) => {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 1) {
+    return words[0].substring(0, 3).toUpperCase();
+  }
+  return words.map((w) => w[0]).join("").substring(0, 5).toUpperCase();
+};
+
+/**
+ * Extrait {owner, repo} depuis une URL GitHub.
+ * Exemples acceptés :
+ *   https://github.com/owner/repo
+ *   https://github.com/owner/repo.git
+ *   https://github.com/owner/repo/
+ */
+const parseGithubUrl = (url) => {
+  if (!url) return { owner: null, repo: null };
+  const match = url.match(/github\.com[\/:]([^\/]+)\/([^\/\?#]+?)(?:\.git)?\/?$/i);
+  if (!match) return { owner: null, repo: null };
+  return { owner: match[1], repo: match[2] };
+};
+
 const serializeMember = (member) => {
   const { avatarUrl, ...userRest } = member.user;
   return { ...member, user: { ...userRest, avatar_url: avatarUrl ?? null } };
 };
 
 const create = async (ownerId, data) => {
+  const identifierPrefix = data.identifierPrefix
+    ? data.identifierPrefix.toUpperCase()
+    : generateIdentifierPrefix(data.name);
+
+  const { owner: githubOwner, repo: githubRepo } = parseGithubUrl(data.githubRepoUrl);
+
   const project = await prisma.project.create({
-    data: { ...data, ownerId },
+    data: {
+      name: data.name,
+      description: data.description,
+      color: data.color,
+      ownerId,
+      identifierPrefix,
+      githubRepoUrl: data.githubRepoUrl || null,
+      githubOwner,
+      githubRepo,
+    },
   });
 
   await prisma.projectMember.create({
@@ -68,7 +109,15 @@ const update = async (id, userId, isAdmin, data) => {
     if (!exists) throw new AppError("Project not found", 404);
   }
 
-  return prisma.project.update({ where: { id }, data });
+  // Si githubRepoUrl change, recalcule owner/repo
+  const updateData = { ...data };
+  if (Object.prototype.hasOwnProperty.call(data, "githubRepoUrl")) {
+    const { owner, repo } = parseGithubUrl(data.githubRepoUrl);
+    updateData.githubOwner = owner;
+    updateData.githubRepo = repo;
+  }
+
+  return prisma.project.update({ where: { id }, data: updateData });
 };
 
 const remove = async (id, userId, isAdmin) => {

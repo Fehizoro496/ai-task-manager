@@ -24,4 +24,12 @@ abstract class AuthApi {
   /// GET /auth/google/status/:state
   /// Response: { status: 'pending' | 'success' | 'error' | 'expired', token?, user?, error? }
   static String googleStatus(String state) => '$basePath/google/status/$state';
+
+  /// GET /auth/github
+  /// Response: { url: string, state: string }
+  static const String githubInit = '$basePath/github';
+
+  /// GET /auth/github/status/:state
+  /// Response: { status: 'pending' | 'success' | 'error' | 'expired', token?, user?, error? }
+  static String githubStatus(String state) => '$basePath/github/status/$state';
 }

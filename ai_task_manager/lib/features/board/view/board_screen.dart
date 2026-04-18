@@ -547,6 +547,7 @@ class _DraggableTaskCard extends ConsumerWidget {
     Widget buildCard() {
       final card = ds.TaskCard(
         title: task.title,
+        identifier: task.identifier,
         description: task.description,
         priority: _mapPriority(task.priority),
         assigneeName: task.assigneeName,

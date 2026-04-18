@@ -6,6 +6,8 @@ enum TaskPriority { urgent, high, medium, low }
 
 class TaskEntity extends Equatable {
   final String id;
+  /// Identifiant lisible de la tâche, ex : "AM-001"
+  final String? identifier;
   final String title;
   final String? description;
   final TaskStatus status;
@@ -23,6 +25,7 @@ class TaskEntity extends Equatable {
 
   const TaskEntity({
     required this.id,
+    this.identifier,
     required this.title,
     this.description,
     this.status = TaskStatus.todo,
@@ -74,6 +77,7 @@ class TaskEntity extends Equatable {
   @override
   List<Object?> get props => [
         id,
+        identifier,
         title,
         description,
         status,

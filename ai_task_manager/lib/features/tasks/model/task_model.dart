@@ -4,6 +4,7 @@ import 'package:ai_task_manager/features/tasks/model/task_entity.dart';
 class TaskModel extends TaskEntity {
   const TaskModel({
     required super.id,
+    super.identifier,
     required super.title,
     super.description,
     super.status,
@@ -24,6 +25,7 @@ class TaskModel extends TaskEntity {
     final assigneeJson = json['assignee'] as Map<String, dynamic>?;
     return TaskModel(
       id: json['id'] as String,
+      identifier: json['identifier'] as String?,
       title: json['title'] as String,
       description: json['description'] as String?,
       status: _statusFromString(json['status'] as String? ?? 'todo'),
@@ -49,6 +51,7 @@ class TaskModel extends TaskEntity {
   factory TaskModel.fromEntity(TaskEntity entity) {
     return TaskModel(
       id: entity.id,
+      identifier: entity.identifier,
       title: entity.title,
       description: entity.description,
       status: entity.status,
