@@ -1,7 +1,7 @@
 const prisma = require("../../prisma/client");
 const AppError = require("../../utils/AppError");
 const { createNotification } = require("../notifications/notifications.service");
-const { createRepo } = require("../github/github.service");
+const { createRepo, inviteCollaborator } = require("../github/github.service");
 
 /**
  * Génère un préfixe d'identifiant à partir du nom du projet.
@@ -178,6 +178,10 @@ const addMember = async (projectId, userId) => {
     taskId: projectId,
     link: `/dashboard`,
   }).catch(() => {});
+
+  if (project.githubOwner && project.githubRepo) {
+    inviteCollaborator(project.ownerId, project.githubOwner, project.githubRepo, userId).catch(() => {});
+  }
 
   return serializeMember(member);
 };

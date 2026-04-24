@@ -83,7 +83,8 @@ const githubCallback = async (code, state) => {
     }
 
     const githubId = String(ghUser.id);
-    const name = ghUser.name || ghUser.login || email;
+    const githubLogin = ghUser.login;
+    const name = ghUser.name || githubLogin || email;
     const avatarUrl = ghUser.avatar_url || null;
 
     // 4) Find or create user
@@ -94,7 +95,7 @@ const githubCallback = async (code, state) => {
       if (user) {
         user = await prisma.user.update({
           where: { id: user.id },
-          data: { githubId, name: name || user.name, avatarUrl: avatarUrl || user.avatarUrl, provider: "github", githubAccessToken: accessToken },
+          data: { githubId, githubLogin, name: name || user.name, avatarUrl: avatarUrl || user.avatarUrl, provider: "github", githubAccessToken: accessToken },
         });
       }
     }
@@ -103,13 +104,13 @@ const githubCallback = async (code, state) => {
     if (!user) {
       isNewUser = true;
       user = await prisma.user.create({
-        data: { email, name: name || email, githubId, avatarUrl, provider: "github", githubAccessToken: accessToken },
+        data: { email, name: name || email, githubId, githubLogin, avatarUrl, provider: "github", githubAccessToken: accessToken },
       });
     } else if (user.githubId) {
-      // Refresh token for existing GitHub users on every login
+      // Refresh token et login pour les utilisateurs GitHub existants à chaque connexion
       await prisma.user.update({
         where: { id: user.id },
-        data: { githubAccessToken: accessToken },
+        data: { githubAccessToken: accessToken, githubLogin },
       });
     }
 

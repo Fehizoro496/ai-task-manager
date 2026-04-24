@@ -25,6 +25,7 @@ model User {
   name          String
   googleId      String?        @unique
   githubId          String?        @unique
+  githubLogin       String?
   githubAccessToken String?
   avatarUrl         String?
   provider          String         @default("local")

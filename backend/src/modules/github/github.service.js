@@ -102,4 +102,39 @@ const createBranch = async (userId, owner, repo, branchName) => {
   }
 };
 
-module.exports = { createBranch, createRepo };
+/**
+ * Envoie une invitation de collaborateur GitHub sur un dépôt.
+ * Utilise le token du propriétaire du projet pour envoyer l'invitation.
+ * Fire-and-forget : les erreurs sont silencieuses.
+ */
+const inviteCollaborator = async (ownerUserId, owner, repo, invitedUserId) => {
+  const [ownerUser, invitedUser] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: ownerUserId },
+      select: { githubAccessToken: true },
+    }),
+    prisma.user.findUnique({
+      where: { id: invitedUserId },
+      select: { githubLogin: true },
+    }),
+  ]);
+
+  if (!ownerUser?.githubAccessToken || !invitedUser?.githubLogin) return;
+
+  const res = await fetch(
+    `${GH_API}/repos/${owner}/${repo}/collaborators/${invitedUser.githubLogin}`,
+    {
+      method: "PUT",
+      headers: ghHeaders(ownerUser.githubAccessToken),
+      body: JSON.stringify({ permission: "push" }),
+    }
+  );
+
+  // 201 = invitation envoyée, 204 = déjà collaborateur → les deux sont OK
+  if (!res.ok && res.status !== 201 && res.status !== 204) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`GitHub invitation failed: ${err.message || res.status}`);
+  }
+};
+
+module.exports = { createBranch, createRepo, inviteCollaborator };
