@@ -9,10 +9,12 @@ class GithubSignInButton extends StatelessWidget {
     super.key,
     required this.onPressed,
     this.isLoading = false,
+    this.label,
   });
 
   final VoidCallback? onPressed;
   final bool isLoading;
+  final String? label;
 
   @override
   Widget build(BuildContext context) {
@@ -56,7 +58,7 @@ class GithubSignInButton extends StatelessWidget {
                   ),
                   const SizedBox(width: AppSpacing.md),
                   Text(
-                    'Se connecter avec GitHub',
+                    label ?? 'Se connecter avec GitHub',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: textColor,
                           fontWeight: FontWeight.w500,

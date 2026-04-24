@@ -8,7 +8,6 @@ import 'package:ai_task_manager/features/auth/viewmodel/auth_viewmodel.dart';
 import 'package:ai_task_manager/shared/app_layout.dart';
 import 'package:ai_task_manager/features/auth/view/login_screen.dart';
 import 'package:ai_task_manager/features/auth/view/pending_approval_screen.dart';
-import 'package:ai_task_manager/features/auth/view/register_screen.dart';
 import 'package:ai_task_manager/features/projects/view/dashboard_screen.dart';
 import 'package:ai_task_manager/features/board/view/board_screen.dart';
 import 'package:ai_task_manager/features/ai_planning/view/ai_planning_screen.dart';
@@ -32,11 +31,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isLoggedIn = user != null;
       final location = state.matchedLocation;
 
-      final isAuthRoute = ['/login', '/register', '/pending-approval']
-          .contains(location);
+      final isAuthRoute = ['/login', '/pending-approval'].contains(location);
 
       if (!isLoggedIn && !isAuthRoute) return '/login';
-      if (isLoggedIn && (location == '/login' || location == '/register')) {
+      if (isLoggedIn && location == '/login') {
         return user.isAdmin ? '/overview' : '/dashboard';
       }
       if (location == '/admin' && isLoggedIn && !user.isAdmin) {
@@ -57,16 +55,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => CustomTransitionPage(
           key: state.pageKey,
           child: const LoginScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-        ),
-      ),
-      GoRoute(
-        path: '/register',
-        pageBuilder: (context, state) => CustomTransitionPage(
-          key: state.pageKey,
-          child: const RegisterScreen(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },

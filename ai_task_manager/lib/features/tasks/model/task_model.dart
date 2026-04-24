@@ -5,6 +5,7 @@ class TaskModel extends TaskEntity {
   const TaskModel({
     required super.id,
     super.identifier,
+    super.githubBranch,
     required super.title,
     super.description,
     super.status,
@@ -26,6 +27,7 @@ class TaskModel extends TaskEntity {
     return TaskModel(
       id: json['id'] as String,
       identifier: json['identifier'] as String?,
+      githubBranch: (json['githubBranch'] ?? json['github_branch']) as String?,
       title: json['title'] as String,
       description: json['description'] as String?,
       status: _statusFromString(json['status'] as String? ?? 'todo'),
@@ -52,6 +54,7 @@ class TaskModel extends TaskEntity {
     return TaskModel(
       id: entity.id,
       identifier: entity.identifier,
+      githubBranch: entity.githubBranch,
       title: entity.title,
       description: entity.description,
       status: entity.status,

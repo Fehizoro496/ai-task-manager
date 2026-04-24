@@ -8,6 +8,8 @@ class TaskEntity extends Equatable {
   final String id;
   /// Identifiant lisible de la tâche, ex : "AM-001"
   final String? identifier;
+  /// Branche GitHub associée, ex : "feat/am-001"
+  final String? githubBranch;
   final String title;
   final String? description;
   final TaskStatus status;
@@ -26,6 +28,7 @@ class TaskEntity extends Equatable {
   const TaskEntity({
     required this.id,
     this.identifier,
+    this.githubBranch,
     required this.title,
     this.description,
     this.status = TaskStatus.todo,
@@ -56,6 +59,8 @@ class TaskEntity extends Equatable {
   }) =>
       TaskEntity(
         id: id,
+        identifier: identifier,
+        githubBranch: githubBranch,
         title: title ?? this.title,
         description: description ?? this.description,
         status: status ?? this.status,
@@ -78,6 +83,7 @@ class TaskEntity extends Equatable {
   List<Object?> get props => [
         id,
         identifier,
+        githubBranch,
         title,
         description,
         status,

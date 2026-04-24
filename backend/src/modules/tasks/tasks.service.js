@@ -2,6 +2,7 @@ const prisma = require("../../prisma/client");
 const AppError = require("../../utils/AppError");
 const { createNotification, notifyAdmins } = require("../notifications/notifications.service");
 const { isMember } = require("../projects/projects.service");
+const { createBranch } = require("../github/github.service");
 
 // Map Prisma UPPERCASE status to lowercase for frontend
 const statusToLowercase = {
@@ -24,6 +25,8 @@ const serializeTask = (task, projectId) => {
   return {
     id: task.id,
     identifier: task.identifier || null,
+    githubBranch: task.githubBranch || null,
+    github_branch: task.githubBranch || null,
     title: task.title,
     description: task.description,
     status: statusToLowercase[task.status] || task.status,
@@ -79,9 +82,16 @@ const verifyStoryOwnership = async (storyId, userId, isAdmin) => {
 
 const create = async (userId, isAdmin, data) => {
   const story = await verifyStoryOwnership(data.storyId, userId, isAdmin);
-  const projectId = story.epic.project.id;
-  const identifier = await generateTaskIdentifier(projectId);
-  return prisma.task.create({ data: { ...data, identifier }, include: assigneeInclude });
+  const project = story.epic.project;
+  const identifier = await generateTaskIdentifier(project.id);
+  const githubBranch = identifier.toLowerCase();
+  const task = await prisma.task.create({ data: { ...data, identifier, githubBranch }, include: assigneeInclude });
+
+  if (project.githubOwner && project.githubRepo) {
+    createBranch(userId, project.githubOwner, project.githubRepo, githubBranch).catch(() => {});
+  }
+
+  return task;
 };
 
 const listByStory = async (storyId, userId, isAdmin) => {
@@ -237,13 +247,12 @@ const listByProject = async (projectId, userId, isAdmin) => {
 };
 
 const createForProject = async (userId, isAdmin, projectId, data) => {
-  if (!isAdmin) {
-    const project = await prisma.project.findFirst({
-      where: { id: projectId, ownerId: userId },
-    });
-    if (!project) {
-      throw new AppError("Project not found", 404);
-    }
+  const project = await prisma.project.findUnique({ where: { id: projectId } });
+
+  if (!project) throw new AppError("Project not found", 404);
+  if (!isAdmin && project.ownerId !== userId) {
+    const member = await isMember(projectId, userId);
+    if (!member) throw new AppError("Project not found", 404);
   }
 
   // If storyId is provided, verify it belongs to this project
@@ -256,7 +265,8 @@ const createForProject = async (userId, isAdmin, projectId, data) => {
       throw new AppError("Story not found in this project", 404);
     }
     const identifier = await generateTaskIdentifier(projectId);
-    return prisma.task.create({
+    const githubBranch = identifier.toLowerCase();
+    const task = await prisma.task.create({
       data: {
         title: data.title,
         description: data.description,
@@ -264,9 +274,16 @@ const createForProject = async (userId, isAdmin, projectId, data) => {
         status: data.status || "TODO",
         storyId,
         identifier,
+        githubBranch,
       },
       include: assigneeInclude,
     });
+
+    if (project?.githubOwner && project?.githubRepo) {
+      createBranch(userId, project.githubOwner, project.githubRepo, githubBranch).catch(() => {});
+    }
+
+    return task;
   }
 
   // No storyId: assign to the first story of the first epic, or create a default epic/story
@@ -285,7 +302,8 @@ const createForProject = async (userId, isAdmin, projectId, data) => {
   }
 
   const identifier = await generateTaskIdentifier(projectId);
-  return prisma.task.create({
+  const githubBranch = identifier.toLowerCase();
+  const task = await prisma.task.create({
     data: {
       title: data.title,
       description: data.description,
@@ -293,9 +311,16 @@ const createForProject = async (userId, isAdmin, projectId, data) => {
       status: data.status || "TODO",
       storyId: story.id,
       identifier,
+      githubBranch,
     },
     include: assigneeInclude,
   });
+
+  if (project?.githubOwner && project?.githubRepo) {
+    createBranch(userId, project.githubOwner, project.githubRepo, githubBranch).catch(() => {});
+  }
+
+  return task;
 };
 
 const assignSelf = async (id, userId, isAdmin) => {

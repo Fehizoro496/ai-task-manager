@@ -213,6 +213,8 @@ class TaskService {
 
     return TaskModel(
       id: row.id,
+      identifier: row.identifier,
+      githubBranch: row.githubBranch,
       title: row.title,
       description: row.description,
       status: _statusFromString(row.status),
@@ -231,6 +233,8 @@ class TaskService {
   TasksCompanion _taskModelToCompanion(TaskModel task) {
     return TasksCompanion(
       id: Value(task.id),
+      identifier: Value(task.identifier),
+      githubBranch: Value(task.githubBranch),
       title: Value(task.title),
       description: Value(task.description),
       status: Value(TaskModel.statusToString(task.status)),

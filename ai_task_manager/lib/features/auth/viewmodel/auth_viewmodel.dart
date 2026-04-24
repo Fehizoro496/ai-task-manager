@@ -57,62 +57,19 @@ class AuthViewModel extends AsyncNotifier<UserEntity?> {
     ref.invalidate(aiPlanningStateProvider);
     ref.invalidate(selectedNavIndexProvider);
     ref.invalidate(conversationsProvider);
-    ref.invalidate(messagesProvider);      // invalide toutes les instances family
-    ref.invalidate(boardTasksProvider);    // invalide toutes les instances family
-    ref.invalidate(approvedUsersProvider); // FutureProvider — peut cacher un 403
+    ref.invalidate(messagesProvider);
+    ref.invalidate(boardTasksProvider);
+    ref.invalidate(approvedUsersProvider);
     ref.invalidate(pendingUsersCountProvider);
-    ref.invalidate(taskStreamProvider);    // invalide toutes les instances family
+    ref.invalidate(taskStreamProvider);
   }
 
   void _connectSocket(String token) {
-    ref
-        .read(socketServiceProvider)
-        .connect(token, ApiConfig.baseUrl);
+    ref.read(socketServiceProvider).connect(token, ApiConfig.baseUrl);
   }
 
   void _disconnectSocket() {
     ref.read(socketServiceProvider).disconnect();
-  }
-
-  Future<void> login(String email, String password) async {
-    state = const AsyncLoading();
-    try {
-      final user = await ref.read(authServiceProvider).login(email, password);
-      // Connecter le socket avant d'invalider les providers pour qu'ils
-      // trouvent un socket prêt dès leur rebuild.
-      if (user.token != null) _connectSocket(user.token!);
-      state = AsyncData(user);
-      _invalidateUserProviders();
-    } catch (e) {
-      state = AsyncError(e, StackTrace.current);
-    }
-  }
-
-  Future<void> register(String name, String email, String password) async {
-    state = const AsyncLoading();
-    try {
-      final user =
-          await ref.read(authServiceProvider).register(name, email, password);
-      state = AsyncData(user);
-    } on PendingApprovalException catch (e) {
-      state = AsyncError(e, StackTrace.current);
-    } catch (e) {
-      state = AsyncError(e, StackTrace.current);
-    }
-  }
-
-  Future<void> loginWithGoogle() async {
-    state = const AsyncLoading();
-    try {
-      final user = await ref.read(authServiceProvider).loginWithGoogle();
-      if (user.token != null) _connectSocket(user.token!);
-      state = AsyncData(user);
-      _invalidateUserProviders();
-    } on PendingApprovalException catch (e) {
-      state = AsyncError(e, StackTrace.current);
-    } catch (e) {
-      state = AsyncError(e, StackTrace.current);
-    }
   }
 
   Future<void> loginWithGithub() async {

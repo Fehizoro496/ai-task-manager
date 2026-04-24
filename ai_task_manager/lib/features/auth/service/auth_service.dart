@@ -30,108 +30,11 @@ class AuthService {
 
   String? get cachedToken => _prefs.getString(_kCachedTokenKey);
 
-  Future<UserEntity> login(String email, String password) async {
-    try {
-      final response = await _apiClient.post<Map<String, dynamic>>(
-        AuthApi.login,
-        data: {
-          'email': email,
-          'password': password,
-        },
-      );
-
-      if (response.data == null) {
-        throw const ServerException(message: 'No data received from server');
-      }
-
-      final authResponse = AuthResponseModel.fromJson(response.data!);
-      final user = authResponse.userWithToken;
-
-      await _cacheUser(user);
-      _apiClient.updateToken(user.token);
-      return user;
-    } on DioException catch (e) {
-      final statusCode = e.response?.statusCode;
-      final message = e.response?.data?['message'] as String? ?? e.message ?? 'Login failed';
-      if (statusCode == 403 && message.toLowerCase().contains('pending')) {
-        throw PendingApprovalException(message: message);
-      }
-      if (statusCode == 403 && message.toLowerCase().contains('rejected')) {
-        throw ServerException(message: message, statusCode: statusCode);
-      }
-      throw ServerException(message: message, statusCode: statusCode);
-    } on ServerException {
-      rethrow;
-    } catch (e) {
-      throw ServerException(message: e.toString());
-    }
-  }
-
-  Future<UserEntity> register(
-    String name,
-    String email,
-    String password,
-  ) async {
-    try {
-      final response = await _apiClient.post<Map<String, dynamic>>(
-        AuthApi.register,
-        data: {
-          'name': name,
-          'email': email,
-          'password': password,
-        },
-      );
-
-      if (response.data == null) {
-        throw const ServerException(message: 'No data received from server');
-      }
-
-      final authResponse = AuthResponseModel.fromJson(response.data!);
-
-      if (authResponse.hasPendingApproval) {
-        throw PendingApprovalException();
-      }
-
-      final user = authResponse.userWithToken;
-      await _cacheUser(user);
-      _apiClient.updateToken(user.token);
-      return user;
-    } on PendingApprovalException {
-      rethrow;
-    } on ServerException {
-      rethrow;
-    } catch (e) {
-      throw ServerException(message: e.toString());
-    }
-  }
-
-  Future<UserEntity> loginWithGoogle() async {
-    return _loginWithOAuth(
-      initEndpoint: AuthApi.googleInit,
-      statusEndpoint: AuthApi.googleStatus,
-      providerName: 'Google',
-    );
-  }
-
   Future<UserEntity> loginWithGithub() async {
-    return _loginWithOAuth(
-      initEndpoint: AuthApi.githubInit,
-      statusEndpoint: AuthApi.githubStatus,
-      providerName: 'GitHub',
-    );
-  }
-
-  /// Generic OAuth polling flow shared by Google and GitHub.
-  Future<UserEntity> _loginWithOAuth({
-    required String initEndpoint,
-    required String Function(String state) statusEndpoint,
-    required String providerName,
-  }) async {
     try {
-      // Step 1: Get the OAuth URL and state from backend
-      final initResponse = await _apiClient.get<Map<String, dynamic>>(initEndpoint);
+      final initResponse = await _apiClient.get<Map<String, dynamic>>(AuthApi.githubInit);
       if (initResponse.data == null) {
-        throw ServerException(message: 'Failed to initiate $providerName sign-in');
+        throw const ServerException(message: 'Failed to initiate GitHub sign-in');
       }
 
       final url = initResponse.data!['url'] as String?;
@@ -141,18 +44,16 @@ class AuthService {
         throw const ServerException(message: 'Invalid response from server');
       }
 
-      // Step 2: Open the URL in the default browser
       final uri = Uri.parse(url);
       if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-        throw ServerException(message: 'Could not open browser for $providerName sign-in');
+        throw const ServerException(message: 'Could not open browser for GitHub sign-in');
       }
 
-      // Step 3: Poll for the result (every 2s, max 60 attempts = 2 minutes)
       for (var i = 0; i < 60; i++) {
         await Future.delayed(const Duration(seconds: 2));
 
         final statusResponse = await _apiClient.get<Map<String, dynamic>>(
-          statusEndpoint(state),
+          AuthApi.githubStatus(state),
         );
 
         if (statusResponse.data == null) continue;
@@ -168,16 +69,17 @@ class AuthService {
         } else if (status == 'pending_approval') {
           throw const PendingApprovalException();
         } else if (status == 'error') {
-          final error = statusResponse.data!['error'] as String?
-              ?? '$providerName sign-in failed';
+          final error = statusResponse.data!['error'] as String? ?? 'GitHub sign-in failed';
           throw ServerException(message: error);
         } else if (status == 'expired') {
           throw const ServerException(message: 'Sign-in session expired. Please try again.');
         }
-        // status == 'pending': continue polling
       }
 
       throw const ServerException(message: 'Sign-in timed out. Please try again.');
+    } on DioException catch (e) {
+      final message = e.response?.data?['message'] as String? ?? e.message ?? 'GitHub sign-in failed';
+      throw ServerException(message: message);
     } on PendingApprovalException {
       rethrow;
     } on ServerException {
