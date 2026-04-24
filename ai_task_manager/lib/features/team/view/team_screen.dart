@@ -31,7 +31,8 @@ class TeamScreen extends ConsumerWidget {
           ClipRect(
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-              child: DecoratedBox(
+              child: Container(
+                width: double.infinity,
                 decoration: BoxDecoration(
                   color: isDark
                       ? const Color(0xFF000000).withOpacity(0.80)

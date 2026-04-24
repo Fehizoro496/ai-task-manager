@@ -29,7 +29,8 @@ class SettingsScreen extends ConsumerWidget {
           ClipRect(
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-              child: DecoratedBox(
+              child: Container(
+                width: double.infinity,
                 decoration: BoxDecoration(
                   color: isDark
                       ? const Color(0xFF000000).withOpacity(0.80)
@@ -45,7 +46,11 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.xl, AppSpacing.xl, AppSpacing.xl, AppSpacing.md),
+                    AppSpacing.xl,
+                    AppSpacing.xl,
+                    AppSpacing.xl,
+                    AppSpacing.md,
+                  ),
                   child: _buildHeader(context, isDark),
                 ),
               ),
@@ -195,85 +200,90 @@ class _ProfileCard extends StatelessWidget {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.07) : Colors.white.withOpacity(0.76),
-        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        border: Border.all(
-          color: isDark ? Colors.white.withOpacity(0.10) : Colors.white.withOpacity(0.85),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.28 : 0.07),
-            blurRadius: 24,
-            offset: const Offset(0, 6),
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          decoration: BoxDecoration(
+            color: isDark
+                ? Colors.white.withOpacity(0.07)
+                : Colors.white.withOpacity(0.76),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withOpacity(0.10)
+                  : Colors.white.withOpacity(0.85),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(isDark ? 0.28 : 0.07),
+                blurRadius: 24,
+                offset: const Offset(0, 6),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          UserAvatar(name: name, avatarUrl: avatarUrl, radius: 28),
-          const SizedBox(width: AppSpacing.lg),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+          child: Row(
+            children: [
+              UserAvatar(name: name, avatarUrl: avatarUrl, radius: 28),
+              const SizedBox(width: AppSpacing.lg),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Text(
-                        name.isNotEmpty ? name : 'Unknown',
-                        style: TextStyle(
-                          color: isDark
-                              ? AppColors.textPrimaryDark
-                              : AppColors.textPrimaryLight,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: -0.2,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    if (role == 'ADMIN')
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.sm,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.12),
-                          borderRadius:
-                              BorderRadius.circular(AppSpacing.radiusSm),
-                        ),
-                        child: Text(
-                          'Admin',
-                          style: TextStyle(
-                            color: AppColors.primary,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: -0.1,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            name.isNotEmpty ? name : 'Unknown',
+                            style: TextStyle(
+                              color: isDark
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.textPrimaryLight,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: -0.2,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        if (role == 'ADMIN')
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.sm,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(
+                                AppSpacing.radiusSm,
+                              ),
+                            ),
+                            child: Text(
+                              'Admin',
+                              style: TextStyle(
+                                color: AppColors.primary,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: -0.1,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      email,
+                      style: TextStyle(
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                        fontSize: 13,
+                        letterSpacing: -0.1,
                       ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ],
                 ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  email,
-                  style: TextStyle(
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight,
-                    fontSize: 13,
-                    letterSpacing: -0.1,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
         ),
       ),
     );
@@ -310,52 +320,56 @@ class _AppearanceCard extends StatelessWidget {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.07) : Colors.white.withOpacity(0.76),
-        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        border: Border.all(
-          color: isDark ? Colors.white.withOpacity(0.10) : Colors.white.withOpacity(0.85),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.28 : 0.07),
-            blurRadius: 24,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            'Theme',
-            style: TextStyle(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          decoration: BoxDecoration(
+            color: isDark
+                ? Colors.white.withOpacity(0.07)
+                : Colors.white.withOpacity(0.76),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+            border: Border.all(
               color: isDark
-                  ? AppColors.textPrimaryDark
-                  : AppColors.textPrimaryLight,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              letterSpacing: -0.15,
+                  ? Colors.white.withOpacity(0.10)
+                  : Colors.white.withOpacity(0.85),
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(isDark ? 0.28 : 0.07),
+                blurRadius: 24,
+                offset: const Offset(0, 6),
+              ),
+            ],
           ),
-          Row(
-            children: options.map((opt) {
-              final isSelected = themeMode == opt.mode;
-              return Padding(
-                padding: const EdgeInsets.only(left: AppSpacing.xs),
-                child: _ThemeChip(
-                  label: opt.label,
-                  icon: opt.icon,
-                  isSelected: isSelected,
-                  isDark: isDark,
-                  onTap: () => onThemeChanged(opt.mode),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Theme',
+                style: TextStyle(
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimaryLight,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: -0.15,
                 ),
-              );
-            }).toList(),
+              ),
+              Row(
+                children: options.map((opt) {
+                  final isSelected = themeMode == opt.mode;
+                  return Padding(
+                    padding: const EdgeInsets.only(left: AppSpacing.xs),
+                    child: _ThemeChip(
+                      label: opt.label,
+                      icon: opt.icon,
+                      isSelected: isSelected,
+                      isDark: isDark,
+                      onTap: () => onThemeChanged(opt.mode),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
           ),
-        ],
-      ),
         ),
       ),
     );
@@ -392,9 +406,7 @@ class _ThemeChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected
               ? AppColors.primary.withOpacity(0.12)
-              : (isDark
-                  ? AppColors.backgroundDark
-                  : AppColors.backgroundLight),
+              : (isDark ? AppColors.backgroundDark : AppColors.backgroundLight),
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           border: Border.all(
             color: isSelected
@@ -411,8 +423,8 @@ class _ThemeChip extends StatelessWidget {
               color: isSelected
                   ? AppColors.primary
                   : (isDark
-                      ? AppColors.textSecondaryDark
-                      : AppColors.textSecondaryLight),
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight),
             ),
             const SizedBox(width: AppSpacing.xs),
             Text(
@@ -421,8 +433,8 @@ class _ThemeChip extends StatelessWidget {
                 color: isSelected
                     ? AppColors.primary
                     : (isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight),
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondaryLight),
                 fontSize: 12,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                 letterSpacing: -0.1,
@@ -450,10 +462,14 @@ class _AccountCard extends ConsumerWidget {
         filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Container(
           decoration: BoxDecoration(
-            color: isDark ? Colors.white.withOpacity(0.07) : Colors.white.withOpacity(0.76),
+            color: isDark
+                ? Colors.white.withOpacity(0.07)
+                : Colors.white.withOpacity(0.76),
             borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
             border: Border.all(
-              color: isDark ? Colors.white.withOpacity(0.10) : Colors.white.withOpacity(0.85),
+              color: isDark
+                  ? Colors.white.withOpacity(0.10)
+                  : Colors.white.withOpacity(0.85),
             ),
             boxShadow: [
               BoxShadow(
@@ -508,18 +524,21 @@ class _SettingsTileState extends State<_SettingsTile> {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveIconColor = widget.iconColor ??
+    final effectiveIconColor =
+        widget.iconColor ??
         (widget.isDark
             ? AppColors.textSecondaryDark
             : AppColors.textSecondaryLight);
-    final effectiveLabelColor = widget.labelColor ??
+    final effectiveLabelColor =
+        widget.labelColor ??
         (widget.isDark
             ? AppColors.textPrimaryDark
             : AppColors.textPrimaryLight);
 
     return MouseRegion(
-      cursor:
-          widget.onTap != null ? SystemMouseCursors.click : MouseCursor.defer,
+      cursor: widget.onTap != null
+          ? SystemMouseCursors.click
+          : MouseCursor.defer,
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       child: GestureDetector(
@@ -529,8 +548,8 @@ class _SettingsTileState extends State<_SettingsTile> {
           decoration: BoxDecoration(
             color: _hovered
                 ? (widget.isDark
-                    ? Colors.white.withOpacity(0.04)
-                    : Colors.black.withOpacity(0.02))
+                      ? Colors.white.withOpacity(0.04)
+                      : Colors.black.withOpacity(0.02))
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
           ),
