@@ -1,6 +1,7 @@
 const prisma = require("../../prisma/client");
 const AppError = require("../../utils/AppError");
 const { createNotification } = require("../notifications/notifications.service");
+const { createRepo, inviteCollaborator } = require("../github/github.service");
 
 /**
  * Génère un préfixe d'identifiant à partir du nom du projet.
@@ -38,7 +39,26 @@ const create = async (ownerId, data) => {
     ? data.identifierPrefix.toUpperCase()
     : generateIdentifierPrefix(data.name);
 
-  const { owner: githubOwner, repo: githubRepo } = parseGithubUrl(data.githubRepoUrl);
+  let githubRepoUrl = data.githubRepoUrl || null;
+  let githubOwner = null;
+  let githubRepo = null;
+
+  if (githubRepoUrl) {
+    // URL fournie manuellement : extraire owner/repo
+    ({ owner: githubOwner, repo: githubRepo } = parseGithubUrl(githubRepoUrl));
+  } else {
+    // Pas d'URL : créer le repo GitHub automatiquement
+    try {
+      const ghRepo = await createRepo(ownerId, data.name, data.description);
+      if (ghRepo) {
+        githubRepoUrl = ghRepo.repoUrl;
+        githubOwner = ghRepo.owner;
+        githubRepo = ghRepo.repo;
+      }
+    } catch (_) {
+      // Échec silencieux : le projet est créé sans lien GitHub
+    }
+  }
 
   const project = await prisma.project.create({
     data: {
@@ -47,7 +67,7 @@ const create = async (ownerId, data) => {
       color: data.color,
       ownerId,
       identifierPrefix,
-      githubRepoUrl: data.githubRepoUrl || null,
+      githubRepoUrl,
       githubOwner,
       githubRepo,
     },
@@ -158,6 +178,10 @@ const addMember = async (projectId, userId) => {
     taskId: projectId,
     link: `/dashboard`,
   }).catch(() => {});
+
+  if (project.githubOwner && project.githubRepo) {
+    inviteCollaborator(project.ownerId, project.githubOwner, project.githubRepo, userId).catch(() => {});
+  }
 
   return serializeMember(member);
 };

@@ -39,7 +39,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration {
@@ -51,6 +51,10 @@ class AppDatabase extends _$AppDatabase {
         if (from < 2) {
           await m.addColumn(users, users.role);
           await m.addColumn(users, users.status);
+        }
+        if (from < 3) {
+          await m.addColumn(tasks, tasks.identifier);
+          await m.addColumn(tasks, tasks.githubBranch);
         }
       },
     );

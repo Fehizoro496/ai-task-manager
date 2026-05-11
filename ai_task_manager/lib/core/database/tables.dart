@@ -56,6 +56,8 @@ class Stories extends Table {
 
 class Tasks extends Table {
   TextColumn get id => text()();
+  TextColumn get identifier => text().nullable()();
+  TextColumn get githubBranch => text().nullable()();
   TextColumn get title => text()();
   TextColumn get description => text().nullable()();
   TextColumn get status => text().withDefault(const Constant('todo'))();
