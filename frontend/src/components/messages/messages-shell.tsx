@@ -133,7 +133,11 @@ export function MessagesShell() {
             <h2 className="font-display text-[15px] font-semibold tracking-tight">
               Messages
             </h2>
-            <button className="grid h-7 w-7 place-items-center rounded-[6px] text-[hsl(var(--ink-3))] hover:bg-[hsl(var(--bg-muted))]">
+            <button
+              onClick={() => refetchConversations()}
+              title="Rafraichir"
+              className="grid h-7 w-7 place-items-center rounded-[6px] text-[hsl(var(--ink-3))] hover:bg-[hsl(var(--bg-muted))] hover:text-ink"
+            >
               <Plus className="h-4 w-4" />
             </button>
           </div>

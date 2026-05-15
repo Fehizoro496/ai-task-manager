@@ -1,6 +1,6 @@
 const prisma = require("../../prisma/client");
 const AppError = require("../../utils/AppError");
-const { addUserToGeneral } = require("../chat/chat.service");
+const { addUserToGeneral, createDmsForNewUser } = require("../chat/chat.service");
 
 const userSelect = {
   id: true,
@@ -34,6 +34,7 @@ const approveUser = async (id) => {
     select: userSelect,
   });
   await addUserToGeneral(id);
+  await createDmsForNewUser(id);
   return serializeUser(updated);
 };
 

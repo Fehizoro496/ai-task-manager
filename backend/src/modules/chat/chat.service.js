@@ -38,8 +38,18 @@ const getOrCreateGeneral = async () => {
     where: { name: 'general', isGroup: true },
   });
   if (!general) {
+    // À la création, on connecte tous les utilisateurs déjà approuvés
+    // (admin compris) pour éviter qu'ils restent hors du canal général.
+    const approved = await prisma.user.findMany({
+      where: { status: 'APPROVED' },
+      select: { id: true },
+    });
     general = await prisma.conversation.create({
-      data: { name: 'general', isGroup: true },
+      data: {
+        name: 'general',
+        isGroup: true,
+        members: { connect: approved.map((u) => ({ id: u.id })) },
+      },
     });
   }
   return general;
@@ -134,6 +144,42 @@ const getMessages = async (convId, userId) => {
   return messages.map(serializeMessage);
 };
 
+/**
+ * Crée automatiquement une DM entre `userId` et chaque autre utilisateur
+ * déjà approuvé (skip s'il existe déjà une DM entre les deux).
+ */
+const createDmsForNewUser = async (userId) => {
+  const others = await prisma.user.findMany({
+    where: {
+      status: 'APPROVED',
+      NOT: { id: userId },
+    },
+    select: { id: true },
+  });
+
+  let created = 0;
+  for (const other of others) {
+    // findFirst sur conversation isGroup=false avec exactement les 2 membres
+    const existing = await prisma.$queryRaw`
+      SELECT c.id FROM "Conversation" c
+      INNER JOIN "_ConversationMembers" cm1 ON cm1."A" = c.id AND cm1."B" = ${userId}
+      INNER JOIN "_ConversationMembers" cm2 ON cm2."A" = c.id AND cm2."B" = ${other.id}
+      WHERE c."isGroup" = false
+      LIMIT 1
+    `;
+    if (existing && existing.length > 0) continue;
+
+    await prisma.conversation.create({
+      data: {
+        isGroup: false,
+        members: { connect: [{ id: userId }, { id: other.id }] },
+      },
+    });
+    created++;
+  }
+  return created;
+};
+
 const sendMessage = async (convId, senderId, content) => {
   const conv = await prisma.conversation.findUnique({
     where: { id: convId },
@@ -172,6 +218,7 @@ const sendMessage = async (convId, senderId, content) => {
 module.exports = {
   getOrCreateGeneral,
   addUserToGeneral,
+  createDmsForNewUser,
   getConversations,
   getOrCreateDM,
   getMessages,

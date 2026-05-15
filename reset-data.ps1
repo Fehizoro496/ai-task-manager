@@ -119,12 +119,11 @@ if (Test-Path $NextCacheDir) {
 Write-Host ""
 Write-Host "Reset complet." -ForegroundColor Green
 Write-Host ""
-Write-Host "Comptes disponibles :" -ForegroundColor White
-Write-Host "  Admin  : fehizoroandriantsarafara@gmail.com  (Google)" -ForegroundColor Gray
-Write-Host "  User1  : user1@gmail.com  / 123456           (local)" -ForegroundColor Gray
-Write-Host "  User2  : user2@gmail.com  / 123456           (local)" -ForegroundColor Gray
+Write-Host "Compte initial :" -ForegroundColor White
+Write-Host "  Admin  : fehizoroandriantsarafara@gmail.com  (GitHub OAuth)" -ForegroundColor Gray
 Write-Host ""
-Write-Host "3 projets seedes (non assignes). Connectez-vous en admin pour ajouter des membres." -ForegroundColor Gray
+Write-Host "3 projets seedes avec epics, stories et taches." -ForegroundColor Gray
+Write-Host "Les autres comptes seront crees a la volee via le login GitHub." -ForegroundColor Gray
 Write-Host ""
 Write-Host "Frontend web : deconnectez-vous dans le navigateur" -ForegroundColor Yellow
 Write-Host "(ou videz localStorage, cle auth_token) pour reinitialiser la session." -ForegroundColor Yellow
