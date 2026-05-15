@@ -8,10 +8,19 @@ import {
   useSensors,
   DragOverlay,
   useDroppable,
-  useDraggable,
+  defaultDropAnimationSideEffects,
   type DragEndEvent,
+  type DragOverEvent,
   type DragStartEvent,
+  type DropAnimation,
 } from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Plus, Search, SlidersHorizontal, Flag, Loader2 } from "lucide-react";
 import { statusLabel, statusToken } from "@/lib/labels";
 import {
@@ -25,7 +34,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { PriorityPill } from "@/components/ui/pill";
 import { Badge } from "@/components/ui/badge";
 import { TaskDetailDialog } from "@/components/tasks/task-detail-dialog";
-import { useProjectTasks } from "@/services";
+import { tasksApi, useProjectTasks } from "@/services";
 import type { Task as ApiTask } from "@/services";
 import type { Status } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -46,17 +55,33 @@ const COLUMN_BG: Record<Status, string> = {
   termine: "bg-[hsl(152_40%_96%)]",
 };
 
+const dropAnimation: DropAnimation = {
+  duration: 180,
+  easing: "cubic-bezier(0.2, 0, 0, 1)",
+  sideEffects: defaultDropAnimationSideEffects({
+    styles: { active: { opacity: "0" } },
+  }),
+};
+
+const isColumnId = (id: string): id is Status =>
+  (COLUMNS as string[]).includes(id);
+
 interface KanbanBoardProps {
   projectId: string;
   projectName: string;
 }
 
 export function KanbanBoard({ projectId, projectName }: KanbanBoardProps) {
-  const { tasks, loading, move } = useProjectTasks(projectId);
+  const { tasks, loading, refetch } = useProjectTasks(projectId);
+  // Liste locale pour les rearrangements optimistes inter-colonnes pendant
+  // le drag, avant la confirmation API au drop.
+  const [localTasks, setLocalTasks] = useState<ApiTask[] | null>(null);
+  const visibleTasks = localTasks ?? tasks;
+
   const [activeId, setActiveId] = useState<string | null>(null);
   const [openTaskId, setOpenTaskId] = useState<string | null>(null);
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   );
 
   const grouped = useMemo(() => {
@@ -66,33 +91,136 @@ export function KanbanBoard({ projectId, projectName }: KanbanBoardProps) {
       en_revue: [],
       termine: [],
     };
-    for (const t of tasks) {
+    for (const t of visibleTasks) {
       map[normalizeApiStatus(t.status)].push(t);
     }
     return map;
-  }, [tasks]);
+  }, [visibleTasks]);
 
   const prefix = prefixForProject(projectName);
-  const activeTask = tasks.find((t) => t.id === activeId) || null;
+  const activeTask = visibleTasks.find((t) => t.id === activeId) || null;
+
+  const columnOf = (id: string): Status | null => {
+    if (isColumnId(id)) return id;
+    const t = visibleTasks.find((tk) => tk.id === id);
+    return t ? normalizeApiStatus(t.status) : null;
+  };
 
   function onDragStart(e: DragStartEvent) {
     setActiveId(String(e.active.id));
+    setLocalTasks([...tasks]);
   }
+
+  // Rearrange en direct quand le pointer survole une autre colonne ou
+  // une autre carte → preview WYSIWYG.
+  function onDragOver(e: DragOverEvent) {
+    const activeIdStr = String(e.active.id);
+    const overId = e.over ? String(e.over.id) : null;
+    if (!overId || activeIdStr === overId) return;
+
+    const overColumn = isColumnId(overId)
+      ? overId
+      : columnOf(overId);
+    if (!overColumn) return;
+
+    setLocalTasks((curr) => {
+      if (!curr) return curr;
+      const activeIdx = curr.findIndex((t) => t.id === activeIdStr);
+      if (activeIdx === -1) return curr;
+      const activeTask = curr[activeIdx];
+      const activeColumn = normalizeApiStatus(activeTask.status);
+
+      // Meme colonne + survol d'une carte : laisser onDragEnd faire le reorder
+      if (activeColumn === overColumn && !isColumnId(overId)) return curr;
+
+      const next = [...curr];
+      next.splice(activeIdx, 1);
+      const updated: ApiTask = {
+        ...activeTask,
+        status: statusFrToApi[overColumn],
+      };
+
+      if (isColumnId(overId)) {
+        // Drop en fin de colonne cible
+        let lastIdx = -1;
+        next.forEach((t, i) => {
+          if (normalizeApiStatus(t.status) === overColumn) lastIdx = i;
+        });
+        next.splice(lastIdx + 1, 0, updated);
+      } else {
+        const overIdx = next.findIndex((t) => t.id === overId);
+        next.splice(overIdx, 0, updated);
+      }
+      return next;
+    });
+  }
+
   async function onDragEnd(e: DragEndEvent) {
+    const activeIdStr = String(e.active.id);
+    const overId = e.over ? String(e.over.id) : null;
     setActiveId(null);
-    const overId = e.over?.id;
-    if (!overId) return;
-    const taskId = String(e.active.id);
-    const target = COLUMNS.find((c) => c === overId);
-    if (!target) return;
-    const task = tasks.find((t) => t.id === taskId);
-    if (!task) return;
-    if (normalizeApiStatus(task.status) === target) return;
+
+    if (!overId || !localTasks) {
+      setLocalTasks(null);
+      return;
+    }
+
+    let finalTasks = [...localTasks];
+
+    const activeIdx = finalTasks.findIndex((t) => t.id === activeIdStr);
+    if (activeIdx === -1) {
+      setLocalTasks(null);
+      return;
+    }
+
+    const targetColumn = columnOf(overId);
+    if (!targetColumn) {
+      setLocalTasks(null);
+      return;
+    }
+
+    // Si on survole une carte différente de la meme colonne, applique le swap
+    if (!isColumnId(overId) && activeIdStr !== overId) {
+      const overIdx = finalTasks.findIndex((t) => t.id === overId);
+      if (overIdx !== -1 && activeIdx !== overIdx) {
+        finalTasks = arrayMove(finalTasks, activeIdx, overIdx);
+      }
+    }
+
+    // Position dans la colonne cible
+    const targetColumnTasks = finalTasks.filter(
+      (t) => normalizeApiStatus(t.status) === targetColumn,
+    );
+    const positionInColumn = targetColumnTasks.findIndex(
+      (t) => t.id === activeIdStr,
+    );
+
+    const original = tasks.find((t) => t.id === activeIdStr);
+    const originalStatus = original ? normalizeApiStatus(original.status) : null;
+
+    setLocalTasks(finalTasks);
+
+    // Pas de changement utile
+    if (originalStatus === targetColumn) {
+      const originalSameCol = tasks
+        .filter((t) => normalizeApiStatus(t.status) === targetColumn)
+        .findIndex((t) => t.id === activeIdStr);
+      if (originalSameCol === positionInColumn) {
+        setLocalTasks(null);
+        return;
+      }
+    }
 
     try {
-      await move(taskId, { status: statusFrToApi[target] });
+      await tasksApi.move(activeIdStr, {
+        status: statusFrToApi[targetColumn],
+        order: positionInColumn,
+      });
+      await refetch();
+      setLocalTasks(null);
     } catch (err) {
       console.error("Failed to move task", err);
+      setLocalTasks(null);
     }
   }
 
@@ -101,6 +229,7 @@ export function KanbanBoard({ projectId, projectName }: KanbanBoardProps) {
       sensors={sensors}
       collisionDetection={closestCorners}
       onDragStart={onDragStart}
+      onDragOver={onDragOver}
       onDragEnd={onDragEnd}
     >
       <div className="px-6 py-4 border-b border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))]">
@@ -146,7 +275,7 @@ export function KanbanBoard({ projectId, projectName }: KanbanBoardProps) {
         </div>
       )}
 
-      <DragOverlay>
+      <DragOverlay dropAnimation={dropAnimation}>
         {activeTask && <TaskCard task={activeTask} prefix={prefix} dragging />}
       </DragOverlay>
 
@@ -175,9 +304,10 @@ function Column({
     <section
       ref={setNodeRef}
       className={cn(
-        "w-[300px] shrink-0 rounded-[var(--radius-lg)] border border-[hsl(var(--line))] transition-colors",
+        "flex w-[300px] shrink-0 flex-col rounded-[var(--radius-lg)] border border-[hsl(var(--line))] transition-all duration-150",
         bg,
-        isOver && "ring-2 ring-[hsl(var(--brand)/0.45)]",
+        isOver &&
+          "ring-2 ring-[hsl(var(--brand)/0.5)] border-[hsl(var(--brand)/0.4)] shadow-[var(--shadow-2)]",
       )}
     >
       <header className="flex items-center justify-between px-3.5 pt-3 pb-2">
@@ -194,21 +324,26 @@ function Column({
           <Plus className="h-3 w-3" />
         </button>
       </header>
-      <div className="flex flex-col gap-2.5 px-2 pb-3">
-        {tasks.map((t) => (
-          <DraggableTaskCard
-            key={t.id}
-            task={t}
-            prefix={prefix}
-            onOpen={() => onOpenTask(t.id)}
-          />
-        ))}
-      </div>
+      <SortableContext
+        items={tasks.map((t) => t.id)}
+        strategy={verticalListSortingStrategy}
+      >
+        <div className="flex flex-1 flex-col gap-2.5 px-2 pb-3 min-h-[40px]">
+          {tasks.map((t) => (
+            <SortableTaskCard
+              key={t.id}
+              task={t}
+              prefix={prefix}
+              onOpen={() => onOpenTask(t.id)}
+            />
+          ))}
+        </div>
+      </SortableContext>
     </section>
   );
 }
 
-function DraggableTaskCard({
+function SortableTaskCard({
   task,
   prefix,
   onOpen,
@@ -217,15 +352,30 @@ function DraggableTaskCard({
   prefix: string;
   onOpen: () => void;
 }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: task.id,
-  });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: task.id });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
   return (
     <div
       ref={setNodeRef}
+      style={style}
       {...listeners}
       {...attributes}
-      className={cn("touch-none", isDragging && "opacity-40")}
+      className={cn(
+        "touch-none",
+        isDragging && "opacity-0 pointer-events-none",
+      )}
     >
       <TaskCard task={task} prefix={prefix} onOpen={onOpen} />
     </div>
@@ -259,8 +409,9 @@ function TaskCard({
         onOpen?.();
       }}
       className={cn(
-        "block w-full rounded-[var(--radius-md)] border border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))] p-3 text-left shadow-[var(--shadow-1)] transition-all hover:-translate-y-px hover:shadow-[var(--shadow-2)]",
-        dragging && "rotate-1 shadow-[var(--shadow-3)]",
+        "block w-full rounded-[var(--radius-md)] border border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))] p-3 text-left shadow-[var(--shadow-1)] transition-shadow hover:shadow-[var(--shadow-2)]",
+        dragging &&
+          "rotate-[1.5deg] cursor-grabbing shadow-[var(--shadow-3)] ring-2 ring-[hsl(var(--brand)/0.35)]",
       )}
     >
       <div className="flex items-center justify-between">

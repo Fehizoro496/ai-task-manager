@@ -1,12 +1,13 @@
 "use client";
-import { use, useCallback, useEffect, useState } from "react";
+import { use, useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Mail, Loader2, Trash2 } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input, Field } from "@/components/ui/input";
+import { Field } from "@/components/ui/input";
+import { UserCombobox } from "@/components/ui/user-combobox";
 import { adminApi, useAuth } from "@/services";
-import type { ProjectMember } from "@/services";
+import type { ProjectMember, User } from "@/services";
 
 export default function MembersPage({
   params,
@@ -16,16 +17,21 @@ export default function MembersPage({
   const { id: projectId } = use(params);
   const { isAdmin } = useAuth();
   const [members, setMembers] = useState<ProjectMember[]>([]);
+  const [approvedUsers, setApprovedUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
-  const [newUserId, setNewUserId] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const refetch = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await adminApi.listProjectMembers(projectId);
-      setMembers(res.members);
+      const [membersRes, usersRes] = await Promise.all([
+        adminApi.listProjectMembers(projectId),
+        adminApi.listUsers("APPROVED"),
+      ]);
+      setMembers(membersRes.members);
+      setApprovedUsers(usersRes.users);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur");
     } finally {
@@ -38,6 +44,19 @@ export default function MembersPage({
     else setLoading(false);
   }, [isAdmin, refetch]);
 
+  // Liste des users approuvés qui ne sont pas encore membres du projet
+  const availableUsers = useMemo(() => {
+    const memberIds = new Set(members.map((m) => m.userId));
+    return approvedUsers.filter((u) => !memberIds.has(u.id));
+  }, [members, approvedUsers]);
+
+  // Reset la sélection si l'utilisateur choisi vient d'être ajouté
+  useEffect(() => {
+    if (selectedUserId && !availableUsers.some((u) => u.id === selectedUserId)) {
+      setSelectedUserId("");
+    }
+  }, [availableUsers, selectedUserId]);
+
   if (!isAdmin) {
     return (
       <main className="px-8 py-7">
@@ -49,12 +68,12 @@ export default function MembersPage({
   }
 
   const handleAdd = async () => {
-    if (!newUserId.trim()) return;
+    if (!selectedUserId) return;
     setAdding(true);
     setError(null);
     try {
-      await adminApi.addProjectMember(projectId, newUserId.trim());
-      setNewUserId("");
+      await adminApi.addProjectMember(projectId, selectedUserId);
+      setSelectedUserId("");
       await refetch();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ajout impossible.");
@@ -88,22 +107,35 @@ export default function MembersPage({
         </header>
 
         <div className="border-b border-[hsl(var(--line))] bg-[hsl(var(--bg-sunken)/0.4)] px-5 py-4">
-          <Field label="Ajouter un membre par ID utilisateur">
+          <Field label="Ajouter un membre">
             <div className="flex items-center gap-2">
-              <Input
-                placeholder="UUID de l'utilisateur"
-                value={newUserId}
-                onChange={(e) => setNewUserId(e.target.value)}
+              <UserCombobox
+                users={availableUsers}
+                value={selectedUserId}
+                onChange={setSelectedUserId}
+                placeholder="Rechercher par nom ou email…"
+                emptyLabel="Aucun utilisateur disponible"
                 disabled={adding}
               />
-              <Button variant="brand" size="sm" onClick={handleAdd} disabled={adding}>
-                {adding ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+              <Button
+                variant="brand"
+                size="sm"
+                onClick={handleAdd}
+                disabled={adding || !selectedUserId}
+              >
+                {adding ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Plus className="h-3.5 w-3.5" />
+                )}
                 Ajouter
               </Button>
             </div>
           </Field>
           {error && (
-            <div className="mt-2 text-[12px] text-[hsl(var(--accent-rose))]">{error}</div>
+            <div className="mt-2 text-[12px] text-[hsl(var(--accent-rose))]">
+              {error}
+            </div>
           )}
         </div>
 
@@ -133,7 +165,9 @@ export default function MembersPage({
                       {display}
                     </div>
                     {email && (
-                      <div className="text-[12px] text-[hsl(var(--ink-3))]">{email}</div>
+                      <div className="text-[12px] text-[hsl(var(--ink-3))]">
+                        {email}
+                      </div>
                     )}
                   </div>
                   <div className="ml-auto flex items-center gap-3">

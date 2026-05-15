@@ -29,10 +29,28 @@ export function useProjectTasks(projectId: string | null | undefined) {
     else setLoading(false);
   }, [projectId, refetch]);
 
+  // Optimistic move: applique le nouveau statut immédiatement, rollback
+  // en cas d'erreur API. Évite le flash entre drop et confirmation serveur.
   const move = useCallback(async (id: string, input: MoveTaskInput) => {
-    const updated = await tasksApi.move(id, input);
-    setTasks((curr) => curr.map((t) => (t.id === id ? updated : t)));
-    return updated;
+    let previous: Task | undefined;
+    setTasks((curr) => {
+      previous = curr.find((t) => t.id === id);
+      return curr.map((t) =>
+        t.id === id ? { ...t, status: input.status } : t,
+      );
+    });
+
+    try {
+      const updated = await tasksApi.move(id, input);
+      setTasks((curr) => curr.map((t) => (t.id === id ? updated : t)));
+      return updated;
+    } catch (err) {
+      if (previous) {
+        const prev = previous;
+        setTasks((curr) => curr.map((t) => (t.id === id ? prev : t)));
+      }
+      throw err;
+    }
   }, []);
 
   const update = useCallback(async (id: string, input: UpdateTaskInput) => {
