@@ -1,4 +1,6 @@
 "use client";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Check, Hourglass, ShieldCheck, KeyRound, Mail, Clock, UserCog } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
@@ -17,7 +19,19 @@ const steps = [
 ];
 
 export default function PendingPage() {
+  const router = useRouter();
   const { user, logout } = useAuth();
+
+  // Redirection auto dès que l'admin nous approuve (event socket reçu par
+  // AuthProvider qui met à jour user.status).
+  useEffect(() => {
+    if (user?.status === "APPROVED") {
+      router.replace("/dashboard");
+    } else if (user?.status === "REJECTED") {
+      logout();
+      router.replace("/login");
+    }
+  }, [user?.status, router, logout]);
 
   return (
     <main className="relative min-h-dvh bg-paper">

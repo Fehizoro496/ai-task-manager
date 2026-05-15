@@ -14,6 +14,32 @@ function fmtTime(iso: string) {
   });
 }
 
+function fmtRelative(iso: string) {
+  const d = new Date(iso);
+  const now = new Date();
+  const sameDay =
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate();
+  if (sameDay) {
+    return d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  }
+  const diffDays = Math.floor(
+    (now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24),
+  );
+  if (diffDays === 1) return "Hier";
+  if (diffDays < 7) return `${diffDays} j`;
+  return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
+}
+
+function sortConversations(list: Conversation[]): Conversation[] {
+  return [...list].sort((a, b) => {
+    const ta = a.lastMessage ? new Date(a.lastMessage.createdAt).getTime() : 0;
+    const tb = b.lastMessage ? new Date(b.lastMessage.createdAt).getTime() : 0;
+    return tb - ta;
+  });
+}
+
 function conversationLabel(conv: Conversation, currentUserId: string): string {
   if (conv.name) return conv.name;
   const others = conv.members?.filter((m) => m.id !== currentUserId) ?? [];
@@ -23,7 +49,7 @@ function conversationLabel(conv: Conversation, currentUserId: string): string {
 }
 
 export function MessagesShell() {
-  const { user, token } = useAuth();
+  const { user } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -42,25 +68,42 @@ export function MessagesShell() {
     setLoadingConvs(true);
     try {
       const { conversations } = await chatApi.listConversations();
-      setConversations(conversations);
-      setActiveId((curr) => curr ?? conversations[0]?.id ?? null);
+      const sorted = sortConversations(conversations);
+      setConversations(sorted);
+      setActiveId((curr) => curr ?? sorted[0]?.id ?? null);
     } finally {
       setLoadingConvs(false);
     }
+  }, []);
+
+  const bumpConversation = useCallback((msg: Message) => {
+    setConversations((curr) => {
+      const idx = curr.findIndex((c) => c.id === msg.conversationId);
+      if (idx === -1) return curr;
+      const updated: Conversation = {
+        ...curr[idx],
+        lastMessage: {
+          content: msg.content,
+          senderId: msg.senderId,
+          senderName: msg.senderName,
+          createdAt: msg.createdAt,
+        },
+      };
+      const rest = curr.filter((_, i) => i !== idx);
+      return [updated, ...rest];
+    });
   }, []);
 
   useEffect(() => {
     refetchConversations();
   }, [refetchConversations]);
 
-  // Connect socket once when token is available
+  // Le socket est lifecyclé par AuthProvider — on attache juste les listeners.
   useEffect(() => {
-    if (!token) return;
-    const socket = socketService.connect({ token });
-
-    const onMessage = (payload: unknown) => {
-      const msg = payload as Message;
+    const onMessage = (...args: unknown[]) => {
+      const msg = args[0] as Message | undefined;
       if (!msg || !msg.conversationId) return;
+      bumpConversation(msg);
       if (msg.conversationId === activeIdRef.current) {
         setMessages((curr) =>
           curr.some((m) => m.id === msg.id) ? curr : [...curr, msg],
@@ -68,15 +111,13 @@ export function MessagesShell() {
       }
     };
 
-    socket.on("new_message", onMessage);
-    socket.on("message:new", onMessage);
-
+    const off1 = socketService.on("new_message", onMessage);
+    const off2 = socketService.on("message:new", onMessage);
     return () => {
-      socket.off("new_message", onMessage);
-      socket.off("message:new", onMessage);
-      socketService.disconnect();
+      off1();
+      off2();
     };
-  }, [token]);
+  }, [bumpConversation]);
 
   // Load messages + join room when active conversation changes
   useEffect(() => {
@@ -115,6 +156,7 @@ export function MessagesShell() {
       setMessages((curr) =>
         curr.some((m) => m.id === message.id) ? curr : [...curr, message],
       );
+      bumpConversation(message);
     } catch (err) {
       setDraft(content);
       console.error("send message failed", err);
@@ -164,23 +206,40 @@ export function MessagesShell() {
             <ul className="flex flex-col gap-0.5">
               {conversations.map((c) => {
                 const label = conversationLabel(c, user.id);
+                const lm = c.lastMessage;
+                const previewSender =
+                  lm && lm.senderId === user.id ? "Vous" : lm?.senderName;
                 return (
                   <li key={c.id}>
                     <button
                       onClick={() => setActiveId(c.id)}
                       className={cn(
-                        "group flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-2.5 py-1.5 text-left",
+                        "group flex w-full items-start gap-2 rounded-[var(--radius-sm)] px-2.5 py-2 text-left",
                         activeId === c.id
                           ? "bg-[hsl(var(--bg-sunken))] text-ink"
                           : "text-[hsl(var(--ink-2))] hover:bg-[hsl(var(--bg-sunken)/0.6)]",
                       )}
                     >
-                      <Avatar id={c.id} name={label} size="xs" />
+                      <Avatar id={c.id} name={label} size="sm" />
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-[12.5px] font-medium">{label}</div>
-                        {c.lastMessage && (
-                          <div className="truncate text-[10.5px] text-[hsl(var(--ink-3))]">
-                            {c.lastMessage.senderName}: {c.lastMessage.content}
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="truncate text-[12.5px] font-medium">
+                            {label}
+                          </span>
+                          {lm && (
+                            <span className="ml-auto shrink-0 font-mono text-[10px] text-[hsl(var(--ink-4))]">
+                              {fmtRelative(lm.createdAt)}
+                            </span>
+                          )}
+                        </div>
+                        {lm ? (
+                          <div className="truncate text-[11px] text-[hsl(var(--ink-3))]">
+                            <span className="font-medium">{previewSender}:</span>{" "}
+                            {lm.content}
+                          </div>
+                        ) : (
+                          <div className="truncate text-[11px] italic text-[hsl(var(--ink-4))]">
+                            Aucun message
                           </div>
                         )}
                       </div>

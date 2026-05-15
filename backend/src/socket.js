@@ -24,10 +24,18 @@ const init = (httpServer) => {
   io.on('connection', async (socket) => {
     const userId = socket.user?.id ?? '?';
     const userName = socket.user?.name ?? socket.user?.email ?? '?';
-    console.log(`[socket] ✓ Connecté  — user=${userName} (${userId})  id=${socket.id}`);
+    const userRole = socket.user?.role ?? null;
+    console.log(`[socket] ✓ Connecté  — user=${userName} (${userId})  role=${userRole}  id=${socket.id}`);
+
+    // Room personnelle pour notifier ce user (status change, etc.)
+    socket.join(`user:${userId}`);
+    // Room admins pour les events globaux (nouvelles demandes, count change…)
+    if (userRole === 'ADMIN') {
+      socket.join('admins');
+      console.log(`[socket]   join  admins  ← ${userName}`);
+    }
 
     // Auto-rejoindre toutes les conversations de l'utilisateur
-    // pour recevoir les nouveaux messages même sans ouvrir la conversation
     try {
       const prisma = require('./prisma/client');
       const convs = await prisma.conversation.findMany({

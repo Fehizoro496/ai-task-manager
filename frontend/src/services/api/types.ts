@@ -25,7 +25,7 @@ export interface GithubAuthUrl {
 
 export type GithubStatus =
   | { status: "pending" }
-  | { status: "pending_approval"; user: User }
+  | { status: "pending_approval"; user: User; token: string | null }
   | { status: "success"; token: string; user: User }
   | { status: "error"; error: string }
   | { status: "expired" };

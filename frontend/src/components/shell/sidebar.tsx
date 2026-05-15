@@ -16,7 +16,13 @@ import {
 } from "lucide-react";
 import { Wordmark } from "@/components/brand/logo";
 import { UserMenu } from "@/components/shell/user-menu";
-import { useAuth, useNotifications, useProjects } from "@/services";
+import {
+  useAuth,
+  useNotifications,
+  usePendingUsersStore,
+  usePendingUsersWatcher,
+  useProjects,
+} from "@/services";
 import { colorForProject } from "@/lib/mappers";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +40,8 @@ export function Sidebar() {
   const { isAdmin } = useAuth();
   const { projects } = useProjects();
   const { unreadCount } = useNotifications();
+  const pendingCount = usePendingUsersStore((s) => s.count);
+  usePendingUsersWatcher();
 
   const items: NavItem[] = [
     { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
@@ -48,7 +56,13 @@ export function Sidebar() {
     { href: "/ai/new", label: "IA Planification", icon: Sparkles, accent: true },
     { href: "/calendar", label: "Calendrier", icon: Calendar },
     { href: "/reports", label: "Rapports", icon: BarChart3 },
-    { href: "/admin", label: "Administration", icon: ShieldCheck, adminOnly: true },
+    {
+      href: "/admin",
+      label: "Administration",
+      icon: ShieldCheck,
+      adminOnly: true,
+      unread: pendingCount,
+    },
     { href: "/settings", label: "Paramètres", icon: Settings },
   ];
 

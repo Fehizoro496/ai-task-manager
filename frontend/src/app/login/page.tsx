@@ -53,6 +53,9 @@ export default function LoginPage() {
             setSession(result.token, result.user);
             router.replace("/dashboard");
           } else if (result.status === "pending_approval") {
+            // Token émis également pour les PENDING : on l'enregistre pour
+            // pouvoir ouvrir un socket et recevoir l'event d'approbation.
+            if (result.token) setSession(result.token, result.user);
             router.replace("/pending");
           } else if (result.status === "error") {
             setError(result.error);

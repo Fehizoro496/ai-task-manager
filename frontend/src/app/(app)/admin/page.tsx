@@ -7,7 +7,7 @@ import { Breadcrumb } from "@/components/shell/breadcrumb";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { adminApi, useAuth } from "@/services";
+import { adminApi, usePendingUsersStore, useAuth } from "@/services";
 import type { User, UserStatus } from "@/services";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +20,7 @@ const TABS: { v: UserStatus; label: string }[] = [
 export default function AdminPage() {
   const router = useRouter();
   const { isAdmin, status } = useAuth();
+  const refreshPending = usePendingUsersStore((s) => s.refresh);
   const [tab, setTab] = useState<UserStatus>("PENDING");
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,7 +52,7 @@ export default function AdminPage() {
     setPendingId(id);
     try {
       await adminApi.approveUser(id);
-      await refetch();
+      await Promise.all([refetch(), refreshPending()]);
     } finally {
       setPendingId(null);
     }
@@ -61,7 +62,7 @@ export default function AdminPage() {
     setPendingId(id);
     try {
       await adminApi.rejectUser(id);
-      await refetch();
+      await Promise.all([refetch(), refreshPending()]);
     } finally {
       setPendingId(null);
     }

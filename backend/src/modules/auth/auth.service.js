@@ -4,6 +4,7 @@ const prisma = require("../../prisma/client");
 const config = require("../../config/env");
 const AppError = require("../../utils/AppError");
 const oauthStore = require("./oauth-store");
+const { getIo } = require("../../socket");
 
 const getMe = async (userId) => {
   const user = await prisma.user.findUnique({
@@ -123,22 +124,31 @@ const githubCallback = async (code, state) => {
       status: user.status,
     };
 
-    if (isNewUser || user.status === "PENDING") {
-      if (state) oauthStore.set(state, { pending_approval: true, user: userPayload });
-      return { pending_approval: true, user: userPayload };
-    }
-
     if (user.status === "REJECTED") {
       const errMsg = "Your account registration has been rejected";
       if (state) oauthStore.set(state, { error: errMsg });
       throw new AppError(errMsg, 403);
     }
 
+    // Token émis pour TOUT user (y compris PENDING) afin de pouvoir
+    // ouvrir un socket et recevoir l'event d'approbation.
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       config.jwtSecret,
       { expiresIn: config.jwtExpiresIn }
     );
+
+    if (isNewUser || user.status === "PENDING") {
+      if (state) {
+        oauthStore.set(state, { pending_approval: true, user: userPayload, token });
+      }
+      // Notifier les admins en temps réel d'une nouvelle demande
+      const io = getIo();
+      if (io) {
+        io.to("admins").emit("admin:pending_request", { user: userPayload });
+      }
+      return { pending_approval: true, user: userPayload, token };
+    }
 
     if (state) oauthStore.set(state, { token, user: userPayload });
     return { token, user: userPayload };
@@ -155,7 +165,11 @@ const getGithubStatus = (state) => {
   if (entry.pending) return { status: "pending" };
   if (entry.pending_approval) {
     oauthStore.delete(state);
-    return { status: "pending_approval", user: entry.user };
+    return {
+      status: "pending_approval",
+      user: entry.user,
+      token: entry.token ?? null,
+    };
   }
   if (entry.error) {
     oauthStore.delete(state);
