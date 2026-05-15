@@ -1,17 +1,19 @@
 # =============================================================================
-# reset-data.ps1  —  Efface toutes les données backend (PostgreSQL) et
-#                    frontend (SQLite Drift cache), puis seede les données
-#                    de développement.
+# reset-data.ps1
+# Reset backend PostgreSQL data, mobile Flutter SQLite cache, and Next.js
+# frontend build cache. Re-seeds development data.
 # Usage : .\reset-data.ps1
 # =============================================================================
 
 $ErrorActionPreference = "Stop"
 
-$BackendDir = Join-Path $PSScriptRoot "backend"
-$SqliteFile = Join-Path $env:USERPROFILE "Documents\ai_task_manager.sqlite"
+$BackendDir   = Join-Path $PSScriptRoot "backend"
+$FrontendDir  = Join-Path $PSScriptRoot "frontend"
+$SqliteFile   = Join-Path $env:USERPROFILE "Documents\ai_task_manager.sqlite"
+$NextCacheDir = Join-Path $FrontendDir ".next"
 
 # -----------------------------------------------------------------------------
-# Lecture de DATABASE_URL depuis backend/.env
+# Read DATABASE_URL from backend/.env
 # -----------------------------------------------------------------------------
 $envFile = Join-Path $BackendDir ".env"
 if (-not (Test-Path $envFile)) {
@@ -31,7 +33,7 @@ if (-not $env:DATABASE_URL) {
 }
 
 # -----------------------------------------------------------------------------
-# 1. Backend — TRUNCATE toutes les tables PostgreSQL (ordre CASCADE)
+# 1. Backend : TRUNCATE PostgreSQL (CASCADE)
 # -----------------------------------------------------------------------------
 Write-Host ""
 Write-Host ">>> Backend : truncate PostgreSQL..." -ForegroundColor Cyan
@@ -65,7 +67,7 @@ try {
 Write-Host "[OK] Tables PostgreSQL videes." -ForegroundColor Green
 
 # -----------------------------------------------------------------------------
-# 2. Backend — Seed : users + projets + tâches
+# 2. Backend : seed data (users + projets + taches)
 # -----------------------------------------------------------------------------
 Write-Host ""
 Write-Host ">>> Backend : seed donnees..." -ForegroundColor Cyan
@@ -84,10 +86,10 @@ try {
 Write-Host "[OK] Donnees seedees." -ForegroundColor Green
 
 # -----------------------------------------------------------------------------
-# 3. Frontend — Suppression du cache SQLite Drift
+# 3. Mobile Flutter : SQLite Drift cache
 # -----------------------------------------------------------------------------
 Write-Host ""
-Write-Host ">>> Frontend : suppression du cache SQLite..." -ForegroundColor Cyan
+Write-Host ">>> Mobile Flutter : suppression du cache SQLite..." -ForegroundColor Cyan
 
 if (Test-Path $SqliteFile) {
     Remove-Item $SqliteFile -Force
@@ -97,15 +99,34 @@ if (Test-Path $SqliteFile) {
 }
 
 # -----------------------------------------------------------------------------
+# 4. Frontend Next.js : cache de build
+# -----------------------------------------------------------------------------
+Write-Host ""
+Write-Host ">>> Frontend Next.js : suppression du cache .next..." -ForegroundColor Cyan
+
+if (Test-Path $NextCacheDir) {
+    try {
+        Remove-Item $NextCacheDir -Recurse -Force -ErrorAction Stop
+        Write-Host "[OK] Dossier supprime : $NextCacheDir" -ForegroundColor Green
+    } catch {
+        Write-Host "[INFO] Cache .next verrouille (dev server actif ?). Ignore." -ForegroundColor Yellow
+    }
+} else {
+    Write-Host "[INFO] Cache .next absent." -ForegroundColor Yellow
+}
+
+# -----------------------------------------------------------------------------
 Write-Host ""
 Write-Host "Reset complet." -ForegroundColor Green
 Write-Host ""
 Write-Host "Comptes disponibles :" -ForegroundColor White
 Write-Host "  Admin  : fehizoroandriantsarafara@gmail.com  (Google)" -ForegroundColor Gray
-# Write-Host "  User   : fehizoroandrian496@gmail.com        (Google)" -ForegroundColor Gray
 Write-Host "  User1  : user1@gmail.com  / 123456           (local)" -ForegroundColor Gray
 Write-Host "  User2  : user2@gmail.com  / 123456           (local)" -ForegroundColor Gray
 Write-Host ""
 Write-Host "3 projets seedes (non assignes). Connectez-vous en admin pour ajouter des membres." -ForegroundColor Gray
 Write-Host ""
-Write-Host "Relancez le serveur backend et l'application." -ForegroundColor Green
+Write-Host "Frontend web : deconnectez-vous dans le navigateur" -ForegroundColor Yellow
+Write-Host "(ou videz localStorage, cle auth_token) pour reinitialiser la session." -ForegroundColor Yellow
+Write-Host ""
+Write-Host "Relancez le serveur backend et l application." -ForegroundColor Green

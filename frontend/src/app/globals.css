@@ -1,0 +1,232 @@
+@import "tailwindcss";
+@plugin "tailwindcss-animate";
+
+/* ---------------------------------------------------------
+   AI Task Manager — Design tokens
+   Direction: refined editorial workspace.
+   Warm off-white surface, anchored violet, graphite ink,
+   apricot + sage accents. Distinctive type pairing.
+--------------------------------------------------------- */
+
+:root {
+  /* Surfaces — warm, slightly desaturated, never pure white */
+  --bg: 44 38% 97.5%;            /* paper */
+  --bg-elevated: 0 0% 100%;      /* cards on paper */
+  --bg-sunken: 40 30% 95%;       /* recessed wells */
+  --bg-muted: 40 24% 92%;        /* chip / hover */
+
+  /* Ink */
+  --ink: 230 22% 12%;            /* primary text */
+  --ink-2: 230 12% 32%;          /* secondary */
+  --ink-3: 230 8% 48%;           /* muted */
+  --ink-4: 230 6% 64%;           /* placeholder */
+
+  /* Hairlines */
+  --line: 230 14% 90%;
+  --line-2: 230 14% 86%;
+  --line-strong: 230 18% 78%;
+
+  /* Brand — violet ancré */
+  --brand: 239 84% 67%;          /* #6366F1 */
+  --brand-ink: 239 70% 38%;
+  --brand-soft: 239 100% 96%;
+  --brand-tint: 239 90% 92%;
+
+  /* Accents */
+  --accent-apricot: 23 92% 60%;
+  --accent-sage: 152 35% 42%;
+  --accent-rose: 348 78% 58%;
+  --accent-teal: 184 64% 42%;
+  --accent-amber: 38 92% 54%;
+
+  /* Status — soft, editorial */
+  --status-todo-bg: 230 24% 95%;
+  --status-todo-fg: 230 28% 32%;
+  --status-doing-bg: 32 92% 94%;
+  --status-doing-fg: 25 78% 38%;
+  --status-review-bg: 271 76% 95%;
+  --status-review-fg: 271 60% 42%;
+  --status-done-bg: 152 50% 92%;
+  --status-done-fg: 152 50% 28%;
+
+  /* Priority */
+  --prio-urgent-bg: 0 84% 95%;
+  --prio-urgent-fg: 0 70% 44%;
+  --prio-high-bg: 24 92% 94%;
+  --prio-high-fg: 22 78% 42%;
+  --prio-med-bg: 217 92% 95%;
+  --prio-med-fg: 217 80% 44%;
+  --prio-low-bg: 230 18% 94%;
+  --prio-low-fg: 230 18% 40%;
+
+  /* Radii */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+
+  /* Shadows — restrained, never blurry */
+  --shadow-1: 0 1px 0 0 hsl(230 18% 78% / 0.35), 0 1px 2px -1px hsl(230 30% 12% / 0.06);
+  --shadow-2: 0 1px 0 0 hsl(230 18% 78% / 0.5), 0 8px 16px -8px hsl(230 30% 12% / 0.10);
+  --shadow-3: 0 1px 0 0 hsl(230 18% 78% / 0.6), 0 20px 40px -20px hsl(230 30% 12% / 0.20);
+  --shadow-brand: 0 1px 0 0 hsl(239 70% 50% / 0.5), 0 10px 30px -10px hsl(239 84% 60% / 0.4);
+
+  --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Instrument Serif", ui-serif, Georgia, serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+@theme inline {
+  --color-bg: hsl(var(--bg));
+  --color-bg-elevated: hsl(var(--bg-elevated));
+  --color-bg-sunken: hsl(var(--bg-sunken));
+  --color-bg-muted: hsl(var(--bg-muted));
+
+  --color-ink: hsl(var(--ink));
+  --color-ink-2: hsl(var(--ink-2));
+  --color-ink-3: hsl(var(--ink-3));
+  --color-ink-4: hsl(var(--ink-4));
+
+  --color-line: hsl(var(--line));
+  --color-line-2: hsl(var(--line-2));
+  --color-line-strong: hsl(var(--line-strong));
+
+  --color-brand: hsl(var(--brand));
+  --color-brand-ink: hsl(var(--brand-ink));
+  --color-brand-soft: hsl(var(--brand-soft));
+  --color-brand-tint: hsl(var(--brand-tint));
+
+  --color-apricot: hsl(var(--accent-apricot));
+  --color-sage: hsl(var(--accent-sage));
+  --color-rose: hsl(var(--accent-rose));
+  --color-teal: hsl(var(--accent-teal));
+  --color-amber: hsl(var(--accent-amber));
+
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-serif: var(--font-serif);
+  --font-mono: var(--font-mono);
+
+  --radius-xs: var(--radius-xs);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+
+  --shadow-1: var(--shadow-1);
+  --shadow-2: var(--shadow-2);
+  --shadow-3: var(--shadow-3);
+  --shadow-brand: var(--shadow-brand);
+
+  --animate-shimmer: shimmer 2.4s linear infinite;
+  --animate-float: float 5s ease-in-out infinite;
+  --animate-fadeup: fadeup 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  50% { transform: translateY(-6px) rotate(0.5deg); }
+}
+@keyframes fadeup {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Base ----------------------------------------------------- */
+html, body {
+  background-color: hsl(var(--bg));
+  color: hsl(var(--ink));
+  font-family: var(--font-body);
+  font-feature-settings: "ss01", "cv11", "cv02";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+* { border-color: hsl(var(--line)); }
+
+::selection { background: hsl(var(--brand) / 0.25); color: hsl(var(--brand-ink)); }
+
+.font-display { font-family: var(--font-display); letter-spacing: -0.02em; }
+.font-serif   { font-family: var(--font-serif); letter-spacing: -0.01em; }
+.font-mono    { font-family: var(--font-mono); font-feature-settings: "ss01", "ss02"; }
+
+/* Paper texture — barely there */
+.bg-paper {
+  background-color: hsl(var(--bg));
+  background-image:
+    radial-gradient(hsl(230 20% 60% / 0.05) 1px, transparent 1px),
+    radial-gradient(hsl(230 20% 60% / 0.04) 1px, transparent 1px);
+  background-size: 24px 24px, 24px 24px;
+  background-position: 0 0, 12px 12px;
+}
+
+/* Grid background option */
+.bg-grid {
+  background-image:
+    linear-gradient(to right, hsl(var(--line) / 0.6) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(var(--line) / 0.6) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* Aurora — used very sparingly on hero blocks */
+.bg-aurora {
+  background:
+    radial-gradient(60% 50% at 10% 0%, hsl(var(--brand) / 0.18), transparent 70%),
+    radial-gradient(50% 50% at 90% 10%, hsl(var(--accent-apricot) / 0.14), transparent 70%),
+    radial-gradient(60% 60% at 50% 100%, hsl(var(--accent-sage) / 0.10), transparent 70%);
+}
+
+/* Grain overlay class — apply on top of any block */
+.grain::after {
+  content: "";
+  position: absolute; inset: 0;
+  pointer-events: none;
+  opacity: 0.06;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+
+/* Hairline card */
+.card-paper {
+  background: hsl(var(--bg-elevated));
+  border: 1px solid hsl(var(--line));
+  box-shadow: var(--shadow-1);
+  border-radius: var(--radius-lg);
+}
+
+/* Stitched dashed inner outline used as a design motif */
+.stitch {
+  position: relative;
+}
+.stitch::before {
+  content: "";
+  position: absolute; inset: 4px;
+  border: 1px dashed hsl(var(--line-strong) / 0.6);
+  border-radius: calc(var(--radius-lg) - 4px);
+  pointer-events: none;
+}
+
+/* Scrollbar */
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: hsl(var(--line-strong) / 0.8);
+  border-radius: 999px;
+  border: 2px solid hsl(var(--bg));
+}
+*::-webkit-scrollbar-thumb:hover { background: hsl(var(--ink-4)); }
+
+/* Focus rings */
+:where(button, a, [role="button"], input, textarea, select):focus-visible {
+  outline: 2px solid hsl(var(--brand) / 0.5);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Pretty number for KPI */
+.tabular { font-variant-numeric: tabular-nums; }
