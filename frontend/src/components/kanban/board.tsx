@@ -34,7 +34,8 @@ import { Avatar } from "@/components/ui/avatar";
 import { PriorityPill } from "@/components/ui/pill";
 import { Badge } from "@/components/ui/badge";
 import { TaskDetailDialog } from "@/components/tasks/task-detail-dialog";
-import { tasksApi, toast, useProjectTasks } from "@/services";
+import { projectsApi, toast, useProjectTasks } from "@/services";
+import type { TaskStatus } from "@/services";
 import type { Task as ApiTask } from "@/services";
 import type { Status } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -187,38 +188,47 @@ export function KanbanBoard({ projectId, projectName }: KanbanBoardProps) {
       }
     }
 
-    // Position dans la colonne cible
-    const targetColumnTasks = finalTasks.filter(
-      (t) => normalizeApiStatus(t.status) === targetColumn,
-    );
-    const positionInColumn = targetColumnTasks.findIndex(
-      (t) => t.id === activeIdStr,
-    );
-
+    // Détermine les colonnes affectées (source + cible)
     const original = tasks.find((t) => t.id === activeIdStr);
     const originalStatus = original ? normalizeApiStatus(original.status) : null;
+    const affectedColumns = new Set<Status>();
+    affectedColumns.add(targetColumn);
+    if (originalStatus) affectedColumns.add(originalStatus);
 
     setLocalTasks(finalTasks);
 
-    // Pas de changement utile
-    if (originalStatus === targetColumn) {
-      const originalSameCol = tasks
-        .filter((t) => normalizeApiStatus(t.status) === targetColumn)
-        .findIndex((t) => t.id === activeIdStr);
-      if (originalSameCol === positionInColumn) {
-        setLocalTasks(null);
-        return;
-      }
+    // Si aucune modification d'ordre, skip
+    const sameOrder =
+      originalStatus === targetColumn &&
+      JSON.stringify(
+        tasks
+          .filter((t) => normalizeApiStatus(t.status) === targetColumn)
+          .map((t) => t.id),
+      ) ===
+        JSON.stringify(
+          finalTasks
+            .filter((t) => normalizeApiStatus(t.status) === targetColumn)
+            .map((t) => t.id),
+        );
+    if (sameOrder) {
+      setLocalTasks(null);
+      return;
+    }
+
+    // Construit le payload bulk : pour chaque colonne touchée, la liste
+    // ordonnée des IDs présents dans finalTasks.
+    const columns: Partial<Record<TaskStatus, string[]>> = {};
+    for (const col of affectedColumns) {
+      columns[statusFrToApi[col]] = finalTasks
+        .filter((t) => normalizeApiStatus(t.status) === col)
+        .map((t) => t.id);
     }
 
     try {
-      await tasksApi.move(activeIdStr, {
-        status: statusFrToApi[targetColumn],
-        order: positionInColumn,
-      });
+      await projectsApi.reorderTasks(projectId, columns);
       await refetch();
     } catch (err) {
-      console.error("Failed to move task", err);
+      console.error("Failed to reorder tasks", err);
       const message =
         err instanceof Error ? err.message : "Déplacement impossible.";
       toast.error(message, "Déplacement refusé");

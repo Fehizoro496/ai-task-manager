@@ -1,6 +1,8 @@
 import { apiClient } from "./client";
 import { endpoints } from "./endpoints";
-import type { Project, Task } from "./types";
+import type { Project, Task, TaskStatus } from "./types";
+
+export type ReorderColumns = Partial<Record<TaskStatus, string[]>>;
 
 export interface CreateProjectInput {
   name: string;
@@ -35,4 +37,10 @@ export const projectsApi = {
 
   createTask: (projectId: string, input: CreateProjectTaskInput) =>
     apiClient.post<Task>(endpoints.projects.tasks(projectId), input),
+
+  reorderTasks: (projectId: string, columns: ReorderColumns) =>
+    apiClient.patch<{ updated: number }>(
+      endpoints.projects.reorderTasks(projectId),
+      { columns },
+    ),
 };

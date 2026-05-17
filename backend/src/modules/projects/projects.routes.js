@@ -202,4 +202,39 @@ router.get("/:projectId/tasks", tasksController.listByProject);
  */
 router.post("/:projectId/tasks", requireAdmin, validate(createTaskForProjectSchema), tasksController.createForProject);
 
+/**
+ * @swagger
+ * /projects/{projectId}/tasks/reorder:
+ *   patch:
+ *     tags: [Tasks]
+ *     summary: Bulk reorder/move tasks within a project's columns
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: projectId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               columns:
+ *                 type: object
+ *                 additionalProperties:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                     format: uuid
+ *     responses:
+ *       200:
+ *         description: Updated count
+ */
+router.patch("/:projectId/tasks/reorder", tasksController.reorderForProject);
+
 module.exports = router;

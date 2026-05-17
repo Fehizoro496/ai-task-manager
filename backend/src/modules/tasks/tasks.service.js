@@ -323,6 +323,56 @@ const createForProject = async (userId, isAdmin, projectId, data) => {
   return task;
 };
 
+const statusMap = {
+  todo: "TODO",
+  in_progress: "IN_PROGRESS",
+  in_review: "IN_REVIEW",
+  done: "DONE",
+};
+
+/**
+ * Bulk reorder pour un projet : pour chaque colonne (status), accepte la
+ * liste ordonnée d'IDs de tâches. Réassigne en transaction:
+ *   task.status = colonne, task.position = index dans la liste.
+ * Ignore silencieusement les IDs ne correspondant pas à des tâches du projet.
+ */
+const reorderForProject = async (projectId, userId, isAdmin, columns) => {
+  const project = await prisma.project.findUnique({ where: { id: projectId } });
+  if (!project) throw new AppError("Project not found", 404);
+
+  if (!isAdmin) {
+    const member = await isMember(projectId, userId);
+    if (!member && project.ownerId !== userId) {
+      throw new AppError("Project not found", 404);
+    }
+  }
+
+  // Vérifie que toutes les tâches référencées appartiennent bien au projet
+  const allIds = Object.values(columns).flat();
+  const projectTasks = await prisma.task.findMany({
+    where: { id: { in: allIds }, story: { epic: { projectId } } },
+    select: { id: true },
+  });
+  const validIds = new Set(projectTasks.map((t) => t.id));
+
+  const updates = [];
+  for (const [colKey, ids] of Object.entries(columns)) {
+    const dbStatus = statusMap[colKey?.toLowerCase()] ?? colKey;
+    ids.forEach((id, index) => {
+      if (!validIds.has(id)) return;
+      updates.push(
+        prisma.task.update({
+          where: { id },
+          data: { status: dbStatus, position: index },
+        }),
+      );
+    });
+  }
+
+  if (updates.length > 0) await prisma.$transaction(updates);
+  return { updated: updates.length };
+};
+
 const assignSelf = async (id, userId, isAdmin) => {
   const task = await prisma.task.findUnique({ where: { id } });
   if (!task) throw new AppError("Task not found", 404);
@@ -347,6 +397,7 @@ module.exports = {
   moveTask,
   listByProject,
   createForProject,
+  reorderForProject,
   assignSelf,
   serializeTask,
 };

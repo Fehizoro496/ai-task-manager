@@ -10,6 +10,8 @@ export const endpoints = {
     root: () => "/api/projects",
     byId: (id: string) => `/api/projects/${id}`,
     tasks: (projectId: string) => `/api/projects/${projectId}/tasks`,
+    reorderTasks: (projectId: string) =>
+      `/api/projects/${projectId}/tasks/reorder`,
   },
 
   epics: {
