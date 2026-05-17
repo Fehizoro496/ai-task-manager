@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/input";
 import { UserCombobox } from "@/components/ui/user-combobox";
-import { adminApi, useAuth } from "@/services";
+import { adminApi, toast, useAuth } from "@/services";
 import type { ProjectMember, User } from "@/services";
 
 export default function MembersPage({
@@ -69,14 +69,21 @@ export default function MembersPage({
 
   const handleAdd = async () => {
     if (!selectedUserId) return;
+    const target = approvedUsers.find((u) => u.id === selectedUserId);
     setAdding(true);
     setError(null);
     try {
       await adminApi.addProjectMember(projectId, selectedUserId);
+      toast.success(
+        target ? `${target.name} a été ajouté.` : "Membre ajouté.",
+        "Membre ajouté",
+      );
       setSelectedUserId("");
       await refetch();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Ajout impossible.");
+      const message = e instanceof Error ? e.message : "Ajout impossible.";
+      setError(message);
+      toast.error(message, "Ajout impossible");
     } finally {
       setAdding(false);
     }
@@ -86,9 +93,13 @@ export default function MembersPage({
     if (!confirm("Retirer ce membre du projet ?")) return;
     try {
       await adminApi.removeProjectMember(projectId, userId);
+      toast.success("Membre retiré du projet.", "Membre retiré");
       await refetch();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Suppression impossible.");
+      const message =
+        e instanceof Error ? e.message : "Suppression impossible.";
+      setError(message);
+      toast.error(message, "Suppression impossible");
     }
   };
 

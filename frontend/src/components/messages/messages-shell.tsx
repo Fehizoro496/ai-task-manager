@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Search, Plus, Send, Loader2, Users as UsersIcon } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { chatApi, socketService, useAuth } from "@/services";
+import { chatApi, socketService, toast, useAuth } from "@/services";
 import type { Conversation, Message } from "@/services";
 import { cn } from "@/lib/utils";
 
@@ -160,6 +160,10 @@ export function MessagesShell() {
     } catch (err) {
       setDraft(content);
       console.error("send message failed", err);
+      toast.error(
+        err instanceof Error ? err.message : "Envoi impossible.",
+        "Message non envoyé",
+      );
     } finally {
       setSending(false);
     }

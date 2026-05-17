@@ -34,7 +34,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { PriorityPill } from "@/components/ui/pill";
 import { Badge } from "@/components/ui/badge";
 import { TaskDetailDialog } from "@/components/tasks/task-detail-dialog";
-import { tasksApi, useProjectTasks } from "@/services";
+import { tasksApi, toast, useProjectTasks } from "@/services";
 import type { Task as ApiTask } from "@/services";
 import type { Status } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -217,9 +217,12 @@ export function KanbanBoard({ projectId, projectName }: KanbanBoardProps) {
         order: positionInColumn,
       });
       await refetch();
-      setLocalTasks(null);
     } catch (err) {
       console.error("Failed to move task", err);
+      const message =
+        err instanceof Error ? err.message : "Déplacement impossible.";
+      toast.error(message, "Déplacement refusé");
+    } finally {
       setLocalTasks(null);
     }
   }

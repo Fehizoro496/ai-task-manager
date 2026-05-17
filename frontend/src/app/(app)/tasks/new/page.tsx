@@ -7,7 +7,7 @@ import { Input, Textarea, Field } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Topbar } from "@/components/shell/topbar";
 import { Breadcrumb } from "@/components/shell/breadcrumb";
-import { projectsApi, useProjects } from "@/services";
+import { projectsApi, toast, useProjects } from "@/services";
 import type { TaskPriority } from "@/services";
 
 const PRIORITY: { v: TaskPriority; l: string }[] = [
@@ -39,9 +39,12 @@ export default function NewTaskPage() {
         title: title.trim(),
         description: description.trim() || undefined,
       });
+      toast.success("La tâche a été créée.", "Tâche créée");
       router.replace(`/tasks/${task.id}`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Création impossible.");
+      const message = e instanceof Error ? e.message : "Création impossible.";
+      setError(message);
+      toast.error(message, "Création de la tâche");
       setSaving(false);
     }
   };

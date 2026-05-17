@@ -4,7 +4,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { X, Plus, Loader2 } from "lucide-react";
 import { Input, Textarea, Field } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useAuth, useProjects } from "@/services";
+import { toast, useAuth, useProjects } from "@/services";
 
 export function NewProjectButton() {
   const { isAdmin } = useAuth();
@@ -32,11 +32,17 @@ export function NewProjectButton() {
     setSaving(true);
     setError(null);
     try {
-      await create({ name: name.trim(), description: description.trim() || undefined });
+      const project = await create({
+        name: name.trim(),
+        description: description.trim() || undefined,
+      });
+      toast.success(`« ${project.name} » a été créé.`, "Projet créé");
       setOpen(false);
       reset();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Création impossible.");
+      const message = e instanceof Error ? e.message : "Création impossible.";
+      setError(message);
+      toast.error(message, "Création du projet");
     } finally {
       setSaving(false);
     }

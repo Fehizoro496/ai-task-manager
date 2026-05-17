@@ -7,7 +7,7 @@ import { Breadcrumb } from "@/components/shell/breadcrumb";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { adminApi, usePendingUsersStore, useAuth } from "@/services";
+import { adminApi, toast, usePendingUsersStore, useAuth } from "@/services";
 import type { User, UserStatus } from "@/services";
 import { cn } from "@/lib/utils";
 
@@ -50,9 +50,20 @@ export default function AdminPage() {
 
   const handleApprove = async (id: string) => {
     setPendingId(id);
+    const target = users.find((u) => u.id === id);
     try {
       await adminApi.approveUser(id);
+      toast.success(
+        target ? `${target.name} a accès à l'application.` : "Utilisateur approuvé.",
+        "Compte approuvé",
+      );
       await Promise.all([refetch(), refreshPending()]);
+    } catch (err) {
+      console.error("Approve failed", err);
+      toast.error(
+        err instanceof Error ? err.message : "Approbation impossible.",
+        "Approbation refusée",
+      );
     } finally {
       setPendingId(null);
     }
@@ -60,9 +71,20 @@ export default function AdminPage() {
 
   const handleReject = async (id: string) => {
     setPendingId(id);
+    const target = users.find((u) => u.id === id);
     try {
       await adminApi.rejectUser(id);
+      toast.info(
+        target ? `${target.name} a été rejeté.` : "Utilisateur rejeté.",
+        "Compte rejeté",
+      );
       await Promise.all([refetch(), refreshPending()]);
+    } catch (err) {
+      console.error("Reject failed", err);
+      toast.error(
+        err instanceof Error ? err.message : "Rejet impossible.",
+        "Rejet refusé",
+      );
     } finally {
       setPendingId(null);
     }

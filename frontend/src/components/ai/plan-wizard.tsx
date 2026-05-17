@@ -15,7 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { PriorityPill } from "@/components/ui/pill";
 import { WizardStepper } from "@/components/ai/wizard-stepper";
-import { aiApi, useProjects } from "@/services";
+import { aiApi, toast, useProjects } from "@/services";
 import type { AiDraft } from "@/services";
 import { normalizeApiPriority, prefixForProject } from "@/lib/mappers";
 import { cn } from "@/lib/utils";
@@ -81,7 +81,9 @@ export function PlanWizard() {
       setDraft(created);
       setStep(2);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "La génération a échoué.");
+      const message = e instanceof Error ? e.message : "La génération a échoué.";
+      setError(message);
+      toast.error(message, "Génération du plan");
     } finally {
       setLoading(false);
     }
@@ -93,10 +95,13 @@ export function PlanWizard() {
     setError(null);
     try {
       await aiApi.approveDraft(draft.id);
+      toast.success("Le plan a été converti en epics, stories et tâches.", "Plan approuvé");
       if (projectId) router.push(`/projects/${projectId}/board`);
       else router.push("/projects");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Approbation impossible.");
+      const message = e instanceof Error ? e.message : "Approbation impossible.";
+      setError(message);
+      toast.error(message, "Approbation du plan");
     } finally {
       setApproving(false);
     }
