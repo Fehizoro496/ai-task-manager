@@ -34,8 +34,12 @@ export interface Project {
   id: UUID;
   name: string;
   description: string | null;
+  color?: string | null;
   createdAt: string;
   ownerId?: UUID;
+  identifierPrefix?: string | null;
+  githubRepoUrl?: string | null;
+  githubOwner?: string | null;
   githubRepo?: string | null;
 }
 

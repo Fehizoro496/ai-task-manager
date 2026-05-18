@@ -7,9 +7,18 @@ export type ReorderColumns = Partial<Record<TaskStatus, string[]>>;
 export interface CreateProjectInput {
   name: string;
   description?: string;
+  color?: string;
+  githubRepoUrl?: string;
+  identifierPrefix?: string;
 }
 
-export type UpdateProjectInput = Partial<CreateProjectInput>;
+export interface UpdateProjectInput {
+  name?: string;
+  description?: string;
+  color?: string;
+  githubRepoUrl?: string | null;
+  identifierPrefix?: string;
+}
 
 export interface CreateProjectTaskInput {
   title: string;
