@@ -5,6 +5,7 @@ const authController = require("./auth.controller");
 const router = Router();
 
 router.get("/me", authenticate, authController.getMe);
+router.patch("/me", authenticate, authController.patchMe);
 router.get("/github", authController.githubInit);
 router.get("/github/callback", authController.githubCallback);
 router.get("/github/status/:state", authController.githubStatus);

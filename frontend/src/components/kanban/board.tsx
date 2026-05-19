@@ -49,10 +49,10 @@ const COLUMN_DOT: Record<Status, string> = {
 };
 
 const COLUMN_BG: Record<Status, string> = {
-  a_faire: "bg-[hsl(230_24%_97%)]",
-  en_cours: "bg-[hsl(32_92%_97%)]",
-  en_revue: "bg-[hsl(271_76%_97%)]",
-  termine: "bg-[hsl(152_40%_96%)]",
+  a_faire: "bg-[hsl(var(--col-todo))]",
+  en_cours: "bg-[hsl(var(--col-doing))]",
+  en_revue: "bg-[hsl(var(--col-review))]",
+  termine: "bg-[hsl(var(--col-done))]",
 };
 
 const dropAnimation: DropAnimation = {

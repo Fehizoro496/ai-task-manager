@@ -44,8 +44,28 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
+      data-theme="clair"
+      data-density="standard"
       className={`${display.variable} ${body.variable} ${serif.variable} ${mono.variable} antialiased`}
     >
+      <head>
+        {/* Restaure le theme avant l'hydratation pour eviter le flash
+            clair→sombre au reload sur un compte en mode sombre. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                var cached = sessionStorage.getItem('appearance');
+                if (cached) {
+                  var p = JSON.parse(cached);
+                  if (p && p.theme) document.documentElement.dataset.theme = p.theme;
+                  if (p && p.density) document.documentElement.dataset.density = p.density;
+                }
+              } catch (_) {}
+            `,
+          }}
+        />
+      </head>
       <body className="min-h-dvh bg-paper text-ink font-body">
         <AuthProvider>{children}</AuthProvider>
         <Toaster />

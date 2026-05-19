@@ -3,6 +3,27 @@ export type UUID = string;
 export type UserRole = "ADMIN" | "MEMBER";
 export type UserStatus = "PENDING" | "APPROVED" | "REJECTED";
 
+export type AppearanceTheme = "clair" | "sombre" | "systeme";
+export type Density = "compact" | "standard" | "confort";
+
+export interface AppearancePrefs {
+  theme: AppearanceTheme;
+  accent: string;
+  density: Density;
+}
+
+export interface NotificationsPrefs {
+  dailyDigest: boolean;
+  push: boolean;
+  weekendQuiet: boolean;
+  sounds: boolean;
+}
+
+export interface UserPreferences {
+  appearance: AppearancePrefs;
+  notifications: NotificationsPrefs;
+}
+
 export interface User {
   id: UUID;
   email: string;
@@ -10,6 +31,7 @@ export interface User {
   avatar_url: string | null;
   role: UserRole;
   status: UserStatus;
+  preferences?: UserPreferences;
   createdAt?: string;
 }
 

@@ -7,6 +7,11 @@ const getMe = asyncHandler(async (req, res) => {
   res.json(result);
 });
 
+const patchMe = asyncHandler(async (req, res) => {
+  const result = await authService.updateMe(req.user.id, req.body);
+  res.json(result);
+});
+
 const githubInit = asyncHandler(async (req, res) => {
   const result = authService.getGithubAuthUrl();
   res.json(result);
@@ -35,4 +40,4 @@ const githubStatus = asyncHandler(async (req, res) => {
   res.json(result);
 });
 
-module.exports = { getMe, githubInit, githubCallback, githubStatus };
+module.exports = { getMe, patchMe, githubInit, githubCallback, githubStatus };

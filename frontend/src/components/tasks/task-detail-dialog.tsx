@@ -63,7 +63,7 @@ function TaskDetailBody({ taskId, onClose }: { taskId: string; onClose: () => vo
   if (error || !task) {
     return (
       <div className="px-6 py-8">
-        <div className="rounded-[var(--radius-md)] border border-[hsl(var(--accent-rose)/0.3)] bg-[hsl(348_78%_97%)] px-4 py-3 text-[13px] text-[hsl(var(--accent-rose))]">
+        <div className="rounded-[var(--radius-md)] border border-[hsl(var(--accent-rose)/0.3)] bg-[hsl(var(--alert-danger-bg))] px-4 py-3 text-[13px] text-[hsl(var(--accent-rose))]">
           Tâche introuvable.
         </div>
         <div className="mt-3 flex justify-end">

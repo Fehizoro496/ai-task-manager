@@ -32,7 +32,7 @@ export default function ProjectsPage() {
             Chargement des projets…
           </div>
         ) : error ? (
-          <div className="mt-8 rounded-[var(--radius-md)] border border-[hsl(var(--accent-rose)/0.3)] bg-[hsl(348_78%_97%)] px-4 py-3 text-[13px] text-[hsl(var(--accent-rose))]">
+          <div className="mt-8 rounded-[var(--radius-md)] border border-[hsl(var(--accent-rose)/0.3)] bg-[hsl(var(--alert-danger-bg))] px-4 py-3 text-[13px] text-[hsl(var(--accent-rose))]">
             Erreur : {error.message}
           </div>
         ) : projects.length === 0 ? (

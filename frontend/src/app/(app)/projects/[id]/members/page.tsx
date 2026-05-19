@@ -195,7 +195,7 @@ export default function MembersPage({
                     )}
                     <button
                       onClick={() => handleRemove(m.userId)}
-                      className="grid h-8 w-8 place-items-center rounded-[8px] text-[hsl(var(--accent-rose))] hover:bg-[hsl(348_78%_97%)]"
+                      className="grid h-8 w-8 place-items-center rounded-[8px] text-[hsl(var(--accent-rose))] hover:bg-[hsl(var(--alert-danger-bg))]"
                       title="Retirer"
                     >
                       <Trash2 className="h-4 w-4" />

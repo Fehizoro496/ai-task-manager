@@ -38,7 +38,7 @@ export default function TaskPage({
       <>
         <Topbar breadcrumb={<Breadcrumb items={[{ label: "Tâche" }]} />} />
         <div className="px-8 py-10">
-          <div className="rounded-[var(--radius-md)] border border-[hsl(var(--accent-rose)/0.3)] bg-[hsl(348_78%_97%)] px-4 py-3 text-[13px] text-[hsl(var(--accent-rose))]">
+          <div className="rounded-[var(--radius-md)] border border-[hsl(var(--accent-rose)/0.3)] bg-[hsl(var(--alert-danger-bg))] px-4 py-3 text-[13px] text-[hsl(var(--accent-rose))]">
             Tâche introuvable.
           </div>
         </div>

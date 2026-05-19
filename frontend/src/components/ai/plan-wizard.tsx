@@ -131,7 +131,7 @@ export function PlanWizard() {
       </header>
 
       {error && (
-        <div className="mt-4 rounded-[var(--radius-sm)] border border-[hsl(var(--accent-rose)/0.3)] bg-[hsl(348_78%_97%)] px-3 py-2 text-[12.5px] text-[hsl(var(--accent-rose))]">
+        <div className="mt-4 rounded-[var(--radius-sm)] border border-[hsl(var(--accent-rose)/0.3)] bg-[hsl(var(--alert-danger-bg))] px-3 py-2 text-[12.5px] text-[hsl(var(--accent-rose))]">
           {error}
         </div>
       )}

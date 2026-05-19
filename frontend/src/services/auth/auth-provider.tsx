@@ -5,6 +5,7 @@ import { ApiError, tokenStorage } from "../api/client";
 import { socketService } from "../socket/socket";
 import { projectsStoreApi } from "../hooks/use-projects";
 import { useAuthStore } from "./auth-store";
+import { applyAppearance, resetAppearance } from "@/lib/apply-appearance";
 import type { User } from "../api/types";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -59,6 +60,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     return off;
   }, [setUser]);
+
+  // 4. Applique l'apparence (theme/accent/density) à chaque changement
+  //    des préférences de l'utilisateur courant.
+  useEffect(() => {
+    if (user?.preferences?.appearance) {
+      applyAppearance(user.preferences.appearance);
+    } else if (!user) {
+      resetAppearance();
+    }
+  }, [user]);
 
   return <>{children}</>;
 }

@@ -5,19 +5,64 @@ const config = require("../../config/env");
 const AppError = require("../../utils/AppError");
 const oauthStore = require("./oauth-store");
 const { getIo } = require("../../socket");
+const {
+  sanitizePatch,
+  mergePreferences,
+  withDefaults,
+} = require("./preferences");
+
+const meSelect = {
+  id: true,
+  email: true,
+  name: true,
+  avatarUrl: true,
+  role: true,
+  status: true,
+  preferences: true,
+  createdAt: true,
+};
+
+const serializeMe = (user) => {
+  const { avatarUrl, preferences, ...rest } = user;
+  return {
+    ...rest,
+    avatar_url: avatarUrl ?? null,
+    preferences: withDefaults(preferences),
+  };
+};
 
 const getMe = async (userId) => {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, email: true, name: true, avatarUrl: true, role: true, status: true, createdAt: true },
+    select: meSelect,
   });
+  if (!user) throw new AppError("User not found", 404);
+  return serializeMe(user);
+};
 
-  if (!user) {
-    throw new AppError("User not found", 404);
+const updateMe = async (userId, data) => {
+  const payload = {};
+  if (typeof data.name === "string" && data.name.trim().length > 0) {
+    payload.name = data.name.trim();
+  }
+  if (data.preferences !== undefined) {
+    const current = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { preferences: true },
+    });
+    const patch = sanitizePatch(data.preferences);
+    payload.preferences = mergePreferences(current?.preferences, patch);
+  }
+  if (Object.keys(payload).length === 0) {
+    throw new AppError("Aucun champ à mettre à jour", 400);
   }
 
-  const { avatarUrl, ...rest } = user;
-  return { ...rest, avatar_url: avatarUrl ?? null };
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: payload,
+    select: meSelect,
+  });
+  return serializeMe(user);
 };
 
 // ─── GitHub OAuth ─────────────────────────────────────────────────────────────
@@ -181,6 +226,7 @@ const getGithubStatus = (state) => {
 
 module.exports = {
   getMe,
+  updateMe,
   getGithubAuthUrl,
   githubCallback,
   getGithubStatus,

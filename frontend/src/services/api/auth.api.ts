@@ -1,9 +1,26 @@
 import { apiClient } from "./client";
 import { endpoints } from "./endpoints";
-import type { GithubAuthUrl, GithubStatus, User } from "./types";
+import type {
+  AppearancePrefs,
+  GithubAuthUrl,
+  GithubStatus,
+  NotificationsPrefs,
+  User,
+} from "./types";
+
+export interface UpdateMeInput {
+  name?: string;
+  preferences?: {
+    appearance?: Partial<AppearancePrefs>;
+    notifications?: Partial<NotificationsPrefs>;
+  };
+}
 
 export const authApi = {
   me: () => apiClient.get<User>(endpoints.auth.me()),
+
+  updateMe: (input: UpdateMeInput) =>
+    apiClient.patch<User>(endpoints.auth.updateMe(), input),
 
   githubInit: () =>
     apiClient.get<GithubAuthUrl>(endpoints.auth.githubInit(), { auth: false }),

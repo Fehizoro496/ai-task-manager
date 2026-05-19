@@ -180,7 +180,7 @@ export function UserMenu({
           <div className="border-t border-[hsl(var(--line))] p-2">
             <button
               onClick={handleLogout}
-              className="group flex w-full items-center gap-2.5 rounded-[var(--radius-sm)] px-2 py-2 text-left text-[12.5px] font-semibold tracking-tight text-[hsl(var(--accent-rose))] hover:bg-[hsl(348_78%_97%)]"
+              className="group flex w-full items-center gap-2.5 rounded-[var(--radius-sm)] px-2 py-2 text-left text-[12.5px] font-semibold tracking-tight text-[hsl(var(--accent-rose))] hover:bg-[hsl(var(--alert-danger-bg))]"
             >
               <LogOut className="h-4 w-4" />
               <span className="flex-1">Se déconnecter</span>

@@ -18,12 +18,12 @@ const TONES: Record<ToastKind, { bg: string; fg: string; ring: string }> = {
     ring: "ring-[hsl(var(--accent-sage)/0.3)]",
   },
   error: {
-    bg: "bg-[hsl(348_78%_97%)]",
+    bg: "bg-[hsl(var(--alert-danger-bg))]",
     fg: "text-[hsl(var(--accent-rose))]",
     ring: "ring-[hsl(var(--accent-rose)/0.35)]",
   },
   warning: {
-    bg: "bg-[hsl(23_92%_96%)]",
+    bg: "bg-[hsl(var(--alert-warning-bg))]",
     fg: "text-[hsl(22_78%_42%)]",
     ring: "ring-[hsl(var(--accent-apricot)/0.35)]",
   },

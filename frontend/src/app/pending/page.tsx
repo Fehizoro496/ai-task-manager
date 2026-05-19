@@ -56,7 +56,7 @@ export default function PendingPage() {
         </div>
 
         <section className="mt-12 text-center">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[hsl(var(--accent-apricot)/0.3)] bg-[hsl(23_92%_96%)] px-3 py-1 text-[11px] font-semibold tracking-[0.14em] uppercase text-[hsl(22_78%_42%)]">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[hsl(var(--accent-apricot)/0.3)] bg-[hsl(var(--alert-warning-bg))] px-3 py-1 text-[11px] font-semibold tracking-[0.14em] uppercase text-[hsl(22_78%_42%)]">
             <Hourglass className="h-3 w-3" />
             En attente
           </span>
