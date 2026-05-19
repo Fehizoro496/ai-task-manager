@@ -1,6 +1,5 @@
 "use client";
 import { use } from "react";
-import Link from "next/link";
 import { Loader2, MoreHorizontal } from "lucide-react";
 import { Topbar } from "@/components/shell/topbar";
 import { Breadcrumb } from "@/components/shell/breadcrumb";
@@ -82,12 +81,22 @@ export default function ProjectLayout({
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {project.githubRepo && (
+              {(project.githubRepoUrl ||
+                (project.githubOwner && project.githubRepo)) && (
                 <Button variant="outline" size="sm" asChild>
-                  <Link href={`https://github.com/${project.githubRepo}`}>
+                  <a
+                    href={
+                      project.githubRepoUrl ||
+                      `https://github.com/${project.githubOwner}/${project.githubRepo}`
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     <Github className="h-3.5 w-3.5" />
-                    {project.githubRepo}
-                  </Link>
+                    {project.githubOwner && project.githubRepo
+                      ? `${project.githubOwner}/${project.githubRepo}`
+                      : "Dépôt GitHub"}
+                  </a>
                 </Button>
               )}
               <button className="grid h-9 w-9 place-items-center rounded-[8px] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-elevated))] hover:bg-[hsl(var(--bg-muted))]">
