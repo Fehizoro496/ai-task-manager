@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Github } from "@/components/icons/github";
 import { useProject } from "@/services";
-import { colorForProject, prefixForProject } from "@/lib/mappers";
+import { colorForProject, projectPrefix } from "@/lib/mappers";
 
 export default function ProjectLayout({
   children,
@@ -42,7 +42,7 @@ export default function ProjectLayout({
   }
 
   const color = colorForProject(project.id);
-  const prefix = prefixForProject(project.name);
+  const prefix = projectPrefix(project);
 
   return (
     <>

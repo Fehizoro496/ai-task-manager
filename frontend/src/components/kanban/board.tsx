@@ -27,13 +27,12 @@ import {
   normalizeApiPriority,
   normalizeApiStatus,
   statusFrToApi,
-  prefixForProject,
-  taskCode,
 } from "@/lib/mappers";
 import { Avatar } from "@/components/ui/avatar";
 import { PriorityPill } from "@/components/ui/pill";
 import { Badge } from "@/components/ui/badge";
 import { TaskDetailDialog } from "@/components/tasks/task-detail-dialog";
+import { NewTaskDialog } from "@/components/tasks/new-task-dialog";
 import { projectsApi, toast, useProjectTasks } from "@/services";
 import type { TaskStatus } from "@/services";
 import type { Task as ApiTask } from "@/services";
@@ -69,10 +68,10 @@ const isColumnId = (id: string): id is Status =>
 
 interface KanbanBoardProps {
   projectId: string;
-  projectName: string;
+  projectPrefix: string;
 }
 
-export function KanbanBoard({ projectId, projectName }: KanbanBoardProps) {
+export function KanbanBoard({ projectId, projectPrefix: prefix }: KanbanBoardProps) {
   const { tasks, loading, refetch } = useProjectTasks(projectId);
   // Liste locale pour les rearrangements optimistes inter-colonnes pendant
   // le drag, avant la confirmation API au drop.
@@ -81,6 +80,7 @@ export function KanbanBoard({ projectId, projectName }: KanbanBoardProps) {
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [openTaskId, setOpenTaskId] = useState<string | null>(null);
+  const [createForStatus, setCreateForStatus] = useState<Status | null>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   );
@@ -98,7 +98,6 @@ export function KanbanBoard({ projectId, projectName }: KanbanBoardProps) {
     return map;
   }, [visibleTasks]);
 
-  const prefix = prefixForProject(projectName);
   const activeTask = visibleTasks.find((t) => t.id === activeId) || null;
 
   const columnOf = (id: string): Status | null => {
@@ -282,6 +281,7 @@ export function KanbanBoard({ projectId, projectName }: KanbanBoardProps) {
                 accent={COLUMN_DOT[col]}
                 bg={COLUMN_BG[col]}
                 onOpenTask={setOpenTaskId}
+                onAddTask={() => setCreateForStatus(col)}
               />
             ))}
           </div>
@@ -293,6 +293,16 @@ export function KanbanBoard({ projectId, projectName }: KanbanBoardProps) {
       </DragOverlay>
 
       <TaskDetailDialog taskId={openTaskId} onClose={() => setOpenTaskId(null)} />
+
+      <NewTaskDialog
+        open={createForStatus !== null}
+        onClose={() => setCreateForStatus(null)}
+        projectId={projectId}
+        initialStatus={
+          createForStatus ? statusFrToApi[createForStatus] : undefined
+        }
+        onCreated={() => refetch()}
+      />
     </DndContext>
   );
 }
@@ -304,6 +314,7 @@ function Column({
   accent,
   bg,
   onOpenTask,
+  onAddTask,
 }: {
   status: Status;
   tasks: ApiTask[];
@@ -311,6 +322,7 @@ function Column({
   accent: string;
   bg: string;
   onOpenTask: (id: string) => void;
+  onAddTask: () => void;
 }) {
   const { isOver, setNodeRef } = useDroppable({ id: status });
   return (
@@ -333,7 +345,11 @@ function Column({
             {tasks.length}
           </span>
         </div>
-        <button className="grid h-6 w-6 place-items-center rounded text-[hsl(var(--ink-3))] hover:bg-[hsl(var(--bg-elevated))]">
+        <button
+          onClick={onAddTask}
+          title="Ajouter une tâche"
+          className="grid h-6 w-6 place-items-center rounded text-[hsl(var(--ink-3))] hover:bg-[hsl(var(--bg-elevated))] hover:text-ink"
+        >
           <Plus className="h-3 w-3" />
         </button>
       </header>
@@ -409,7 +425,7 @@ function TaskCard({
   const status = normalizeApiStatus(task.status);
   const priority = normalizeApiPriority(task.priority);
   const token = statusToken[status];
-  const code = taskCode(prefix, task.id);
+  const code = task.identifier ?? prefix;
 
   return (
     <button

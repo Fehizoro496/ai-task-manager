@@ -8,7 +8,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { PriorityPill, StatusPill } from "@/components/ui/pill";
 import { useTask } from "@/services";
-import { normalizeApiStatus, normalizeApiPriority, taskCode } from "@/lib/mappers";
+import { normalizeApiStatus, normalizeApiPriority } from "@/lib/mappers";
 import { shortDate } from "@/lib/utils";
 
 export default function TaskPage({
@@ -48,7 +48,9 @@ export default function TaskPage({
 
   const status = normalizeApiStatus(task.status);
   const priority = normalizeApiPriority(task.priority);
-  const code = taskCode("AM", task.id);
+  const code = task.identifier ?? task.id.slice(0, 8);
+  const branchName = task.githubBranch ?? task.branch ?? null;
+  const branchUrl = task.githubBranchUrl ?? null;
   const overdue = task.dueDate ? new Date(task.dueDate) < new Date() : false;
   const projectId = task.projectId;
 
@@ -137,9 +139,20 @@ export default function TaskPage({
                     <span className="text-[hsl(var(--ink-3))]">—</span>
                   )}
                 </Meta>
-                {task.branch && (
+                {branchName && (
                   <Meta Icon={GitBranch} label="Branche">
-                    <span className="font-mono text-[12px]">{task.branch}</span>
+                    {branchUrl ? (
+                      <a
+                        href={branchUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-mono text-[12px] text-[hsl(var(--brand-ink))] underline-offset-2 hover:underline"
+                      >
+                        {branchName}
+                      </a>
+                    ) : (
+                      <span className="font-mono text-[12px]">{branchName}</span>
+                    )}
                   </Meta>
                 )}
                 {task.storyId && (

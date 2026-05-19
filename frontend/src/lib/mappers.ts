@@ -67,6 +67,20 @@ export function prefixForProject(name: string): string {
   );
 }
 
+/**
+ * Renvoie le préfixe d'identifiant à utiliser pour un projet. Privilégie
+ * la valeur stockée en base (modifiable depuis les paramètres) et tombe
+ * sur une dérivation du nom uniquement si elle est absente.
+ */
+export function projectPrefix(
+  project: { identifierPrefix?: string | null; name: string } | null | undefined,
+): string {
+  if (!project) return "PR";
+  const stored = project.identifierPrefix?.trim();
+  if (stored) return stored.toUpperCase();
+  return prefixForProject(project.name);
+}
+
 export function taskCode(prefix: string, idOrPosition: string | number): string {
   const n =
     typeof idOrPosition === "number"

@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { authApi } from "../api/auth.api";
 import { ApiError, tokenStorage } from "../api/client";
 import { socketService } from "../socket/socket";
+import { projectsStoreApi } from "../hooks/use-projects";
 import { useAuthStore } from "./auth-store";
 import type { User } from "../api/types";
 
@@ -38,6 +39,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!token || !user) {
       socketService.disconnect();
+      // Vide les caches métiers à la déconnexion (sinon un autre user dans
+      // le même onglet hériterait des données de la session précédente).
+      projectsStoreApi.getState().reset();
       return;
     }
     socketService.connect({ token });

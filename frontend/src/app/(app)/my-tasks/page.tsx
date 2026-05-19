@@ -1,18 +1,19 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Filter, SortDesc, MoreHorizontal, Loader2 } from "lucide-react";
+import { Filter, SortDesc, MoreHorizontal, Loader2, Plus } from "lucide-react";
 import { Topbar } from "@/components/shell/topbar";
 import { Breadcrumb } from "@/components/shell/breadcrumb";
 import { Avatar } from "@/components/ui/avatar";
 import { StatusPill, PriorityPill } from "@/components/ui/pill";
 import { TaskDetailDialog } from "@/components/tasks/task-detail-dialog";
+import { NewTaskDialog } from "@/components/tasks/new-task-dialog";
+import { Button } from "@/components/ui/button";
 import { projectsApi, useAuth, useProjects } from "@/services";
 import type { Task } from "@/services";
 import {
   normalizeApiPriority,
   normalizeApiStatus,
-  taskCode,
   colorForProject,
 } from "@/lib/mappers";
 import { shortDate, cn } from "@/lib/utils";
@@ -26,6 +27,8 @@ export default function MyTasksPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "active" | "done">("all");
   const [openTaskId, setOpenTaskId] = useState<string | null>(null);
+  const [newTaskOpen, setNewTaskOpen] = useState(false);
+  const [refreshTick, setRefreshTick] = useState(0);
 
   useEffect(() => {
     if (projects.length === 0) {
@@ -49,7 +52,7 @@ export default function MyTasksPage() {
     )
       .then((all) => setTasks(all.flat()))
       .finally(() => setLoading(false));
-  }, [projects]);
+  }, [projects, refreshTick]);
 
   const list = useMemo(() => {
     let arr = tasks.filter((t) => !user || t.assigneeId === user.id);
@@ -67,7 +70,7 @@ export default function MyTasksPage() {
     <>
       <Topbar breadcrumb={<Breadcrumb items={[{ label: "Mes tâches" }]} />} />
       <main className="flex-1 px-8 py-7">
-        <div className="flex items-end justify-between">
+        <div className="flex items-end justify-between gap-4">
           <div>
             <h1 className="font-display text-[26px] font-semibold tracking-tight">
               Mes tâches
@@ -76,6 +79,14 @@ export default function MyTasksPage() {
               Tout ce qui vous concerne, du backlog au sprint en cours.
             </p>
           </div>
+          <Button
+            variant="brand"
+            size="md"
+            onClick={() => setNewTaskOpen(true)}
+          >
+            <Plus className="h-4 w-4" />
+            Nouvelle tâche
+          </Button>
         </div>
 
         <div className="mt-6 rounded-[var(--radius-lg)] border border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))] shadow-[var(--shadow-1)]">
@@ -147,7 +158,7 @@ export default function MyTasksPage() {
                       className="flex items-center gap-3 min-w-0 text-left"
                     >
                       <span className="font-mono text-[10.5px] font-semibold tracking-wider text-[hsl(var(--ink-3))] shrink-0 w-[58px]">
-                        {taskCode("AM", t.id)}
+                        {t.identifier ?? "—"}
                       </span>
                       <span className="truncate text-[13px] font-medium tracking-tight">
                         {t.title}
@@ -203,6 +214,11 @@ export default function MyTasksPage() {
       </main>
 
       <TaskDetailDialog taskId={openTaskId} onClose={() => setOpenTaskId(null)} />
+      <NewTaskDialog
+        open={newTaskOpen}
+        onClose={() => setNewTaskOpen(false)}
+        onCreated={() => setRefreshTick((n) => n + 1)}
+      />
     </>
   );
 }

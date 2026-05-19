@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Input, Textarea, Field } from "@/components/ui/input";
 import { Github } from "@/components/icons/github";
 import {
-  projectsApi,
   toast,
   useAuth,
   useProject,
@@ -38,7 +37,7 @@ export default function ProjectSettingsPage({
   const router = useRouter();
   const { user, isAdmin } = useAuth();
   const { project, loading } = useProject(projectId);
-  const { refetch: refetchProjects, remove } = useProjects();
+  const { update, remove } = useProjects();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -88,7 +87,7 @@ export default function ProjectSettingsPage({
     setSaving(true);
     setError(null);
     try {
-      await projectsApi.update(projectId, {
+      await update(projectId, {
         name: name.trim(),
         description: description.trim(),
         color,
@@ -96,7 +95,6 @@ export default function ProjectSettingsPage({
         identifierPrefix: identifierPrefix.trim() || undefined,
       });
       toast.success("Modifications enregistrées.", "Projet mis à jour");
-      await refetchProjects();
     } catch (e) {
       console.error("Update project failed", e);
       const message = e instanceof Error ? e.message : "Mise à jour impossible.";

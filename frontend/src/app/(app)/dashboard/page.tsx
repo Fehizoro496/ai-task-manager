@@ -15,7 +15,7 @@ import { Topbar } from "@/components/shell/topbar";
 import { Breadcrumb } from "@/components/shell/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { useAuth, useProjects } from "@/services";
-import { colorForProject, prefixForProject } from "@/lib/mappers";
+import { colorForProject, projectPrefix } from "@/lib/mappers";
 import { cn } from "@/lib/utils";
 
 export default function DashboardPage() {
@@ -112,7 +112,7 @@ export default function DashboardPage() {
             <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {projects.slice(0, 8).map((p) => {
                 const color = colorForProject(p.id);
-                const prefix = prefixForProject(p.name);
+                const prefix = projectPrefix(p);
                 return (
                   <Link
                     key={p.id}

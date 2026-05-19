@@ -64,6 +64,7 @@ export type TaskPriority = "low" | "medium" | "high" | "urgent";
 
 export interface Task {
   id: UUID;
+  identifier?: string | null;
   title: string;
   description: string | null;
   status: TaskStatus;
@@ -75,6 +76,8 @@ export interface Task {
   labels: string[];
   dueDate: string | null;
   branch?: string | null;
+  githubBranch?: string | null;
+  githubBranchUrl?: string | null;
 }
 
 export interface AiDraft {

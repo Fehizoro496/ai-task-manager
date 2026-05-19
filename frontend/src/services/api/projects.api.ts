@@ -24,6 +24,8 @@ export interface CreateProjectTaskInput {
   title: string;
   description?: string;
   storyId?: string;
+  priority?: string;
+  status?: string;
 }
 
 export const projectsApi = {

@@ -30,6 +30,7 @@ async function main() {
     name: "Application Mobile",
     description: "App Flutter de gestion de tâches avec IA.",
     color: "#6C5CE7",
+    identifierPrefix: "AM",
     ownerId: admin.id,
     epics: {
       create: [
@@ -89,6 +90,7 @@ async function main() {
     name: "Dashboard Analytics",
     description: "Tableau de bord avec visualisations et exports.",
     color: "#00B894",
+    identifierPrefix: "DA",
     ownerId: admin.id,
     epics: {
       create: [
@@ -130,6 +132,7 @@ async function main() {
     name: "API Backend v2",
     description: "Refactoring et modernisation de l'API REST.",
     color: "#FDAA5E",
+    identifierPrefix: "API",
     ownerId: admin.id,
     epics: {
       create: [

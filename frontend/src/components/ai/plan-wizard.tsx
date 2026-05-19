@@ -17,7 +17,7 @@ import { PriorityPill } from "@/components/ui/pill";
 import { WizardStepper } from "@/components/ai/wizard-stepper";
 import { aiApi, toast, useProjects } from "@/services";
 import type { AiDraft } from "@/services";
-import { normalizeApiPriority, prefixForProject } from "@/lib/mappers";
+import { normalizeApiPriority, projectPrefix } from "@/lib/mappers";
 import { cn } from "@/lib/utils";
 
 const EXAMPLE = `Je veux créer une plateforme e-learning avec les fonctionnalités suivantes :
@@ -337,7 +337,7 @@ export function PlanWizard() {
                   <span className="text-[12.5px] text-[hsl(var(--ink-3))]">Projet :</span>
                   <span className="font-mono text-[12.5px]">
                     {projects.find((p) => p.id === projectId)?.name ?? projectId}{" "}
-                    ({prefixForProject(projects.find((p) => p.id === projectId)?.name ?? "")}-)
+                    ({projectPrefix(projects.find((p) => p.id === projectId))}-)
                   </span>
                 </div>
               )}

@@ -3,7 +3,7 @@ import { use } from "react";
 import { Calendar as CalIcon, Hash, Palette } from "lucide-react";
 import { Github } from "@/components/icons/github";
 import { useProject, useProjectTasks } from "@/services";
-import { colorForProject, prefixForProject, normalizeApiStatus } from "@/lib/mappers";
+import { colorForProject, projectPrefix, normalizeApiStatus } from "@/lib/mappers";
 import { shortDate } from "@/lib/utils";
 
 export default function ProjectOverview({
@@ -24,7 +24,7 @@ export default function ProjectOverview({
   const pct = total === 0 ? 0 : Math.round((done / total) * 100);
 
   const color = colorForProject(project.id);
-  const prefix = prefixForProject(project.name);
+  const prefix = projectPrefix(project);
 
   return (
     <main className="px-8 py-7">

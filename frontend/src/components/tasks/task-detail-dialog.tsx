@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { PriorityPill, StatusPill } from "@/components/ui/pill";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import { useTask } from "@/services";
-import { normalizeApiStatus, normalizeApiPriority, taskCode } from "@/lib/mappers";
+import { normalizeApiStatus, normalizeApiPriority } from "@/lib/mappers";
 import { shortDate } from "@/lib/utils";
 
 interface TaskDetailDialogProps {
@@ -80,8 +80,10 @@ function TaskDetailBody({ taskId, onClose }: { taskId: string; onClose: () => vo
 
   const status = normalizeApiStatus(task.status);
   const priority = normalizeApiPriority(task.priority);
-  const code = taskCode("AM", task.id);
+  const code = task.identifier ?? task.id.slice(0, 8);
   const overdue = task.dueDate ? new Date(task.dueDate) < new Date() : false;
+  const branchName = task.githubBranch ?? task.branch ?? null;
+  const branchUrl = task.githubBranchUrl ?? null;
 
   return (
     <>
@@ -159,9 +161,20 @@ function TaskDetailBody({ taskId, onClose }: { taskId: string; onClose: () => vo
               <span className="text-[hsl(var(--ink-3))]">—</span>
             )}
           </Meta>
-          {task.branch && (
+          {branchName && (
             <Meta Icon={GitBranch} label="Branche">
-              <span className="font-mono text-[12px]">{task.branch}</span>
+              {branchUrl ? (
+                <a
+                  href={branchUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-mono text-[12px] text-[hsl(var(--brand-ink))] underline-offset-2 hover:underline"
+                >
+                  {branchName}
+                </a>
+              ) : (
+                <span className="font-mono text-[12px]">{branchName}</span>
+              )}
             </Meta>
           )}
           {task.storyId && (

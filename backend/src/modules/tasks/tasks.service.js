@@ -22,11 +22,27 @@ const assigneeInclude = {
 const serializeTask = (task, projectId) => {
   const computedProjectId = projectId || task.projectId || null;
 
+  // Quand le projet est inclus (via getById notamment), on construit l'URL
+  // directe vers la branche sur GitHub pour pouvoir l'afficher cliquable.
+  const project = task.story?.epic?.project ?? null;
+  const repoUrl = project?.githubRepoUrl ?? null;
+  const owner = project?.githubOwner ?? null;
+  const repo = project?.githubRepo ?? null;
+  const branch = task.githubBranch ?? null;
+  let githubBranchUrl = null;
+  if (branch && owner && repo) {
+    githubBranchUrl = `https://github.com/${owner}/${repo}/tree/${branch}`;
+  }
+
   return {
     id: task.id,
     identifier: task.identifier || null,
     githubBranch: task.githubBranch || null,
     github_branch: task.githubBranch || null,
+    githubBranchUrl,
+    github_branch_url: githubBranchUrl,
+    githubRepoUrl: repoUrl,
+    github_repo_url: repoUrl,
     title: task.title,
     description: task.description,
     status: statusToLowercase[task.status] || task.status,
@@ -84,7 +100,7 @@ const create = async (userId, isAdmin, data) => {
   const story = await verifyStoryOwnership(data.storyId, userId, isAdmin);
   const project = story.epic.project;
   const identifier = await generateTaskIdentifier(project.id);
-  const githubBranch = identifier.toLowerCase();
+  const githubBranch = identifier;
   const task = await prisma.task.create({ data: { ...data, identifier, githubBranch }, include: assigneeInclude });
 
   if (project.githubOwner && project.githubRepo) {
@@ -242,7 +258,10 @@ const listByProject = async (projectId, userId, isAdmin) => {
       story: { epic: { projectId } },
     },
     orderBy: { position: "asc" },
-    include: assigneeInclude,
+    include: {
+      ...assigneeInclude,
+      story: { include: { epic: { include: { project: true } } } },
+    },
   });
 };
 
@@ -265,7 +284,7 @@ const createForProject = async (userId, isAdmin, projectId, data) => {
       throw new AppError("Story not found in this project", 404);
     }
     const identifier = await generateTaskIdentifier(projectId);
-    const githubBranch = identifier.toLowerCase();
+    const githubBranch = identifier;
     const task = await prisma.task.create({
       data: {
         title: data.title,
@@ -302,7 +321,7 @@ const createForProject = async (userId, isAdmin, projectId, data) => {
   }
 
   const identifier = await generateTaskIdentifier(projectId);
-  const githubBranch = identifier.toLowerCase();
+  const githubBranch = identifier;
   const task = await prisma.task.create({
     data: {
       title: data.title,

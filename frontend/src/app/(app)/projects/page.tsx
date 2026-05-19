@@ -5,7 +5,7 @@ import { Topbar } from "@/components/shell/topbar";
 import { Breadcrumb } from "@/components/shell/breadcrumb";
 import { NewProjectButton } from "@/components/projects/new-project-modal";
 import { useProjects } from "@/services";
-import { colorForProject, prefixForProject } from "@/lib/mappers";
+import { colorForProject, projectPrefix } from "@/lib/mappers";
 
 export default function ProjectsPage() {
   const { projects, loading, error } = useProjects();
@@ -51,7 +51,7 @@ export default function ProjectsPage() {
           <div className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {projects.map((p) => {
               const color = colorForProject(p.id);
-              const prefix = prefixForProject(p.name);
+              const prefix = projectPrefix(p);
               return (
                 <Link
                   key={p.id}
