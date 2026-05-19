@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PriorityPill } from "@/components/ui/pill";
+import { Select } from "@/components/ui/select";
 import { WizardStepper } from "@/components/ai/wizard-stepper";
 import { aiApi, toast, useProjects } from "@/services";
 import type { AiDraft } from "@/services";
@@ -159,18 +160,19 @@ export function PlanWizard() {
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 text-[12.5px]">
                   <span className="text-[hsl(var(--ink-3))]">Projet :</span>
-                  <select
-                    value={projectId}
-                    onChange={(e) => setProjectId(e.target.value)}
-                    className="h-8 rounded-[var(--radius-sm)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-elevated))] px-2.5 text-[12.5px]"
-                  >
-                    <option value="">— Aucun (brouillon seul) —</option>
-                    {projects.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="w-[220px]">
+                    <Select
+                      value={projectId}
+                      onChange={setProjectId}
+                      placeholder="— Aucun (brouillon seul) —"
+                      options={projects.map((p) => ({
+                        value: p.id,
+                        label: p.name,
+                        swatch: p.color ?? undefined,
+                      }))}
+                      className="h-8 text-[12.5px]"
+                    />
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 text-[12.5px]">
                   <span className="text-[hsl(var(--ink-3))]">Ton :</span>

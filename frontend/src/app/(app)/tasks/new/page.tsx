@@ -5,6 +5,7 @@ import Link from "next/link";
 import { X, Sparkles, Loader2 } from "lucide-react";
 import { Input, Textarea, Field } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import { Topbar } from "@/components/shell/topbar";
 import { Breadcrumb } from "@/components/shell/breadcrumb";
 import { projectsApi, toast, useProjects } from "@/services";
@@ -72,18 +73,17 @@ export default function NewTaskPage() {
 
           <div className="space-y-4 px-6 pb-4">
             <Field label="Projet">
-              <select
+              <Select
                 value={projectId}
-                onChange={(e) => setProjectId(e.target.value)}
-                className="h-10 w-full rounded-[var(--radius-sm)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-elevated))] px-3 text-[13px]"
-              >
-                <option value="">— Sélectionner —</option>
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
+                onChange={setProjectId}
+                disabled={saving}
+                placeholder="— Sélectionner un projet —"
+                options={projects.map((p) => ({
+                  value: p.id,
+                  label: p.name,
+                  swatch: p.color ?? undefined,
+                }))}
+              />
             </Field>
             <Field label="Titre">
               <Input
@@ -102,17 +102,12 @@ export default function NewTaskPage() {
               />
             </Field>
             <Field label="Priorité">
-              <select
+              <Select
                 value={priority}
-                onChange={(e) => setPriority(e.target.value as TaskPriority)}
-                className="h-10 w-full rounded-[var(--radius-sm)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-elevated))] px-3 text-[13px]"
-              >
-                {PRIORITY.map((p) => (
-                  <option key={p.v} value={p.v}>
-                    {p.l}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => setPriority(v as TaskPriority)}
+                disabled={saving}
+                options={PRIORITY.map((p) => ({ value: p.v, label: p.l }))}
+              />
             </Field>
 
             {error && (

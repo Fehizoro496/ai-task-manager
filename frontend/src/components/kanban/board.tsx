@@ -21,7 +21,7 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Plus, Search, SlidersHorizontal, Flag, Loader2 } from "lucide-react";
+import { Plus, Search, SlidersHorizontal, Flag, Loader2, X } from "lucide-react";
 import { statusLabel, statusToken } from "@/lib/labels";
 import {
   normalizeApiPriority,
@@ -33,13 +33,21 @@ import { PriorityPill } from "@/components/ui/pill";
 import { Badge } from "@/components/ui/badge";
 import { TaskDetailDialog } from "@/components/tasks/task-detail-dialog";
 import { NewTaskDialog } from "@/components/tasks/new-task-dialog";
+import { FilterPopover } from "@/components/ui/filter-popover";
 import { projectsApi, toast, useProjectTasks } from "@/services";
-import type { TaskStatus } from "@/services";
+import type { TaskPriority, TaskStatus } from "@/services";
 import type { Task as ApiTask } from "@/services";
 import type { Status } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const COLUMNS: Status[] = ["a_faire", "en_cours", "en_revue", "termine"];
+
+const PRIORITY_OPTIONS: readonly { value: TaskPriority; label: string }[] = [
+  { value: "urgent", label: "Urgent" },
+  { value: "high", label: "Élevée" },
+  { value: "medium", label: "Moyenne" },
+  { value: "low", label: "Faible" },
+];
 
 const COLUMN_DOT: Record<Status, string> = {
   a_faire: "bg-[hsl(var(--ink-3))]",
@@ -81,9 +89,45 @@ export function KanbanBoard({ projectId, projectPrefix: prefix }: KanbanBoardPro
   const [activeId, setActiveId] = useState<string | null>(null);
   const [openTaskId, setOpenTaskId] = useState<string | null>(null);
   const [createForStatus, setCreateForStatus] = useState<Status | null>(null);
+  const [query, setQuery] = useState("");
+  const [priorityFilter, setPriorityFilter] = useState<Set<TaskPriority>>(
+    new Set(),
+  );
+  const [assigneeFilter, setAssigneeFilter] = useState<Set<string>>(new Set());
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   );
+
+  // Liste des assignés présents dans les tâches (pour l'option du filtre)
+  const assigneeOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const t of tasks) {
+      if (t.assigneeId && !seen.has(t.assigneeId)) {
+        seen.set(t.assigneeId, t.assigneeId.slice(0, 8));
+      }
+    }
+    return Array.from(seen, ([value, label]) => ({ value, label }));
+  }, [tasks]);
+
+  const filteredTasks = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return visibleTasks.filter((t) => {
+      if (q) {
+        const haystack = `${t.title} ${t.identifier ?? ""} ${
+          t.description ?? ""
+        }`.toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      if (priorityFilter.size > 0) {
+        const p = (t.priority ?? "medium") as TaskPriority;
+        if (!priorityFilter.has(p)) return false;
+      }
+      if (assigneeFilter.size > 0) {
+        if (!t.assigneeId || !assigneeFilter.has(t.assigneeId)) return false;
+      }
+      return true;
+    });
+  }, [visibleTasks, query, priorityFilter, assigneeFilter]);
 
   const grouped = useMemo(() => {
     const map: Record<Status, ApiTask[]> = {
@@ -92,11 +136,14 @@ export function KanbanBoard({ projectId, projectPrefix: prefix }: KanbanBoardPro
       en_revue: [],
       termine: [],
     };
-    for (const t of visibleTasks) {
+    for (const t of filteredTasks) {
       map[normalizeApiStatus(t.status)].push(t);
     }
     return map;
-  }, [visibleTasks]);
+  }, [filteredTasks]);
+
+  const activeFiltersCount =
+    (query.trim() ? 1 : 0) + priorityFilter.size + assigneeFilter.size;
 
   const activeTask = visibleTasks.find((t) => t.id === activeId) || null;
 
@@ -249,18 +296,86 @@ export function KanbanBoard({ projectId, projectPrefix: prefix }: KanbanBoardPro
           <div className="relative">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[hsl(var(--ink-3))]" />
             <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
               placeholder="Rechercher une tâche…"
-              className="h-9 w-[260px] rounded-[var(--radius-sm)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg))] pl-8 pr-3 text-[13px] placeholder:text-[hsl(var(--ink-4))] focus:border-[hsl(var(--brand)/0.5)] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand)/0.3)]"
+              className="h-9 w-[260px] rounded-[var(--radius-sm)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg))] pl-8 pr-8 text-[13px] placeholder:text-[hsl(var(--ink-4))] focus:border-[hsl(var(--brand)/0.5)] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand)/0.3)]"
             />
+            {query && (
+              <button
+                onClick={() => setQuery("")}
+                aria-label="Effacer"
+                className="absolute right-2 top-1/2 grid h-5 w-5 -translate-y-1/2 place-items-center rounded text-[hsl(var(--ink-3))] hover:bg-[hsl(var(--bg-sunken)/0.7)] hover:text-ink"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
           </div>
-          <button className="inline-flex h-9 items-center gap-1.5 rounded-[var(--radius-sm)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-elevated))] px-3 text-[12.5px] font-medium hover:bg-[hsl(var(--bg-muted))]">
-            <SlidersHorizontal className="h-3.5 w-3.5" />
-            Filtre
-          </button>
-          <button className="inline-flex h-9 items-center gap-1.5 rounded-[var(--radius-sm)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-elevated))] px-3 text-[12.5px] font-medium hover:bg-[hsl(var(--bg-muted))]">
-            <Flag className="h-3.5 w-3.5" />
-            Priorité
-          </button>
+
+          <FilterPopover<TaskPriority>
+            title="Priorité"
+            options={PRIORITY_OPTIONS}
+            selected={priorityFilter}
+            onChange={(s) => setPriorityFilter(s)}
+            trigger={
+              <button
+                className={cn(
+                  "inline-flex h-9 items-center gap-1.5 rounded-[var(--radius-sm)] border px-3 text-[12.5px] font-medium",
+                  priorityFilter.size > 0
+                    ? "border-[hsl(var(--brand)/0.5)] bg-[hsl(var(--brand-soft))] text-[hsl(var(--brand-ink))]"
+                    : "border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-elevated))] hover:bg-[hsl(var(--bg-muted))]",
+                )}
+              >
+                <Flag className="h-3.5 w-3.5" />
+                Priorité
+                {priorityFilter.size > 0 && (
+                  <span className="rounded-full bg-[hsl(var(--brand))] px-1.5 py-0.5 text-[10px] font-bold text-white">
+                    {priorityFilter.size}
+                  </span>
+                )}
+              </button>
+            }
+          />
+
+          <FilterPopover<string>
+            title="Assigné"
+            options={assigneeOptions}
+            selected={assigneeFilter}
+            onChange={(s) => setAssigneeFilter(s)}
+            emptyLabel="Aucune tâche assignée"
+            trigger={
+              <button
+                className={cn(
+                  "inline-flex h-9 items-center gap-1.5 rounded-[var(--radius-sm)] border px-3 text-[12.5px] font-medium",
+                  assigneeFilter.size > 0
+                    ? "border-[hsl(var(--brand)/0.5)] bg-[hsl(var(--brand-soft))] text-[hsl(var(--brand-ink))]"
+                    : "border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-elevated))] hover:bg-[hsl(var(--bg-muted))]",
+                )}
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                Assigné
+                {assigneeFilter.size > 0 && (
+                  <span className="rounded-full bg-[hsl(var(--brand))] px-1.5 py-0.5 text-[10px] font-bold text-white">
+                    {assigneeFilter.size}
+                  </span>
+                )}
+              </button>
+            }
+          />
+
+          {activeFiltersCount > 0 && (
+            <button
+              onClick={() => {
+                setQuery("");
+                setPriorityFilter(new Set());
+                setAssigneeFilter(new Set());
+              }}
+              className="inline-flex h-9 items-center gap-1.5 rounded-[var(--radius-sm)] px-2 text-[12px] font-medium text-[hsl(var(--ink-3))] hover:bg-[hsl(var(--bg-sunken)/0.7)] hover:text-ink"
+            >
+              <X className="h-3.5 w-3.5" />
+              Réinitialiser ({activeFiltersCount})
+            </button>
+          )}
         </div>
       </div>
 
