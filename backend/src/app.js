@@ -13,6 +13,7 @@ const aiRoutes = require("./modules/ai/ai.routes");
 const adminRoutes = require("./modules/admin/admin.routes");
 const notificationsRoutes = require("./modules/notifications/notifications.routes");
 const chatRoutes = require("./modules/chat/chat.routes");
+const usersRoutes = require("./modules/users/users.routes");
 
 const app = express();
 
@@ -30,6 +31,7 @@ app.use("/api/ai", aiRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/notifications", notificationsRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/users", usersRoutes);
 
 app.use(errorHandler);
 

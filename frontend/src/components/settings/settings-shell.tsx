@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import {
   User as UserIcon,
   Bell,
@@ -763,15 +764,20 @@ function MembersSection() {
               key={m.id}
               className="flex items-center gap-3 py-3 first:pt-0 last:pb-0"
             >
-              <Avatar id={m.id} name={m.name} size="md" />
-              <div className="min-w-0 flex-1">
-                <div className="text-[13.5px] font-semibold tracking-tight">
-                  {m.name}
+              <Link
+                href={`/users/${m.id}`}
+                className="flex min-w-0 flex-1 items-center gap-3 hover:opacity-90"
+              >
+                <Avatar id={m.id} name={m.name} size="md" />
+                <div className="min-w-0 flex-1">
+                  <div className="text-[13.5px] font-semibold tracking-tight hover:underline">
+                    {m.name}
+                  </div>
+                  <div className="text-[11.5px] text-[hsl(var(--ink-3))]">
+                    {m.email}
+                  </div>
                 </div>
-                <div className="text-[11.5px] text-[hsl(var(--ink-3))]">
-                  {m.email}
-                </div>
-              </div>
+              </Link>
               <Badge tone={m.role === "ADMIN" ? "brand" : "neutral"}>
                 {m.role === "ADMIN" ? "Admin" : "Membre"}
               </Badge>

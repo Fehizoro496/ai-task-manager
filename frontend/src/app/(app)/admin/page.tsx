@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Check, X, Loader2, ShieldCheck, Users as UsersIcon } from "lucide-react";
 import { Topbar } from "@/components/shell/topbar";
 import { Breadcrumb } from "@/components/shell/breadcrumb";
@@ -153,15 +154,20 @@ export default function AdminPage() {
                     i < users.length - 1 && "border-b border-[hsl(var(--line))]",
                   )}
                 >
-                  <Avatar id={u.id} name={u.name} size="md" />
-                  <div className="min-w-0">
-                    <div className="text-[13.5px] font-semibold tracking-tight">
-                      {u.name}
+                  <Link
+                    href={`/users/${u.id}`}
+                    className="flex min-w-0 items-center gap-4 hover:opacity-90"
+                  >
+                    <Avatar id={u.id} name={u.name} size="md" />
+                    <div className="min-w-0">
+                      <div className="text-[13.5px] font-semibold tracking-tight hover:underline">
+                        {u.name}
+                      </div>
+                      <div className="text-[12px] text-[hsl(var(--ink-3))]">
+                        {u.email}
+                      </div>
                     </div>
-                    <div className="text-[12px] text-[hsl(var(--ink-3))]">
-                      {u.email}
-                    </div>
-                  </div>
+                  </Link>
                   <div className="ml-auto flex items-center gap-3">
                     <Badge
                       tone={

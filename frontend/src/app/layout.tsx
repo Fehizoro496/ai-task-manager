@@ -46,6 +46,7 @@ export default function RootLayout({
       lang="fr"
       data-theme="clair"
       data-density="standard"
+      suppressHydrationWarning
       className={`${display.variable} ${body.variable} ${serif.variable} ${mono.variable} antialiased`}
     >
       <head>

@@ -11,5 +11,7 @@ export { aiApi } from "./ai.api";
 export { adminApi } from "./admin.api";
 export { notificationsApi } from "./notifications.api";
 export { chatApi } from "./chat.api";
+export { usersApi } from "./users.api";
+export type { UserDetail, UserRecentTask } from "./users.api";
 
 export type * from "./types";

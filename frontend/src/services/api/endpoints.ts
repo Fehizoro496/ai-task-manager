@@ -68,6 +68,11 @@ export const endpoints = {
     markAllRead: () => "/api/notifications/read-all",
   },
 
+  users: {
+    root: () => "/api/users",
+    byId: (id: string) => `/api/users/${id}`,
+  },
+
   chat: {
     conversations: () => "/api/chat/conversations",
     messages: (conversationId: string) =>

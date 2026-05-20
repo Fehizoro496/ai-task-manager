@@ -1,5 +1,6 @@
 "use client";
 import { use, useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { Plus, Mail, Loader2, Trash2 } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -170,17 +171,22 @@ export default function MembersPage({
                   key={m.id}
                   className={`flex items-center gap-4 px-5 py-3.5 ${i < members.length - 1 ? "border-b border-[hsl(var(--line))]" : ""} hover:bg-[hsl(var(--bg-sunken)/0.4)]`}
                 >
-                  <Avatar id={m.userId} name={display} size="md" />
-                  <div className="min-w-0">
-                    <div className="text-[13.5px] font-semibold tracking-tight">
-                      {display}
-                    </div>
-                    {email && (
-                      <div className="text-[12px] text-[hsl(var(--ink-3))]">
-                        {email}
+                  <Link
+                    href={`/users/${m.userId}`}
+                    className="flex min-w-0 items-center gap-4 hover:opacity-90"
+                  >
+                    <Avatar id={m.userId} name={display} size="md" />
+                    <div className="min-w-0">
+                      <div className="text-[13.5px] font-semibold tracking-tight hover:underline">
+                        {display}
                       </div>
-                    )}
-                  </div>
+                      {email && (
+                        <div className="text-[12px] text-[hsl(var(--ink-3))]">
+                          {email}
+                        </div>
+                      )}
+                    </div>
+                  </Link>
                   <div className="ml-auto flex items-center gap-3">
                     <Badge tone={user?.role === "ADMIN" ? "brand" : "neutral"}>
                       {user?.role === "ADMIN" ? "Admin" : "Membre"}

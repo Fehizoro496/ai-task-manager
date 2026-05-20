@@ -31,6 +31,7 @@ export interface User {
   avatar_url: string | null;
   role: UserRole;
   status: UserStatus;
+  provider?: string;
   preferences?: UserPreferences;
   createdAt?: string;
 }
