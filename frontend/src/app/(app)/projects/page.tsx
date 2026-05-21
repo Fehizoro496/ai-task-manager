@@ -1,10 +1,9 @@
 "use client";
-import Link from "next/link";
 import { FolderKanban, Loader2 } from "lucide-react";
 import { Topbar } from "@/components/shell/topbar";
 import { Breadcrumb } from "@/components/shell/breadcrumb";
 import { NewProjectButton } from "@/components/projects/new-project-modal";
-import { useProjects } from "@/services";
+import { routerService, useProjects } from "@/services";
 import { colorForProject, projectPrefix } from "@/lib/mappers";
 
 export default function ProjectsPage() {
@@ -53,10 +52,11 @@ export default function ProjectsPage() {
               const color = colorForProject(p.id);
               const prefix = projectPrefix(p);
               return (
-                <Link
+                <button
                   key={p.id}
-                  href={`/projects/${p.id}`}
-                  className="group relative overflow-hidden rounded-[var(--radius-lg)] border border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))] p-5 shadow-[var(--shadow-1)] transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-2)]"
+                  type="button"
+                  onClick={() => routerService.toProject(p.id)}
+                  className="group relative w-full overflow-hidden rounded-[var(--radius-lg)] border border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))] p-5 text-left shadow-[var(--shadow-1)] transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-2)]"
                 >
                   <div
                     className="absolute inset-x-0 top-0 h-1"
@@ -81,7 +81,7 @@ export default function ProjectsPage() {
                   <p className="mt-1 line-clamp-2 text-[12.5px] text-[hsl(var(--ink-3))]">
                     {p.description ?? "—"}
                   </p>
-                </Link>
+                </button>
               );
             })}
           </div>

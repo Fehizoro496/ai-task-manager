@@ -1,5 +1,4 @@
 "use client";
-import Link from "next/link";
 import {
   FolderKanban,
   CheckCircle2,
@@ -14,7 +13,7 @@ import {
 import { Topbar } from "@/components/shell/topbar";
 import { Breadcrumb } from "@/components/shell/breadcrumb";
 import { Button } from "@/components/ui/button";
-import { useAuth, useProjects } from "@/services";
+import { routerService, useAuth, useProjects } from "@/services";
 import { colorForProject, projectPrefix } from "@/lib/mappers";
 import { cn } from "@/lib/utils";
 
@@ -50,20 +49,16 @@ export default function DashboardPage() {
               </p>
 
               <div className="mt-5 flex flex-wrap items-center gap-2">
-                <Button variant="brand" size="md" asChild>
-                  <Link href="/projects">
-                    <Plus className="h-4 w-4" />
-                    Voir les projets
-                  </Link>
+                <Button variant="brand" size="md" onClick={() => routerService.toProjects()}>
+                  <Plus className="h-4 w-4" />
+                  Voir les projets
                 </Button>
-                <Button variant="outline" size="md" asChild>
-                  <Link href="/ai/new">
-                    <Sparkles className="h-4 w-4" />
-                    Plan IA
-                  </Link>
+                <Button variant="outline" size="md" onClick={() => routerService.toAiNew()}>
+                  <Sparkles className="h-4 w-4" />
+                  Plan IA
                 </Button>
-                <Button variant="ghost" size="md" asChild>
-                  <Link href="/my-tasks">Mes tâches du jour →</Link>
+                <Button variant="ghost" size="md" onClick={() => routerService.toMyTasks()}>
+                  Mes tâches du jour →
                 </Button>
               </div>
             </div>
@@ -87,12 +82,13 @@ export default function DashboardPage() {
                 Vos espaces de travail actifs.
               </p>
             </div>
-            <Link
-              href="/projects"
+            <button
+              type="button"
+              onClick={() => routerService.toProjects()}
               className="inline-flex items-center gap-1 text-[12.5px] font-medium text-[hsl(var(--brand-ink))] hover:underline"
             >
               Voir tous les projets <ArrowUpRight className="h-3 w-3" />
-            </Link>
+            </button>
           </header>
 
           {loading ? (
@@ -103,9 +99,13 @@ export default function DashboardPage() {
           ) : projects.length === 0 ? (
             <div className="mt-4 rounded-[var(--radius-lg)] border border-dashed border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-elevated))] p-8 text-center text-[13px] text-[hsl(var(--ink-3))]">
               Aucun projet pour le moment.{" "}
-              <Link href="/projects" className="font-medium text-[hsl(var(--brand-ink))] underline">
+              <button
+                type="button"
+                onClick={() => routerService.toProjects()}
+                className="font-medium text-[hsl(var(--brand-ink))] underline"
+              >
                 En créer un
-              </Link>
+              </button>
               .
             </div>
           ) : (
@@ -114,10 +114,11 @@ export default function DashboardPage() {
                 const color = colorForProject(p.id);
                 const prefix = projectPrefix(p);
                 return (
-                  <Link
+                  <button
                     key={p.id}
-                    href={`/projects/${p.id}`}
-                    className="group relative overflow-hidden rounded-[var(--radius-lg)] border border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))] p-5 shadow-[var(--shadow-1)] transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-2)]"
+                    type="button"
+                    onClick={() => routerService.toProject(p.id)}
+                    className="group relative w-full overflow-hidden rounded-[var(--radius-lg)] border border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))] p-5 text-left shadow-[var(--shadow-1)] transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-2)]"
                   >
                     <div
                       className="absolute inset-x-0 top-0 h-1"
@@ -140,7 +141,7 @@ export default function DashboardPage() {
                         {p.description ?? "—"}
                       </p>
                     </div>
-                  </Link>
+                  </button>
                 );
               })}
             </div>
@@ -165,11 +166,9 @@ export default function DashboardPage() {
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Button variant="brand" size="lg" asChild>
-                  <Link href="/ai/new">
-                    <Sparkles className="h-4 w-4" />
-                    Lancer un plan IA
-                  </Link>
+                <Button variant="brand" size="lg" onClick={() => routerService.toAiNew()}>
+                  <Sparkles className="h-4 w-4" />
+                  Lancer un plan IA
                 </Button>
               </div>
             </div>

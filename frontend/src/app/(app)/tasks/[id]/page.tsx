@@ -1,13 +1,12 @@
 "use client";
 import { use } from "react";
-import Link from "next/link";
 import { X, GitBranch, Calendar as CalIcon, User, Tag, Link as LinkIcon, Sparkles, Loader2 } from "lucide-react";
 import { Topbar } from "@/components/shell/topbar";
 import { Breadcrumb } from "@/components/shell/breadcrumb";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { PriorityPill, StatusPill } from "@/components/ui/pill";
-import { useTask } from "@/services";
+import { routerService, useTask } from "@/services";
 import { normalizeApiStatus, normalizeApiPriority } from "@/lib/mappers";
 import { shortDate } from "@/lib/utils";
 
@@ -79,12 +78,13 @@ export default function TaskPage({
               </span>
               <StatusPill status={status} />
               {projectId && (
-                <Link
-                  href={`/projects/${projectId}/board`}
+                <button
+                  type="button"
+                  onClick={() => routerService.toProjectBoard(projectId)}
                   className="ml-auto grid h-8 w-8 place-items-center rounded-[8px] text-[hsl(var(--ink-3))] hover:bg-[hsl(var(--bg-muted))] hover:text-ink"
                 >
                   <X className="h-4 w-4" />
-                </Link>
+                </button>
               )}
             </header>
 

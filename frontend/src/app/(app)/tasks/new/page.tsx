@@ -1,14 +1,13 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { X, Sparkles, Loader2 } from "lucide-react";
 import { Input, Textarea, Field } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Topbar } from "@/components/shell/topbar";
 import { Breadcrumb } from "@/components/shell/breadcrumb";
-import { projectsApi, toast, useProjects } from "@/services";
+import { projectsApi, routerService, toast, useProjects } from "@/services";
 import type { TaskPriority } from "@/services";
 
 const PRIORITY: { v: TaskPriority; l: string }[] = [
@@ -63,12 +62,13 @@ export default function NewTaskPage() {
             <h1 className="font-display text-[18px] font-semibold tracking-tight">
               Créer une tâche
             </h1>
-            <Link
-              href="/my-tasks"
+            <button
+              type="button"
+              onClick={() => routerService.toMyTasks()}
               className="grid h-8 w-8 place-items-center rounded-[8px] text-[hsl(var(--ink-3))] hover:bg-[hsl(var(--bg-muted))]"
             >
               <X className="h-4 w-4" />
-            </Link>
+            </button>
           </header>
 
           <div className="space-y-4 px-6 pb-4">

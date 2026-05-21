@@ -1,10 +1,9 @@
 "use client";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { Check, Hourglass, ShieldCheck, KeyRound, Mail, Clock, UserCog } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
-import { useAuth } from "@/services";
+import { routerService, useAuth } from "@/services";
 
 const steps = [
   { label: "Compte créé", sub: "GitHub", icon: Check, state: "done" as const },
@@ -38,12 +37,16 @@ export default function PendingPage() {
       <div className="absolute inset-0 -z-10 bg-aurora opacity-70" />
       <div className="mx-auto flex max-w-[860px] flex-col px-6 pt-10 pb-20">
         <div className="flex items-center justify-between">
-          <Link href="/login" className="inline-flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => routerService.toLogin()}
+            className="inline-flex items-center gap-2.5"
+          >
             <Logo size={32} />
             <span className="font-display text-[14px] font-semibold tracking-tight">
               AI Task Manager
             </span>
-          </Link>
+          </button>
           <button
             onClick={() => {
               logout();

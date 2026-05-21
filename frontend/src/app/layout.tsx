@@ -7,6 +7,7 @@ import {
 } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/services/auth";
+import { RouterBridge } from "@/services/router";
 import { Toaster } from "@/components/ui/toaster";
 
 const display = Bricolage_Grotesque({
@@ -68,6 +69,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-dvh bg-paper text-ink font-body">
+        <RouterBridge />
         <AuthProvider>{children}</AuthProvider>
         <Toaster />
       </body>

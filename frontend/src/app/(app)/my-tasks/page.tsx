@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import {
   Filter,
   SortDesc,
@@ -20,7 +19,7 @@ import { TaskDetailDialog } from "@/components/tasks/task-detail-dialog";
 import { NewTaskDialog } from "@/components/tasks/new-task-dialog";
 import { Button } from "@/components/ui/button";
 import { FilterPopover } from "@/components/ui/filter-popover";
-import { projectsApi, useAuth, useProjects } from "@/services";
+import { projectsApi, routerService, useAuth, useProjects } from "@/services";
 import type { Task, TaskPriority } from "@/services";
 import {
   normalizeApiPriority,
@@ -374,12 +373,13 @@ export default function MyTasksPage() {
                         className="h-2 w-2 rounded-[3px] shrink-0"
                         style={{ background: colorForProject(t._projectId) }}
                       />
-                      <Link
-                        href={`/projects/${t._projectId}`}
+                      <button
+                        type="button"
+                        onClick={() => routerService.toProject(t._projectId)}
                         className="truncate text-[12.5px] text-[hsl(var(--ink-2))] hover:underline"
                       >
                         {t._projectName}
-                      </Link>
+                      </button>
                     </div>
                     <div>
                       <StatusPill status={status} />

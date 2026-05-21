@@ -1,13 +1,12 @@
 "use client";
 import { use, useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { Plus, Mail, Loader2, Trash2 } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/input";
 import { UserCombobox } from "@/components/ui/user-combobox";
-import { adminApi, toast, useAuth } from "@/services";
+import { adminApi, routerService, toast, useAuth } from "@/services";
 import type { ProjectMember, User } from "@/services";
 
 export default function MembersPage({
@@ -171,9 +170,10 @@ export default function MembersPage({
                   key={m.id}
                   className={`flex items-center gap-4 px-5 py-3.5 ${i < members.length - 1 ? "border-b border-[hsl(var(--line))]" : ""} hover:bg-[hsl(var(--bg-sunken)/0.4)]`}
                 >
-                  <Link
-                    href={`/users/${m.userId}`}
-                    className="flex min-w-0 items-center gap-4 hover:opacity-90"
+                  <button
+                    type="button"
+                    onClick={() => routerService.toUser(m.userId)}
+                    className="flex min-w-0 items-center gap-4 text-left hover:opacity-90"
                   >
                     <Avatar id={m.userId} name={display} size="md" />
                     <div className="min-w-0">
@@ -186,7 +186,7 @@ export default function MembersPage({
                         </div>
                       )}
                     </div>
-                  </Link>
+                  </button>
                   <div className="ml-auto flex items-center gap-3">
                     <Badge tone={user?.role === "ADMIN" ? "brand" : "neutral"}>
                       {user?.role === "ADMIN" ? "Admin" : "Membre"}

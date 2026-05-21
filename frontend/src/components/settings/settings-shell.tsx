@@ -1,6 +1,5 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import {
   User as UserIcon,
   Bell,
@@ -27,6 +26,7 @@ import { Input, Field } from "@/components/ui/input";
 import {
   adminApi,
   authApi,
+  routerService,
   toast,
   useAuth,
   useAuthStore,
@@ -764,9 +764,10 @@ function MembersSection() {
               key={m.id}
               className="flex items-center gap-3 py-3 first:pt-0 last:pb-0"
             >
-              <Link
-                href={`/users/${m.id}`}
-                className="flex min-w-0 flex-1 items-center gap-3 hover:opacity-90"
+              <button
+                type="button"
+                onClick={() => routerService.toUser(m.id)}
+                className="flex min-w-0 flex-1 items-center gap-3 text-left hover:opacity-90"
               >
                 <Avatar id={m.id} name={m.name} size="md" />
                 <div className="min-w-0 flex-1">
@@ -777,7 +778,7 @@ function MembersSection() {
                     {m.email}
                   </div>
                 </div>
-              </Link>
+              </button>
               <Badge tone={m.role === "ADMIN" ? "brand" : "neutral"}>
                 {m.role === "ADMIN" ? "Admin" : "Membre"}
               </Badge>

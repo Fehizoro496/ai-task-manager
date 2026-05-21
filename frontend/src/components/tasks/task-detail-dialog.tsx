@@ -15,7 +15,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { PriorityPill, StatusPill } from "@/components/ui/pill";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
-import { useTask } from "@/services";
+import { routerService, useTask } from "@/services";
 import { normalizeApiStatus, normalizeApiPriority } from "@/lib/mappers";
 import { shortDate } from "@/lib/utils";
 
@@ -164,14 +164,13 @@ function TaskDetailBody({ taskId, onClose }: { taskId: string; onClose: () => vo
           {branchName && (
             <Meta Icon={GitBranch} label="Branche">
               {branchUrl ? (
-                <a
-                  href={branchUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  type="button"
+                  onClick={() => routerService.openExternal(branchUrl)}
                   className="font-mono text-[12px] text-[hsl(var(--brand-ink))] underline-offset-2 hover:underline"
                 >
                   {branchName}
-                </a>
+                </button>
               ) : (
                 <span className="font-mono text-[12px]">{branchName}</span>
               )}

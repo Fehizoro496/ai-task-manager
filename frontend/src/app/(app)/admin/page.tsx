@@ -1,14 +1,13 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { Check, X, Loader2, ShieldCheck, Users as UsersIcon } from "lucide-react";
 import { Topbar } from "@/components/shell/topbar";
 import { Breadcrumb } from "@/components/shell/breadcrumb";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { adminApi, toast, usePendingUsersStore, useAuth } from "@/services";
+import { adminApi, routerService, toast, usePendingUsersStore, useAuth } from "@/services";
 import type { User, UserStatus } from "@/services";
 import { cn } from "@/lib/utils";
 
@@ -154,9 +153,10 @@ export default function AdminPage() {
                     i < users.length - 1 && "border-b border-[hsl(var(--line))]",
                   )}
                 >
-                  <Link
-                    href={`/users/${u.id}`}
-                    className="flex min-w-0 items-center gap-4 hover:opacity-90"
+                  <button
+                    type="button"
+                    onClick={() => routerService.toUser(u.id)}
+                    className="flex min-w-0 items-center gap-4 text-left hover:opacity-90"
                   >
                     <Avatar id={u.id} name={u.name} size="md" />
                     <div className="min-w-0">
@@ -167,7 +167,7 @@ export default function AdminPage() {
                         {u.email}
                       </div>
                     </div>
-                  </Link>
+                  </button>
                   <div className="ml-auto flex items-center gap-3">
                     <Badge
                       tone={

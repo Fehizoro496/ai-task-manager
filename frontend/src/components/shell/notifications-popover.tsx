@@ -1,6 +1,5 @@
 "use client";
 import * as Popover from "@radix-ui/react-popover";
-import Link from "next/link";
 import {
   Bell,
   Settings as SettingsIcon,
@@ -8,7 +7,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useNotifications } from "@/services";
+import { routerService, useNotifications } from "@/services";
 import { cn } from "@/lib/utils";
 
 function timeAgo(iso: string) {
@@ -67,12 +66,13 @@ export function NotificationsPopover() {
                 <CheckCheck className="h-3 w-3" />
                 Tout marquer lu
               </button>
-              <Link
-                href="/settings"
+              <button
+                type="button"
+                onClick={() => routerService.toSettings()}
                 className="grid h-7 w-7 place-items-center rounded-[6px] text-[hsl(var(--ink-3))] hover:bg-[hsl(var(--bg-muted))] hover:text-ink"
               >
                 <SettingsIcon className="h-3.5 w-3.5" />
-              </Link>
+              </button>
             </div>
           </header>
 

@@ -1,7 +1,6 @@
 "use client";
 import { useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   User as UserIcon,
@@ -16,7 +15,7 @@ import {
   Check,
 } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
-import { useAuth } from "@/services";
+import { routerService, useAuth } from "@/services";
 import { cn } from "@/lib/utils";
 
 type Status = "available" | "busy" | "dnd";
@@ -207,9 +206,10 @@ function MenuLink({
 }) {
   return (
     <li>
-      <Link
-        href={href}
-        className="flex items-center gap-2.5 rounded-[var(--radius-sm)] px-2 py-1.5 text-[12.5px] font-medium text-[hsl(var(--ink-2))] hover:bg-[hsl(var(--bg-sunken)/0.6)] hover:text-ink"
+      <button
+        type="button"
+        onClick={() => routerService.push(href)}
+        className="flex w-full items-center gap-2.5 rounded-[var(--radius-sm)] px-2 py-1.5 text-left text-[12.5px] font-medium text-[hsl(var(--ink-2))] hover:bg-[hsl(var(--bg-sunken)/0.6)] hover:text-ink"
       >
         <Icon
           className={cn(
@@ -223,7 +223,7 @@ function MenuLink({
             {shortcut}
           </span>
         )}
-      </Link>
+      </button>
     </li>
   );
 }

@@ -1,6 +1,5 @@
 "use client";
 import { use, useEffect, useState } from "react";
-import Link from "next/link";
 import {
   Loader2,
   Mail,
@@ -17,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { StatusPill, PriorityPill } from "@/components/ui/pill";
 import { Github } from "@/components/icons/github";
 import { TaskDetailDialog } from "@/components/tasks/task-detail-dialog";
-import { usersApi } from "@/services";
+import { routerService, usersApi } from "@/services";
 import type { UserDetail } from "@/services";
 import {
   normalizeApiPriority,
@@ -201,13 +200,16 @@ export default function UserDetailPage({
                             {t.title}
                           </span>
                           {t.projectName && t.projectId && (
-                            <Link
-                              href={`/projects/${t.projectId}`}
-                              onClick={(e) => e.stopPropagation()}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                routerService.toProject(t.projectId!);
+                              }}
                               className="text-[11.5px] text-[hsl(var(--ink-3))] hover:underline"
                             >
                               {t.projectName}
-                            </Link>
+                            </button>
                           )}
                         </span>
                         <StatusPill status={status} />

@@ -1,6 +1,7 @@
-import Link from "next/link";
+"use client";
 import { ChevronRight } from "lucide-react";
 import { Fragment } from "react";
+import { routerService } from "@/services";
 
 export function Breadcrumb({
   items,
@@ -14,12 +15,13 @@ export function Breadcrumb({
         return (
           <Fragment key={i}>
             {it.href && !last ? (
-              <Link
-                href={it.href}
+              <button
+                type="button"
+                onClick={() => routerService.push(it.href!)}
                 className="text-[hsl(var(--ink-3))] hover:text-ink"
               >
                 {it.label}
-              </Link>
+              </button>
             ) : (
               <span
                 className={

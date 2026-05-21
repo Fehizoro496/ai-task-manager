@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { routerService } from "@/services";
 import {
   Download,
   ArrowUpRight,
@@ -356,9 +356,10 @@ export default function ReportsPage() {
                       )}
                     >
                       <td className="px-3 py-3">
-                        <Link
-                          href={`/projects/${h.project.id}`}
-                          className="flex items-center gap-2"
+                        <button
+                          type="button"
+                          onClick={() => routerService.toProject(h.project.id)}
+                          className="flex items-center gap-2 text-left"
                         >
                           <span
                             className="h-2 w-2 rounded-[3px]"
@@ -367,7 +368,7 @@ export default function ReportsPage() {
                           <span className="font-medium tracking-tight">
                             {h.project.name}
                           </span>
-                        </Link>
+                        </button>
                       </td>
                       <td className="px-3 py-3 min-w-[140px]">
                         <div className="flex items-center gap-2">
@@ -450,13 +451,14 @@ export default function ReportsPage() {
                   suivant.
                 </p>
               </div>
-              <Link
-                href="/ai/assistant"
+              <button
+                type="button"
+                onClick={() => routerService.toAiAssistant()}
                 className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[hsl(var(--brand))] px-3 py-2 text-[12.5px] font-semibold text-white shadow-[var(--shadow-brand)] hover:bg-[hsl(var(--brand-ink))]"
               >
                 Approfondir
                 <ArrowUpRight className="h-3.5 w-3.5" />
-              </Link>
+              </button>
             </div>
           </div>
         </section>

@@ -7,7 +7,7 @@ import { ProjectTabs } from "@/components/projects/project-tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Github } from "@/components/icons/github";
-import { useProject } from "@/services";
+import { routerService, useProject } from "@/services";
 import { colorForProject, projectPrefix } from "@/lib/mappers";
 
 export default function ProjectLayout({
@@ -83,20 +83,20 @@ export default function ProjectLayout({
             <div className="flex items-center gap-2">
               {(project.githubRepoUrl ||
                 (project.githubOwner && project.githubRepo)) && (
-                <Button variant="outline" size="sm" asChild>
-                  <a
-                    href={
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    routerService.openExternal(
                       project.githubRepoUrl ||
-                      `https://github.com/${project.githubOwner}/${project.githubRepo}`
-                    }
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <Github className="h-3.5 w-3.5" />
-                    {project.githubOwner && project.githubRepo
-                      ? `${project.githubOwner}/${project.githubRepo}`
-                      : "Dépôt GitHub"}
-                  </a>
+                        `https://github.com/${project.githubOwner}/${project.githubRepo}`,
+                    )
+                  }
+                >
+                  <Github className="h-3.5 w-3.5" />
+                  {project.githubOwner && project.githubRepo
+                    ? `${project.githubOwner}/${project.githubRepo}`
+                    : "Dépôt GitHub"}
                 </Button>
               )}
               <button className="grid h-9 w-9 place-items-center rounded-[8px] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-elevated))] hover:bg-[hsl(var(--bg-muted))]">
