@@ -74,7 +74,23 @@ export function useProjectTasks(projectId: string | null | undefined) {
     [projectId],
   );
 
-  return { tasks, loading, error, refetch, move, update, remove, create };
+  /** Remplace une tâche dans le store local (pour propager une mise à jour
+   *  réalisée ailleurs — ex. assignation depuis le dialog détail). */
+  const applyUpdate = useCallback((updated: Task) => {
+    setTasks((curr) => curr.map((t) => (t.id === updated.id ? updated : t)));
+  }, []);
+
+  return {
+    tasks,
+    loading,
+    error,
+    refetch,
+    move,
+    update,
+    remove,
+    create,
+    applyUpdate,
+  };
 }
 
 export function useTask(id: string | null | undefined) {

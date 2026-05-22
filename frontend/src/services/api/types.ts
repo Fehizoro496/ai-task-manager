@@ -96,6 +96,11 @@ export interface Task {
   storyId: UUID | null;
   projectId?: UUID;
   assigneeId: UUID | null;
+  assignee?: {
+    id: UUID;
+    name: string;
+    avatar_url: string | null;
+  } | null;
   labels: string[];
   dueDate: string | null;
   branch?: string | null;

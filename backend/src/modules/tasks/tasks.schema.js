@@ -85,15 +85,26 @@ const updateTaskSchema = z
     const pos = data.position ?? data.order;
     if (pos !== undefined) result.position = pos;
 
-    // assigneeId: accept snake_case alias
-    const assignee = data.assigneeId ?? data.assignee_id;
-    if (assignee !== undefined) result.assigneeId = assignee;
+    // assigneeId: accept snake_case alias.
+    // Important : ne PAS utiliser `??` ici — il assimile null à "absent"
+    // et empêche de retirer l'assignation. On distingue explicitement
+    // les deux clés pour préserver `null`.
+    if (data.assigneeId !== undefined) result.assigneeId = data.assigneeId;
+    else if (data.assignee_id !== undefined) result.assigneeId = data.assignee_id;
 
     if (data.labels !== undefined) result.labels = data.labels;
 
-    // dueDate: accept snake_case alias
-    const due = data.dueDate ?? data.due_date;
-    if (due !== undefined) result.dueDate = due ? new Date(due) : null;
+    // dueDate: même précaution — `??` masquerait un null explicite.
+    let due;
+    let hasDue = false;
+    if (data.dueDate !== undefined) {
+      due = data.dueDate;
+      hasDue = true;
+    } else if (data.due_date !== undefined) {
+      due = data.due_date;
+      hasDue = true;
+    }
+    if (hasDue) result.dueDate = due ? new Date(due) : null;
 
     return result;
   });

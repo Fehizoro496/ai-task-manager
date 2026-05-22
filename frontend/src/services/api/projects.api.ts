@@ -1,6 +1,6 @@
 import { apiClient } from "./client";
 import { endpoints } from "./endpoints";
-import type { Project, Task, TaskStatus } from "./types";
+import type { Project, ProjectMember, Task, TaskStatus } from "./types";
 
 export type ReorderColumns = Partial<Record<TaskStatus, string[]>>;
 
@@ -45,6 +45,11 @@ export const projectsApi = {
 
   listTasks: (projectId: string) =>
     apiClient.get<{ tasks: Task[] }>(endpoints.projects.tasks(projectId)),
+
+  listMembers: (projectId: string) =>
+    apiClient.get<{ members: ProjectMember[] }>(
+      endpoints.projects.members(projectId),
+    ),
 
   createTask: (projectId: string, input: CreateProjectTaskInput) =>
     apiClient.post<Task>(endpoints.projects.tasks(projectId), input),

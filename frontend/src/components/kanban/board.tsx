@@ -80,7 +80,7 @@ interface KanbanBoardProps {
 }
 
 export function KanbanBoard({ projectId, projectPrefix: prefix }: KanbanBoardProps) {
-  const { tasks, loading, refetch } = useProjectTasks(projectId);
+  const { tasks, loading, refetch, applyUpdate } = useProjectTasks(projectId);
   // Liste locale pour les rearrangements optimistes inter-colonnes pendant
   // le drag, avant la confirmation API au drop.
   const [localTasks, setLocalTasks] = useState<ApiTask[] | null>(null);
@@ -103,7 +103,10 @@ export function KanbanBoard({ projectId, projectPrefix: prefix }: KanbanBoardPro
     const seen = new Map<string, string>();
     for (const t of tasks) {
       if (t.assigneeId && !seen.has(t.assigneeId)) {
-        seen.set(t.assigneeId, t.assigneeId.slice(0, 8));
+        seen.set(
+          t.assigneeId,
+          t.assignee?.name ?? t.assigneeId.slice(0, 8),
+        );
       }
     }
     return Array.from(seen, ([value, label]) => ({ value, label }));
@@ -407,7 +410,11 @@ export function KanbanBoard({ projectId, projectPrefix: prefix }: KanbanBoardPro
         {activeTask && <TaskCard task={activeTask} prefix={prefix} dragging />}
       </DragOverlay>
 
-      <TaskDetailDialog taskId={openTaskId} onClose={() => setOpenTaskId(null)} />
+      <TaskDetailDialog
+        taskId={openTaskId}
+        onClose={() => setOpenTaskId(null)}
+        onUpdated={(t) => applyUpdate(t)}
+      />
 
       <NewTaskDialog
         open={createForStatus !== null}
@@ -592,7 +599,11 @@ function TaskCard({
       <div className="mt-3 flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           {task.assigneeId && (
-            <Avatar id={task.assigneeId} name={task.assigneeId.slice(0, 2)} size="xs" />
+            <Avatar
+              id={task.assigneeId}
+              name={task.assignee?.name ?? task.assigneeId}
+              size="xs"
+            />
           )}
         </div>
         <PriorityPill priority={priority} className="!text-[10px]" />

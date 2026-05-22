@@ -83,22 +83,22 @@ export default function ProjectLayout({
             <div className="flex items-center gap-2">
               {(project.githubRepoUrl ||
                 (project.githubOwner && project.githubRepo)) && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    routerService.openExternal(
-                      project.githubRepoUrl ||
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      routerService.openExternal(
+                        project.githubRepoUrl ||
                         `https://github.com/${project.githubOwner}/${project.githubRepo}`,
-                    )
-                  }
-                >
-                  <Github className="h-3.5 w-3.5" />
-                  {project.githubOwner && project.githubRepo
-                    ? `${project.githubOwner}/${project.githubRepo}`
-                    : "Dépôt GitHub"}
-                </Button>
-              )}
+                      )
+                    }
+                  >
+                    <Github className="h-3.5 w-3.5" />
+                    {project.githubOwner && project.githubRepo
+                      ? `${project.githubOwner}/${project.githubRepo}`
+                      : "Dépôt GitHub"}
+                  </Button>
+                )}
               <button className="grid h-9 w-9 place-items-center rounded-[8px] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-elevated))] hover:bg-[hsl(var(--bg-muted))]">
                 <MoreHorizontal className="h-4 w-4" />
               </button>

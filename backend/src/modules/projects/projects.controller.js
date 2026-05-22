@@ -1,5 +1,6 @@
 const projectsService = require("./projects.service");
 const asyncHandler = require("../../utils/asyncHandler");
+const AppError = require("../../utils/AppError");
 
 const create = asyncHandler(async (req, res) => {
   const project = await projectsService.create(req.user.id, req.body);
@@ -30,4 +31,14 @@ const remove = asyncHandler(async (req, res) => {
   res.status(204).end();
 });
 
-module.exports = { create, list, getById, update, remove };
+const listMembers = asyncHandler(async (req, res) => {
+  const isAdmin = req.user.role === "ADMIN";
+  if (!isAdmin) {
+    const member = await projectsService.isMember(req.params.projectId, req.user.id);
+    if (!member) throw new AppError("Project not found", 404);
+  }
+  const members = await projectsService.listMembers(req.params.projectId);
+  res.json({ members });
+});
+
+module.exports = { create, list, getById, update, remove, listMembers };

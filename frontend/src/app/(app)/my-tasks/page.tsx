@@ -396,7 +396,7 @@ export default function MyTasksPage() {
                       {t.assigneeId && (
                         <Avatar
                           id={t.assigneeId}
-                          name={t.assigneeId.slice(0, 2)}
+                          name={t.assignee?.name ?? t.assigneeId}
                           size="xs"
                         />
                       )}
@@ -418,7 +418,11 @@ export default function MyTasksPage() {
         </div>
       </main>
 
-      <TaskDetailDialog taskId={openTaskId} onClose={() => setOpenTaskId(null)} />
+      <TaskDetailDialog
+        taskId={openTaskId}
+        onClose={() => setOpenTaskId(null)}
+        onUpdated={() => setRefreshTick((n) => n + 1)}
+      />
       <NewTaskDialog
         open={newTaskOpen}
         onClose={() => setNewTaskOpen(false)}

@@ -125,17 +125,6 @@ export default function ProjectSettingsPage({
   if (!canEdit) {
     return (
       <main className="px-8 py-7">
-        <Topbar
-          breadcrumb={
-            <Breadcrumb
-              items={[
-                { label: "Projets", href: "/projects" },
-                { label: project.name, href: `/projects/${projectId}` },
-                { label: "Paramètres" },
-              ]}
-            />
-          }
-        />
         <div className="mt-6 rounded-[var(--radius-md)] border border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))] p-6 text-[13px] text-[hsl(var(--ink-3))]">
           Seul le propriétaire du projet ou un administrateur peut modifier ces
           paramètres.

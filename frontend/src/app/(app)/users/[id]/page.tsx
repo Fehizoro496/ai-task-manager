@@ -1,5 +1,5 @@
 "use client";
-import { use, useEffect, useState } from "react";
+import { use, useCallback, useEffect, useState } from "react";
 import {
   Loader2,
   Mail,
@@ -35,17 +35,20 @@ export default function UserDetailPage({
   const [error, setError] = useState<string | null>(null);
   const [openTaskId, setOpenTaskId] = useState<string | null>(null);
 
-  useEffect(() => {
-    setLoading(true);
+  const refetch = useCallback(() => {
     setError(null);
-    usersApi
+    return usersApi
       .getById(id)
       .then(setUser)
       .catch((e) =>
         setError(e instanceof Error ? e.message : "Utilisateur introuvable."),
-      )
-      .finally(() => setLoading(false));
+      );
   }, [id]);
+
+  useEffect(() => {
+    setLoading(true);
+    refetch().finally(() => setLoading(false));
+  }, [refetch]);
 
   if (loading) {
     return (
@@ -231,6 +234,7 @@ export default function UserDetailPage({
       <TaskDetailDialog
         taskId={openTaskId}
         onClose={() => setOpenTaskId(null)}
+        onUpdated={() => refetch()}
       />
     </>
   );

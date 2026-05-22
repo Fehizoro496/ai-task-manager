@@ -20,7 +20,11 @@ const assigneeInclude = {
  * Serializes a Prisma Task into the format expected by the Flutter frontend.
  */
 const serializeTask = (task, projectId) => {
-  const computedProjectId = projectId || task.projectId || null;
+  const computedProjectId =
+    projectId ||
+    task.projectId ||
+    task.story?.epic?.project?.id ||
+    null;
 
   // Quand le projet est inclus (via getById notamment), on construit l'URL
   // directe vers la branche sur GitHub pour pouvoir l'afficher cliquable.
@@ -128,8 +132,16 @@ const getById = async (id, userId, isAdmin) => {
     },
   });
 
-  if (!task || (!isAdmin && task.story.epic.project.ownerId !== userId)) {
-    throw new AppError("Task not found", 404);
+  if (!task) throw new AppError("Task not found", 404);
+
+  if (!isAdmin) {
+    const project = task.story.epic.project;
+    const isOwner = project.ownerId === userId;
+    const isAssignee = task.assigneeId === userId;
+    if (!isOwner && !isAssignee) {
+      const member = await isMember(project.id, userId);
+      if (!member) throw new AppError("Task not found", 404);
+    }
   }
 
   return task;
@@ -155,7 +167,14 @@ const update = async (id, userId, isAdmin, data) => {
     if (!memberCheck) throw new AppError("User is not a member of this project", 400);
   }
 
-  const updated = await prisma.task.update({ where: { id }, data, include: assigneeInclude });
+  const updated = await prisma.task.update({
+    where: { id },
+    data,
+    include: {
+      ...assigneeInclude,
+      story: { include: { epic: { include: { project: true } } } },
+    },
+  });
 
   const projectId = task.story.epic.project.id;
   const link = `/board/${projectId}`;
@@ -212,7 +231,10 @@ const moveTask = async (id, userId, isAdmin, { status, position }) => {
   const updated = await prisma.task.update({
     where: { id },
     data: { status, position },
-    include: assigneeInclude,
+    include: {
+      ...assigneeInclude,
+      story: { include: { epic: { include: { project: true } } } },
+    },
   });
 
   const projectId = task.story.epic.project.id;
@@ -403,7 +425,10 @@ const assignSelf = async (id, userId, isAdmin) => {
   return prisma.task.update({
     where: { id },
     data: { assigneeId: userId },
-    include: assigneeInclude,
+    include: {
+      ...assigneeInclude,
+      story: { include: { epic: { include: { project: true } } } },
+    },
   });
 };
 

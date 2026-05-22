@@ -237,4 +237,6 @@ router.post("/:projectId/tasks", requireAdmin, validate(createTaskForProjectSche
  */
 router.patch("/:projectId/tasks/reorder", tasksController.reorderForProject);
 
+router.get("/:projectId/members", projectsController.listMembers);
+
 module.exports = router;

@@ -10,21 +10,39 @@ import {
   Link as LinkIcon,
   Sparkles,
   Loader2,
+  UserPlus,
+  UserMinus,
 } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { PriorityPill, StatusPill } from "@/components/ui/pill";
+import { UserCombobox } from "@/components/ui/user-combobox";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
-import { routerService, useTask } from "@/services";
+import {
+  projectsApi,
+  routerService,
+  tasksApi,
+  toast,
+  useAuth,
+  useTask,
+} from "@/services";
+import type { ProjectMember, Task, User as ApiUser } from "@/services";
 import { normalizeApiStatus, normalizeApiPriority } from "@/lib/mappers";
 import { shortDate } from "@/lib/utils";
 
 interface TaskDetailDialogProps {
   taskId: string | null;
   onClose: () => void;
+  /** Appelé à chaque mutation locale de la tâche pour que le parent
+   *  (board, my-tasks, etc.) puisse synchroniser sa propre liste. */
+  onUpdated?: (task: Task) => void;
 }
 
-export function TaskDetailDialog({ taskId, onClose }: TaskDetailDialogProps) {
+export function TaskDetailDialog({
+  taskId,
+  onClose,
+  onUpdated,
+}: TaskDetailDialogProps) {
   const open = !!taskId;
 
   return (
@@ -35,19 +53,103 @@ export function TaskDetailDialog({ taskId, onClose }: TaskDetailDialogProps) {
           <VisuallyHidden.Root>
             <Dialog.Title>Détails de la tâche</Dialog.Title>
           </VisuallyHidden.Root>
-          {taskId && <TaskDetailBody taskId={taskId} onClose={onClose} />}
+          {taskId && (
+            <TaskDetailBody
+              taskId={taskId}
+              onClose={onClose}
+              onUpdated={onUpdated}
+            />
+          )}
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
   );
 }
 
-function TaskDetailBody({ taskId, onClose }: { taskId: string; onClose: () => void }) {
-  const { task, loading, error } = useTask(taskId);
+function TaskDetailBody({
+  taskId,
+  onClose,
+  onUpdated,
+}: {
+  taskId: string;
+  onClose: () => void;
+  onUpdated?: (task: Task) => void;
+}) {
+  const { task, loading, error, refetch, setTask } = useTask(taskId);
+  const { user } = useAuth();
   const [comment, setComment] = useState("");
+  const [members, setMembers] = useState<ProjectMember[]>([]);
+  const [membersLoaded, setMembersLoaded] = useState(false);
+  const [assigning, setAssigning] = useState(false);
 
   // Reset comment when task changes
   useEffect(() => setComment(""), [taskId]);
+
+  // Charge la liste des membres du projet pour le sélecteur.
+  // Ne déclenche le reset que si projectId change vers une autre valeur
+  // définie — sinon on conserve la liste précédente pour éviter de vider
+  // l'autocomplete pendant une réponse API tronquée.
+  const projectId = task?.projectId ?? null;
+  useEffect(() => {
+    if (!projectId) return;
+    setMembersLoaded(false);
+    projectsApi
+      .listMembers(projectId)
+      .then((res) => setMembers(res.members))
+      .catch(() => setMembers([]))
+      .finally(() => setMembersLoaded(true));
+  }, [projectId]);
+
+  const handleAssign = async (assigneeId: string | null) => {
+    if (!task) return;
+    if (assigneeId === task.assigneeId) return;
+    const previous = task;
+    // Optimistic update — l'input reflète le choix immédiatement
+    setTask({ ...task, assigneeId });
+    setAssigning(true);
+    try {
+      const updated = await tasksApi.update(task.id, { assigneeId });
+      setTask(updated);
+      onUpdated?.(updated);
+      toast.success(
+        assigneeId ? "Tâche assignée." : "Assignation retirée.",
+        "Mise à jour",
+      );
+    } catch (e) {
+      console.error("Assign failed", e);
+      // Rollback sur l'état précédent
+      setTask(previous);
+      toast.error(
+        e instanceof Error ? e.message : "Assignation impossible.",
+        "Assignation refusée",
+      );
+      refetch();
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  const handleAssignSelf = async () => {
+    if (!task || !user) return;
+    const previous = task;
+    setTask({ ...task, assigneeId: user.id });
+    setAssigning(true);
+    try {
+      const updated = await tasksApi.assign(task.id);
+      setTask(updated);
+      onUpdated?.(updated);
+      toast.success("Vous êtes assigné à cette tâche.", "Assignation");
+    } catch (e) {
+      console.error("Self-assign failed", e);
+      setTask(previous);
+      toast.error(
+        e instanceof Error ? e.message : "Assignation impossible.",
+        "Assignation refusée",
+      );
+    } finally {
+      setAssigning(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -113,21 +215,16 @@ function TaskDetailBody({ taskId, onClose }: { taskId: string; onClose: () => vo
         )}
 
         <div className="mt-5 grid grid-cols-2 gap-x-6 gap-y-3 rounded-[var(--radius-md)] border border-[hsl(var(--line))] bg-[hsl(var(--bg-sunken)/0.4)] p-4 text-[13px]">
-          <Meta Icon={User} label="Assigné">
-            {task.assigneeId ? (
-              <span className="inline-flex items-center gap-1.5">
-                <Avatar
-                  id={task.assigneeId}
-                  name={task.assigneeId.slice(0, 2)}
-                  size="xs"
-                />
-                <span className="font-mono text-[11px]">
-                  {task.assigneeId.slice(0, 8)}…
-                </span>
-              </span>
-            ) : (
-              <span className="text-[hsl(var(--ink-3))]">—</span>
-            )}
+          <Meta Icon={User} label="Assigné" className="col-span-2">
+            <AssigneePicker
+              currentAssigneeId={task.assigneeId}
+              members={members}
+              membersLoaded={membersLoaded}
+              currentUser={user}
+              disabled={assigning}
+              onAssign={handleAssign}
+              onAssignSelf={handleAssignSelf}
+            />
           </Meta>
           <Meta Icon={Sparkles} label="Priorité">
             <PriorityPill priority={priority} />
@@ -211,13 +308,15 @@ function Meta({
   Icon,
   label,
   children,
+  className,
 }: {
   Icon: React.ComponentType<{ className?: string }>;
   label: string;
   children: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="flex items-start gap-2.5">
+    <div className={`flex items-start gap-2.5${className ? " " + className : ""}`}>
       <span className="mt-0.5 grid h-5 w-5 place-items-center rounded-md bg-[hsl(var(--bg-elevated))] text-[hsl(var(--ink-3))] ring-1 ring-[hsl(var(--line))]">
         <Icon className="h-3 w-3" />
       </span>
@@ -227,6 +326,85 @@ function Meta({
         </div>
         <div className="mt-0.5">{children}</div>
       </div>
+    </div>
+  );
+}
+
+/* ---------- AssigneePicker ---------- */
+
+function AssigneePicker({
+  currentAssigneeId,
+  members,
+  membersLoaded,
+  currentUser,
+  disabled,
+  onAssign,
+  onAssignSelf,
+}: {
+  currentAssigneeId: string | null;
+  members: ProjectMember[];
+  membersLoaded: boolean;
+  currentUser: ApiUser | null;
+  disabled: boolean;
+  onAssign: (id: string | null) => void;
+  onAssignSelf: () => void;
+}) {
+  const options = members
+    .filter((m) => !!m.user)
+    .map((m) => ({
+      id: m.userId,
+      name: m.user!.name,
+      email: m.user!.email,
+      avatar_url: m.user!.avatar_url ?? null,
+    }));
+
+  const selfIsMember =
+    !!currentUser &&
+    members.some((m) => m.userId === currentUser.id);
+  const canSelfAssign =
+    !!currentUser && selfIsMember && currentAssigneeId !== currentUser.id;
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <div className="min-w-[260px] flex-1">
+        <UserCombobox
+          users={options}
+          value={currentAssigneeId ?? ""}
+          onChange={(id) => onAssign(id || null)}
+          placeholder={
+            membersLoaded
+              ? "Choisir un assigné…"
+              : "Chargement des membres…"
+          }
+          emptyLabel={
+            membersLoaded ? "Aucun membre disponible" : "Chargement…"
+          }
+          disabled={disabled || !membersLoaded}
+        />
+      </div>
+      {currentAssigneeId && (
+        <button
+          type="button"
+          onClick={() => onAssign(null)}
+          disabled={disabled}
+          className="inline-flex h-9 items-center gap-1 rounded-[var(--radius-sm)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-elevated))] px-2.5 text-[11.5px] font-medium text-[hsl(var(--ink-2))] hover:bg-[hsl(var(--bg-muted))] hover:text-ink disabled:opacity-60"
+          title="Retirer l'assignation"
+        >
+          <UserMinus className="h-3.5 w-3.5" />
+          Retirer
+        </button>
+      )}
+      {canSelfAssign && (
+        <button
+          type="button"
+          onClick={onAssignSelf}
+          disabled={disabled}
+          className="inline-flex h-9 items-center gap-1 rounded-[var(--radius-sm)] bg-[hsl(var(--brand))] px-2.5 text-[11.5px] font-semibold text-white shadow-[var(--shadow-brand)] hover:bg-[hsl(var(--brand-ink))] disabled:opacity-60"
+        >
+          <UserPlus className="h-3.5 w-3.5" />
+          M&apos;assigner
+        </button>
+      )}
     </div>
   );
 }

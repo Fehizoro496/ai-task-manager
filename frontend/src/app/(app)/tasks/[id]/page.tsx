@@ -102,8 +102,14 @@ export default function TaskPage({
                 <Meta Icon={User} label="Assigné">
                   {task.assigneeId ? (
                     <span className="inline-flex items-center gap-1.5">
-                      <Avatar id={task.assigneeId} name={task.assigneeId.slice(0, 2)} size="xs" />
-                      <span className="font-mono text-[11px]">{task.assigneeId.slice(0, 8)}…</span>
+                      <Avatar
+                        id={task.assigneeId}
+                        name={task.assignee?.name ?? task.assigneeId}
+                        size="xs"
+                      />
+                      <span className="text-[12px] font-medium">
+                        {task.assignee?.name ?? task.assigneeId.slice(0, 8) + "…"}
+                      </span>
                     </span>
                   ) : (
                     <span className="text-[hsl(var(--ink-3))]">—</span>
