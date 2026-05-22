@@ -14,6 +14,8 @@ const adminRoutes = require("./modules/admin/admin.routes");
 const notificationsRoutes = require("./modules/notifications/notifications.routes");
 const chatRoutes = require("./modules/chat/chat.routes");
 const usersRoutes = require("./modules/users/users.routes");
+const calendarRoutes = require("./modules/calendar/calendar.routes");
+const reportsRoutes = require("./modules/reports/reports.routes");
 
 const app = express();
 
@@ -32,6 +34,8 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/notifications", notificationsRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/users", usersRoutes);
+app.use("/api/calendar", calendarRoutes);
+app.use("/api/reports", reportsRoutes);
 
 app.use(errorHandler);
 

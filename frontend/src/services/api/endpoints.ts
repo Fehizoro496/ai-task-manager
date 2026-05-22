@@ -78,4 +78,13 @@ export const endpoints = {
     messages: (conversationId: string) =>
       `/api/chat/conversations/${conversationId}/messages`,
   },
+
+  calendar: {
+    events: (from: string, to: string) =>
+      `/api/calendar/events?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+  },
+
+  reports: {
+    overview: () => "/api/reports/overview",
+  },
 } as const;

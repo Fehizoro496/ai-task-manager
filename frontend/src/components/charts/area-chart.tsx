@@ -27,7 +27,8 @@ export function AreaChart({
   const padB = 26;
   const innerW = W - padL - padR;
   const innerH = H - padT - padB;
-  const max = yMax ?? Math.max(...data, ...(ideal ?? [0])) * 1.1;
+  const rawMax = Math.max(...data, ...(ideal ?? [0]));
+  const max = yMax ?? Math.max(rawMax * 1.1, 1); // évite max=0 → NaN sur dataset vide/plat
   const step = innerW / (data.length - 1);
   const x = (i: number) => padL + i * step;
   const y = (v: number) => padT + innerH - (v / max) * innerH;

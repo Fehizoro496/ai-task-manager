@@ -13,5 +13,16 @@ export { notificationsApi } from "./notifications.api";
 export { chatApi } from "./chat.api";
 export { usersApi } from "./users.api";
 export type { UserDetail, UserRecentTask } from "./users.api";
+export { calendarApi } from "./calendar.api";
+export type { CalendarEvent } from "./calendar.api";
+export { reportsApi } from "./reports.api";
+export type {
+  ReportTotals,
+  ReportsOverview,
+  ProjectBreakdown,
+  AssigneeStat,
+  DayCompletion,
+  DistributionItem,
+} from "./reports.api";
 
 export type * from "./types";

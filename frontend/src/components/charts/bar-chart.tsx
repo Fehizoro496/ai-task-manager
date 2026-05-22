@@ -21,7 +21,7 @@ export function BarChart({
   const padB = 24;
   const innerW = W - padL - padR;
   const innerH = H - padT - padB;
-  const max = Math.max(...data) * 1.15 || 1;
+  const max = Math.max(Math.max(...data) * 1.15, 1);
   const slot = innerW / data.length;
   const barW = Math.min(28, slot * 0.55);
 
