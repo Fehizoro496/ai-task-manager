@@ -40,6 +40,7 @@ model User {
   projectMembers   ProjectMember[]
   conversations Conversation[] @relation("ConversationMembers")
   sentMessages  Message[]      @relation("SentMessages")
+  comments      TaskComment[]
 }
 
 model Conversation {
@@ -140,12 +141,27 @@ model Task {
   dueDate      DateTime?
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
+  comments     TaskComment[]
+}
+
+model TaskComment {
+  id        String   @id @default(uuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([taskId, createdAt])
 }
 
 enum NotificationType {
   TASK_ASSIGNED
   TASK_UPDATED
   TASK_STATUS_CHANGED
+  TASK_COMMENT
 }
 
 model Notification {

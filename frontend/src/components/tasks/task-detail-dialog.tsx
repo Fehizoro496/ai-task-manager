@@ -12,6 +12,9 @@ import {
   Loader2,
   UserPlus,
   UserMinus,
+  MessageSquare,
+  Send,
+  Trash2,
 } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +22,7 @@ import { PriorityPill, StatusPill } from "@/components/ui/pill";
 import { UserCombobox } from "@/components/ui/user-combobox";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import {
+  commentsApi,
   projectsApi,
   routerService,
   tasksApi,
@@ -26,7 +30,12 @@ import {
   useAuth,
   useTask,
 } from "@/services";
-import type { ProjectMember, Task, User as ApiUser } from "@/services";
+import type {
+  ProjectMember,
+  Task,
+  TaskComment,
+  User as ApiUser,
+} from "@/services";
 import { normalizeApiStatus, normalizeApiPriority } from "@/lib/mappers";
 import { shortDate } from "@/lib/utils";
 
@@ -76,11 +85,81 @@ function TaskDetailBody({
   onUpdated?: (task: Task) => void;
 }) {
   const { task, loading, error, refetch, setTask } = useTask(taskId);
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [comment, setComment] = useState("");
+  const [submittingComment, setSubmittingComment] = useState(false);
+  const [comments, setComments] = useState<TaskComment[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [members, setMembers] = useState<ProjectMember[]>([]);
   const [membersLoaded, setMembersLoaded] = useState(false);
   const [assigning, setAssigning] = useState(false);
+
+  // Charge les commentaires à chaque ouverture / changement de tâche
+  useEffect(() => {
+    setComments([]);
+    setCommentsLoading(true);
+    commentsApi
+      .list(taskId)
+      .then((res) => setComments(res.comments))
+      .catch((e) => {
+        console.error("Load comments failed", e);
+        setComments([]);
+      })
+      .finally(() => setCommentsLoading(false));
+  }, [taskId]);
+
+  const handleSubmitComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const body = comment.trim();
+    if (!body || submittingComment) return;
+    setSubmittingComment(true);
+    try {
+      const created = await commentsApi.create(taskId, body);
+      setComments((curr) => [...curr, created]);
+      setComment("");
+      if (task) {
+        const next = {
+          ...task,
+          commentsCount: (task.commentsCount ?? 0) + 1,
+        };
+        setTask(next);
+        onUpdated?.(next);
+      }
+    } catch (err) {
+      console.error("Submit comment failed", err);
+      toast.error(
+        err instanceof Error ? err.message : "Envoi impossible.",
+        "Commentaire refusé",
+      );
+    } finally {
+      setSubmittingComment(false);
+    }
+  };
+
+  const handleDeleteComment = async (id: string) => {
+    setDeletingId(id);
+    try {
+      await commentsApi.remove(id);
+      setComments((curr) => curr.filter((c) => c.id !== id));
+      if (task) {
+        const next = {
+          ...task,
+          commentsCount: Math.max((task.commentsCount ?? 1) - 1, 0),
+        };
+        setTask(next);
+        onUpdated?.(next);
+      }
+    } catch (err) {
+      console.error("Delete comment failed", err);
+      toast.error(
+        err instanceof Error ? err.message : "Suppression impossible.",
+        "Refusé",
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   // Reset comment when task changes
   useEffect(() => setComment(""), [taskId]);
@@ -282,26 +361,195 @@ function TaskDetailBody({
           )}
         </div>
 
-        <div className="mt-5">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[hsl(var(--ink-3))]">
-            Commentaire
-          </div>
-          <div className="mt-2 rounded-[var(--radius-md)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg))] focus-within:border-[hsl(var(--brand)/0.5)] focus-within:ring-2 focus-within:ring-[hsl(var(--brand)/0.3)]">
-            <textarea
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              placeholder="Ajouter un commentaire…"
-              rows={2}
-              className="block w-full resize-none bg-transparent px-3 py-2.5 text-[13px] placeholder:text-[hsl(var(--ink-4))] focus:outline-none"
-            />
-          </div>
-          <p className="mt-1.5 text-[11px] text-[hsl(var(--ink-3))]">
-            Les commentaires ne sont pas encore persistés côté backend.
-          </p>
-        </div>
+        <CommentsSection
+          comments={comments}
+          loading={commentsLoading}
+          currentUserId={user?.id ?? null}
+          isAdmin={isAdmin}
+          deletingId={deletingId}
+          onDelete={handleDeleteComment}
+          comment={comment}
+          setComment={setComment}
+          submitting={submittingComment}
+          onSubmit={handleSubmitComment}
+        />
       </div>
     </>
   );
+}
+
+/* ---------- CommentsSection ---------- */
+
+function CommentsSection({
+  comments,
+  loading,
+  currentUserId,
+  isAdmin,
+  deletingId,
+  onDelete,
+  comment,
+  setComment,
+  submitting,
+  onSubmit,
+}: {
+  comments: TaskComment[];
+  loading: boolean;
+  currentUserId: string | null;
+  isAdmin: boolean;
+  deletingId: string | null;
+  onDelete: (id: string) => void;
+  comment: string;
+  setComment: (v: string) => void;
+  submitting: boolean;
+  onSubmit: (e: React.FormEvent) => void;
+}) {
+  const sorted = [...comments].sort((a, b) =>
+    a.createdAt < b.createdAt ? -1 : 1,
+  );
+  const canSubmit = comment.trim().length > 0 && !submitting;
+
+  return (
+    <section className="mt-6">
+      <header className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <MessageSquare className="h-3.5 w-3.5 text-[hsl(var(--ink-3))]" />
+          <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[hsl(var(--ink-3))]">
+            Commentaires
+          </div>
+          {comments.length > 0 && (
+            <Badge tone="neutral" className="!text-[10px]">
+              {comments.length}
+            </Badge>
+          )}
+        </div>
+      </header>
+
+      {/* Liste */}
+      <div className="mt-3 space-y-3">
+        {loading ? (
+          <div className="flex items-center gap-2 py-2 text-[12px] text-[hsl(var(--ink-3))]">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            Chargement…
+          </div>
+        ) : sorted.length === 0 ? (
+          <p className="rounded-[var(--radius-sm)] border border-dashed border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-sunken)/0.4)] px-3 py-3 text-center text-[12px] text-[hsl(var(--ink-3))]">
+            <span className="font-serif italic">Pas encore de mot écrit.</span>{" "}
+            Soyez le premier à commenter.
+          </p>
+        ) : (
+          sorted.map((c) => {
+            const canDelete =
+              isAdmin || (currentUserId && c.authorId === currentUserId);
+            const isDeleting = deletingId === c.id;
+            return (
+              <article
+                key={c.id}
+                className="group relative flex gap-2.5 rounded-[var(--radius-md)] border border-[hsl(var(--line))] bg-[hsl(var(--bg))] p-3"
+              >
+                <Avatar
+                  id={c.authorId}
+                  name={c.author?.name ?? c.authorId}
+                  size="sm"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline gap-2">
+                    <span className="truncate text-[12.5px] font-semibold tracking-tight">
+                      {c.author?.name ?? "Auteur inconnu"}
+                    </span>
+                    <span className="font-mono text-[10.5px] text-[hsl(var(--ink-4))]">
+                      {formatCommentDate(c.createdAt)}
+                    </span>
+                  </div>
+                  <p className="mt-1 whitespace-pre-wrap break-words text-[13px] leading-relaxed text-[hsl(var(--ink-2))]">
+                    {c.body}
+                  </p>
+                </div>
+                {canDelete && (
+                  <button
+                    type="button"
+                    onClick={() => onDelete(c.id)}
+                    disabled={isDeleting}
+                    title="Supprimer"
+                    className="absolute right-2 top-2 grid h-6 w-6 place-items-center rounded-[5px] text-[hsl(var(--ink-4))] opacity-0 transition hover:bg-[hsl(var(--bg-muted))] hover:text-[hsl(var(--accent-rose))] focus:opacity-100 group-hover:opacity-100 disabled:opacity-40"
+                  >
+                    {isDeleting ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-3 w-3" />
+                    )}
+                  </button>
+                )}
+              </article>
+            );
+          })
+        )}
+      </div>
+
+      {/* Form */}
+      <form
+        onSubmit={onSubmit}
+        className="mt-3 rounded-[var(--radius-md)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg))] focus-within:border-[hsl(var(--brand)/0.5)] focus-within:ring-2 focus-within:ring-[hsl(var(--brand)/0.3)]"
+      >
+        <textarea
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          onKeyDown={(e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+              e.preventDefault();
+              onSubmit(e);
+            }
+          }}
+          placeholder="Ajouter un commentaire…"
+          rows={2}
+          maxLength={2000}
+          disabled={submitting}
+          className="block w-full resize-none bg-transparent px-3 py-2.5 text-[13px] placeholder:text-[hsl(var(--ink-4))] focus:outline-none disabled:opacity-60"
+        />
+        <div className="flex items-center justify-between gap-2 border-t border-[hsl(var(--line))] px-3 py-2">
+          <span className="font-mono text-[10px] text-[hsl(var(--ink-4))]">
+            <kbd className="rounded border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-elevated))] px-1.5 py-0.5 text-[9.5px]">
+              ⌘
+            </kbd>
+            <span className="mx-1">+</span>
+            <kbd className="rounded border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-elevated))] px-1.5 py-0.5 text-[9.5px]">
+              Entrée
+            </kbd>{" "}
+            pour publier
+          </span>
+          <button
+            type="submit"
+            disabled={!canSubmit}
+            className="inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-sm)] bg-[hsl(var(--brand))] px-3 text-[12px] font-semibold text-white shadow-[var(--shadow-brand)] hover:bg-[hsl(var(--brand-ink))] disabled:opacity-50"
+          >
+            {submitting ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Send className="h-3 w-3" />
+            )}
+            Publier
+          </button>
+        </div>
+      </form>
+    </section>
+  );
+}
+
+function formatCommentDate(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const min = Math.round(diffMs / 60000);
+  if (min < 1) return "à l'instant";
+  if (min < 60) return `il y a ${min} min`;
+  const h = Math.round(min / 60);
+  if (h < 24) return `il y a ${h} h`;
+  const days = Math.round(h / 24);
+  if (days < 7) return `il y a ${days} j`;
+  return d.toLocaleDateString("fr-FR", {
+    day: "2-digit",
+    month: "short",
+    year: now.getFullYear() === d.getFullYear() ? undefined : "numeric",
+  });
 }
 
 function Meta({

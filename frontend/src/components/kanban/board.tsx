@@ -21,7 +21,15 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Plus, Search, SlidersHorizontal, Flag, Loader2, X } from "lucide-react";
+import {
+  Plus,
+  Search,
+  SlidersHorizontal,
+  Flag,
+  Loader2,
+  X,
+  MessageSquare,
+} from "lucide-react";
 import { statusLabel, statusToken } from "@/lib/labels";
 import {
   normalizeApiPriority,
@@ -604,6 +612,15 @@ function TaskCard({
               name={task.assignee?.name ?? task.assigneeId}
               size="xs"
             />
+          )}
+          {task.commentsCount != null && task.commentsCount > 0 && (
+            <span
+              className="inline-flex items-center gap-0.5 text-[10.5px] font-medium text-[hsl(var(--ink-3))]"
+              title={`${task.commentsCount} commentaire${task.commentsCount > 1 ? "s" : ""}`}
+            >
+              <MessageSquare className="h-3 w-3" />
+              <span className="font-mono tabular">{task.commentsCount}</span>
+            </span>
           )}
         </div>
         <PriorityPill priority={priority} className="!text-[10px]" />

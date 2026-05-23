@@ -14,6 +14,7 @@ const statusToLowercase = {
 
 const assigneeInclude = {
   assignee: { select: { id: true, name: true, avatarUrl: true } },
+  _count: { select: { comments: true } },
 };
 
 /**
@@ -67,6 +68,8 @@ const serializeTask = (task, projectId) => {
         }
       : null,
     labels: task.labels || [],
+    commentsCount: task._count?.comments ?? 0,
+    comments_count: task._count?.comments ?? 0,
     dueDate: task.dueDate ? task.dueDate.toISOString() : null,
     due_date: task.dueDate ? task.dueDate.toISOString() : null,
     createdAt: task.createdAt.toISOString(),

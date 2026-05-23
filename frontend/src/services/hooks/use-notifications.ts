@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { notificationsApi } from "../api/notifications.api";
 import type { Notification } from "../api/types";
 import { useAuthStore } from "../auth/auth-store";
+import { socketService } from "../socket";
 
 export function useNotifications() {
   const isAuth = useAuthStore((s) => s.status === "authenticated");
@@ -22,6 +23,19 @@ export function useNotifications() {
   useEffect(() => {
     if (isAuth) refetch();
   }, [isAuth, refetch]);
+
+  // Live updates : insertion en tête lors d'un évènement notification:new.
+  useEffect(() => {
+    if (!isAuth) return;
+    const off = socketService.on("notification:new", (n: unknown) => {
+      const incoming = n as Notification;
+      setItems((curr) => {
+        if (curr.some((x) => x.id === incoming.id)) return curr;
+        return [{ ...incoming, read: false }, ...curr];
+      });
+    });
+    return off;
+  }, [isAuth]);
 
   const markRead = useCallback(async (id: string) => {
     await notificationsApi.markRead(id);

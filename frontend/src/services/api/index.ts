@@ -15,6 +15,8 @@ export { usersApi } from "./users.api";
 export type { UserDetail, UserRecentTask } from "./users.api";
 export { calendarApi } from "./calendar.api";
 export type { CalendarEvent } from "./calendar.api";
+export { commentsApi } from "./comments.api";
+export type { TaskComment } from "./comments.api";
 export { reportsApi } from "./reports.api";
 export type {
   ReportTotals,

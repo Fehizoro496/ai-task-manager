@@ -16,6 +16,10 @@ const chatRoutes = require("./modules/chat/chat.routes");
 const usersRoutes = require("./modules/users/users.routes");
 const calendarRoutes = require("./modules/calendar/calendar.routes");
 const reportsRoutes = require("./modules/reports/reports.routes");
+const {
+  commentsRouter,
+  tasksCommentsRouter,
+} = require("./modules/comments/comments.routes");
 
 const app = express();
 
@@ -29,6 +33,7 @@ app.use("/api/projects", projectsRoutes);
 app.use("/api/epics", epicsRoutes);
 app.use("/api/stories", storiesRoutes);
 app.use("/api/tasks", tasksRoutes);
+app.use("/api/tasks", tasksCommentsRouter);
 app.use("/api/ai", aiRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/notifications", notificationsRoutes);
@@ -36,6 +41,7 @@ app.use("/api/chat", chatRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/calendar", calendarRoutes);
 app.use("/api/reports", reportsRoutes);
+app.use("/api/comments", commentsRouter);
 
 app.use(errorHandler);
 

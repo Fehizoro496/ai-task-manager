@@ -102,6 +102,7 @@ export interface Task {
     avatar_url: string | null;
   } | null;
   labels: string[];
+  commentsCount?: number;
   dueDate: string | null;
   branch?: string | null;
   githubBranch?: string | null;

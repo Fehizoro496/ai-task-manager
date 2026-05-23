@@ -203,16 +203,24 @@ export default function UserDetailPage({
                             {t.title}
                           </span>
                           {t.projectName && t.projectId && (
-                            <button
-                              type="button"
+                            <span
+                              role="link"
+                              tabIndex={0}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 routerService.toProject(t.projectId!);
                               }}
-                              className="text-[11.5px] text-[hsl(var(--ink-3))] hover:underline"
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  routerService.toProject(t.projectId!);
+                                }
+                              }}
+                              className="block w-fit cursor-pointer text-[11.5px] text-[hsl(var(--ink-3))] hover:underline focus:outline-none focus-visible:underline"
                             >
                               {t.projectName}
-                            </button>
+                            </span>
                           )}
                         </span>
                         <StatusPill status={status} />
