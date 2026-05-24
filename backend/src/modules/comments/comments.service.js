@@ -2,7 +2,6 @@ const prisma = require("../../prisma/client");
 const AppError = require("../../utils/AppError");
 const { isMember } = require("../projects/projects.service");
 const { createNotification } = require("../notifications/notifications.service");
-const { getIo } = require("../../socket");
 
 const authorInclude = {
   author: {
@@ -88,7 +87,7 @@ const create = async (taskId, userId, isAdmin, data) => {
     const ident = taskInfo?.identifier ? `${taskInfo.identifier} ` : "";
     const projectId = task.story.epic.project.id;
     const link = `/projects/${projectId}/board?task=${taskId}`;
-    const notif = await createNotification({
+    await createNotification({
       type: "TASK_COMMENT",
       title: "Nouveau commentaire",
       message: `${author} a commenté ${ident}« ${taskInfo?.title ?? ""} ».`,
@@ -96,24 +95,6 @@ const create = async (taskId, userId, isAdmin, data) => {
       taskId,
       link,
     });
-
-    // Diffusion socket vers la room user:<assigneeId>
-    try {
-      const io = getIo();
-      io.to(`user:${task.assigneeId}`).emit("notification:new", {
-        id: notif.id,
-        type: notif.type,
-        title: notif.title,
-        message: notif.message,
-        taskId: notif.taskId,
-        link: notif.link,
-        createdAt: notif.createdAt.toISOString(),
-        isRead: notif.isRead,
-      });
-    } catch (e) {
-      // socket pas indispensable, on log seulement
-      console.error("Socket emit notification:new failed", e);
-    }
   }
 
   return serialize(comment);

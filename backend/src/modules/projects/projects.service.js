@@ -176,7 +176,7 @@ const addMember = async (projectId, userId) => {
     message: `Vous avez été ajouté en tant que participant au projet "${project.name}".`,
     userId,
     taskId: projectId,
-    link: `/dashboard`,
+    link: `/projects/${projectId}`,
   }).catch(() => {});
 
   if (project.githubOwner && project.githubRepo) {

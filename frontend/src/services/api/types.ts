@@ -127,7 +127,10 @@ export interface ProjectMember {
 export interface Notification {
   id: UUID;
   type: string;
+  title?: string | null;
   message: string;
+  link?: string | null;
+  taskId?: string | null;
   read: boolean;
   createdAt: string;
   data?: Record<string, unknown>;
@@ -138,6 +141,7 @@ export interface Conversation {
   name: string | null;
   isGroup: boolean;
   members: Pick<User, "id" | "name" | "avatar_url">[];
+  unreadCount: number;
   lastMessage: {
     content: string;
     senderId: UUID;

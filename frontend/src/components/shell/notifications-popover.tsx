@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
 import {
   Bell,
@@ -8,6 +9,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { routerService, useNotifications } from "@/services";
+import type { Notification } from "@/services";
 import { cn } from "@/lib/utils";
 
 function timeAgo(iso: string) {
@@ -23,9 +25,18 @@ function timeAgo(iso: string) {
 
 export function NotificationsPopover() {
   const { items, markRead, markAllRead, unreadCount } = useNotifications();
+  const [open, setOpen] = useState(false);
+
+  const handleClick = (n: Notification) => {
+    if (!n.read) markRead(n.id);
+    if (n.link) {
+      setOpen(false);
+      routerService.push(n.link);
+    }
+  };
 
   return (
-    <Popover.Root>
+    <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger asChild>
         <button
           className="relative grid h-9 w-9 place-items-center rounded-[var(--radius-sm)] border border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))] hover:bg-[hsl(var(--bg-muted))] data-[state=open]:bg-[hsl(var(--bg-muted))] data-[state=open]:border-[hsl(var(--line-strong))]"
@@ -68,7 +79,10 @@ export function NotificationsPopover() {
               </button>
               <button
                 type="button"
-                onClick={() => routerService.toSettings()}
+                onClick={() => {
+                  setOpen(false);
+                  routerService.toSettings();
+                }}
                 className="grid h-7 w-7 place-items-center rounded-[6px] text-[hsl(var(--ink-3))] hover:bg-[hsl(var(--bg-muted))] hover:text-ink"
               >
                 <SettingsIcon className="h-3.5 w-3.5" />
@@ -94,10 +108,11 @@ export function NotificationsPopover() {
                 {items.map((n) => (
                   <li key={n.id}>
                     <button
-                      onClick={() => !n.read && markRead(n.id)}
+                      onClick={() => handleClick(n)}
                       className={cn(
                         "group relative flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-[hsl(var(--bg-sunken)/0.45)]",
                         !n.read && "bg-[hsl(var(--brand-soft)/0.35)]",
+                        n.link && "cursor-pointer",
                       )}
                     >
                       {!n.read && (

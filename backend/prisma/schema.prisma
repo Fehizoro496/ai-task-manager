@@ -38,7 +38,7 @@ model User {
   assignedTasks Task[]         @relation("TaskAssignee")
   notifications    Notification[]
   projectMembers   ProjectMember[]
-  conversations Conversation[] @relation("ConversationMembers")
+  conversationMembers ConversationMember[]
   sentMessages  Message[]      @relation("SentMessages")
   comments      TaskComment[]
 }
@@ -47,10 +47,22 @@ model Conversation {
   id        String    @id @default(uuid())
   name      String?
   isGroup   Boolean   @default(false)
-  members   User[]    @relation("ConversationMembers")
+  members   ConversationMember[]
   messages  Message[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+}
+
+model ConversationMember {
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt       DateTime     @default(now())
+  lastReadAt     DateTime?
+
+  @@id([conversationId, userId])
+  @@index([userId])
 }
 
 model Message {

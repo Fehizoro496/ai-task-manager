@@ -166,7 +166,7 @@ async function main() {
     data: {
       name: "general",
       isGroup: true,
-      members: { connect: { id: admin.id } },
+      members: { create: [{ userId: admin.id }] },
     },
   });
   console.log("✓ Canal général créé (1 membre : admin)");

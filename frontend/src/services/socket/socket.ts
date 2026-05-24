@@ -63,11 +63,11 @@ export const socketService = {
     };
   },
 
-  joinConversation(conversationId: string) {
-    socket?.emit("join_conversation", conversationId);
+  joinProject(projectId: string) {
+    socket?.emit("join_project", projectId);
   },
 
-  leaveConversation(conversationId: string) {
-    socket?.emit("leave_conversation", conversationId);
+  leaveProject(projectId: string) {
+    socket?.emit("leave_project", projectId);
   },
 };

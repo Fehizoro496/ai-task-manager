@@ -3,6 +3,17 @@ const AppError = require("../../utils/AppError");
 const { createNotification, notifyAdmins } = require("../notifications/notifications.service");
 const { isMember } = require("../projects/projects.service");
 const { createBranch } = require("../github/github.service");
+const { getIo } = require("../../socket");
+
+const emitToProject = (projectId, event, payload) => {
+  if (!projectId) return;
+  try {
+    const io = getIo();
+    if (io) io.to(`project:${projectId}`).emit(event, payload);
+  } catch (err) {
+    console.error(`Socket emit ${event} failed`, err);
+  }
+};
 
 // Map Prisma UPPERCASE status to lowercase for frontend
 const statusToLowercase = {
@@ -108,11 +119,19 @@ const create = async (userId, isAdmin, data) => {
   const project = story.epic.project;
   const identifier = await generateTaskIdentifier(project.id);
   const githubBranch = identifier;
-  const task = await prisma.task.create({ data: { ...data, identifier, githubBranch }, include: assigneeInclude });
+  const task = await prisma.task.create({
+    data: { ...data, identifier, githubBranch },
+    include: {
+      ...assigneeInclude,
+      story: { include: { epic: { include: { project: true } } } },
+    },
+  });
 
   if (project.githubOwner && project.githubRepo) {
     createBranch(userId, project.githubOwner, project.githubRepo, githubBranch).catch(() => {});
   }
+
+  emitToProject(project.id, "task:created", serializeTask(task, project.id));
 
   return task;
 };
@@ -180,7 +199,7 @@ const update = async (id, userId, isAdmin, data) => {
   });
 
   const projectId = task.story.epic.project.id;
-  const link = `/board/${projectId}`;
+  const link = `/projects/${projectId}/board?task=${id}`;
 
   // Notify new assignee when assigned
   if (data.assigneeId && data.assigneeId !== task.assigneeId) {
@@ -204,6 +223,8 @@ const update = async (id, userId, isAdmin, data) => {
     }).catch(() => {});
   }
 
+  emitToProject(projectId, "task:updated", serializeTask(updated, projectId));
+
   return updated;
 };
 
@@ -217,7 +238,10 @@ const remove = async (id, userId, isAdmin) => {
     throw new AppError("Task not found", 404);
   }
 
-  return prisma.task.delete({ where: { id } });
+  const projectId = task.story.epic.project.id;
+  const deleted = await prisma.task.delete({ where: { id } });
+  emitToProject(projectId, "task:deleted", { id, projectId });
+  return deleted;
 };
 
 const moveTask = async (id, userId, isAdmin, { status, position }) => {
@@ -241,7 +265,7 @@ const moveTask = async (id, userId, isAdmin, { status, position }) => {
   });
 
   const projectId = task.story.epic.project.id;
-  const link = `/board/${projectId}`;
+  const link = `/projects/${projectId}/board?task=${id}`;
 
   // Notify assignee if someone else moved the task
   if (task.assigneeId && task.assigneeId !== userId) {
@@ -265,6 +289,8 @@ const moveTask = async (id, userId, isAdmin, { status, position }) => {
       link,
     }).catch(() => {});
   }
+
+  emitToProject(projectId, "task:updated", serializeTask(updated, projectId));
 
   return updated;
 };
@@ -327,6 +353,7 @@ const createForProject = async (userId, isAdmin, projectId, data) => {
       createBranch(userId, project.githubOwner, project.githubRepo, githubBranch).catch(() => {});
     }
 
+    emitToProject(projectId, "task:created", serializeTask(task, projectId));
     return task;
   }
 
@@ -364,6 +391,7 @@ const createForProject = async (userId, isAdmin, projectId, data) => {
     createBranch(userId, project.githubOwner, project.githubRepo, githubBranch).catch(() => {});
   }
 
+  emitToProject(projectId, "task:created", serializeTask(task, projectId));
   return task;
 };
 
@@ -414,6 +442,7 @@ const reorderForProject = async (projectId, userId, isAdmin, columns) => {
   }
 
   if (updates.length > 0) await prisma.$transaction(updates);
+  emitToProject(projectId, "tasks:reordered", { projectId });
   return { updated: updates.length };
 };
 
@@ -425,7 +454,7 @@ const assignSelf = async (id, userId, isAdmin) => {
     throw new AppError("Task is already assigned to someone", 403);
   }
 
-  return prisma.task.update({
+  const updated = await prisma.task.update({
     where: { id },
     data: { assigneeId: userId },
     include: {
@@ -433,6 +462,10 @@ const assignSelf = async (id, userId, isAdmin) => {
       story: { include: { epic: { include: { project: true } } } },
     },
   });
+
+  const projectId = updated.story?.epic?.project?.id;
+  emitToProject(projectId, "task:updated", serializeTask(updated, projectId));
+  return updated;
 };
 
 module.exports = {

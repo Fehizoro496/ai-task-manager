@@ -1,5 +1,6 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   DndContext,
   closestCorners,
@@ -96,6 +97,14 @@ export function KanbanBoard({ projectId, projectPrefix: prefix }: KanbanBoardPro
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [openTaskId, setOpenTaskId] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+
+  // Deep-link : ?task=<id> ouvre directement le dialog (ex: depuis une
+  // notification de commentaire).
+  useEffect(() => {
+    const t = searchParams.get("task");
+    if (t) setOpenTaskId(t);
+  }, [searchParams]);
   const [createForStatus, setCreateForStatus] = useState<Status | null>(null);
   const [query, setQuery] = useState("");
   const [priorityFilter, setPriorityFilter] = useState<Set<TaskPriority>>(

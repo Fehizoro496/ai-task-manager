@@ -31,7 +31,7 @@ export function useNotifications() {
       const incoming = n as Notification;
       setItems((curr) => {
         if (curr.some((x) => x.id === incoming.id)) return curr;
-        return [{ ...incoming, read: false }, ...curr];
+        return [incoming, ...curr];
       });
     });
     return off;

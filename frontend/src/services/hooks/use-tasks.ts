@@ -4,6 +4,7 @@ import { projectsApi } from "../api/projects.api";
 import { tasksApi } from "../api/tasks.api";
 import type { MoveTaskInput, UpdateTaskInput } from "../api/tasks.api";
 import type { Task } from "../api/types";
+import { socketService } from "../socket";
 
 export function useProjectTasks(projectId: string | null | undefined) {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -27,6 +28,47 @@ export function useProjectTasks(projectId: string | null | undefined) {
   useEffect(() => {
     if (projectId) refetch();
     else setLoading(false);
+  }, [projectId, refetch]);
+
+  // Live updates : join la room project:<id> et applique les events.
+  useEffect(() => {
+    if (!projectId) return;
+    socketService.joinProject(projectId);
+
+    const offCreated = socketService.on("task:created", (payload: unknown) => {
+      const t = payload as Task;
+      if (t.projectId !== projectId) return;
+      setTasks((curr) => (curr.some((x) => x.id === t.id) ? curr : [...curr, t]));
+    });
+    const offUpdated = socketService.on("task:updated", (payload: unknown) => {
+      const t = payload as Task;
+      if (t.projectId !== projectId) return;
+      setTasks((curr) => {
+        const idx = curr.findIndex((x) => x.id === t.id);
+        if (idx === -1) return [...curr, t];
+        const next = [...curr];
+        next[idx] = t;
+        return next;
+      });
+    });
+    const offDeleted = socketService.on("task:deleted", (payload: unknown) => {
+      const p = payload as { id: string; projectId: string };
+      if (p.projectId !== projectId) return;
+      setTasks((curr) => curr.filter((x) => x.id !== p.id));
+    });
+    const offReordered = socketService.on("tasks:reordered", (payload: unknown) => {
+      const p = payload as { projectId: string };
+      if (p.projectId !== projectId) return;
+      refetch();
+    });
+
+    return () => {
+      socketService.leaveProject(projectId);
+      offCreated();
+      offUpdated();
+      offDeleted();
+      offReordered();
+    };
   }, [projectId, refetch]);
 
   // Optimistic move: applique le nouveau statut immédiatement, rollback

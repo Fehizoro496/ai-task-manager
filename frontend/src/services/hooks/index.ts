@@ -5,3 +5,7 @@ export {
   usePendingUsersStore,
   usePendingUsersWatcher,
 } from "./use-pending-users";
+export {
+  useUnreadMessagesStore,
+  useUnreadMessagesWatcher,
+} from "./use-unread-messages";

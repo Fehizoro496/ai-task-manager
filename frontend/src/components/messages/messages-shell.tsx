@@ -3,7 +3,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Search, Plus, Send, Loader2, Users as UsersIcon } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { chatApi, socketService, toast, useAuth } from "@/services";
+import {
+  chatApi,
+  socketService,
+  toast,
+  useAuth,
+  useUnreadMessagesStore,
+} from "@/services";
 import type { Conversation, Message } from "@/services";
 import { cn } from "@/lib/utils";
 
@@ -59,6 +65,7 @@ export function MessagesShell() {
   const [sending, setSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const activeIdRef = useRef<string | null>(null);
+  const clearUnreadForConv = useUnreadMessagesStore((s) => s.clearForConv);
 
   useEffect(() => {
     activeIdRef.current = activeId;
@@ -76,23 +83,30 @@ export function MessagesShell() {
     }
   }, []);
 
-  const bumpConversation = useCallback((msg: Message) => {
-    setConversations((curr) => {
-      const idx = curr.findIndex((c) => c.id === msg.conversationId);
-      if (idx === -1) return curr;
-      const updated: Conversation = {
-        ...curr[idx],
-        lastMessage: {
-          content: msg.content,
-          senderId: msg.senderId,
-          senderName: msg.senderName,
-          createdAt: msg.createdAt,
-        },
-      };
-      const rest = curr.filter((_, i) => i !== idx);
-      return [updated, ...rest];
-    });
-  }, []);
+  const bumpConversation = useCallback(
+    (msg: Message) => {
+      setConversations((curr) => {
+        const idx = curr.findIndex((c) => c.id === msg.conversationId);
+        if (idx === -1) return curr;
+        const isActive = msg.conversationId === activeIdRef.current;
+        const isMine = msg.senderId === user?.id;
+        const incrUnread = !isActive && !isMine ? 1 : 0;
+        const updated: Conversation = {
+          ...curr[idx],
+          unreadCount: (curr[idx].unreadCount ?? 0) + incrUnread,
+          lastMessage: {
+            content: msg.content,
+            senderId: msg.senderId,
+            senderName: msg.senderName,
+            createdAt: msg.createdAt,
+          },
+        };
+        const rest = curr.filter((_, i) => i !== idx);
+        return [updated, ...rest];
+      });
+    },
+    [user?.id],
+  );
 
   useEffect(() => {
     refetchConversations();
@@ -108,18 +122,18 @@ export function MessagesShell() {
         setMessages((curr) =>
           curr.some((m) => m.id === msg.id) ? curr : [...curr, msg],
         );
+        // Conv active : on aligne lastReadAt côté serveur sans bruit.
+        if (msg.senderId !== user?.id) {
+          chatApi.markRead(msg.conversationId).catch(() => {});
+        }
       }
     };
 
-    const off1 = socketService.on("new_message", onMessage);
-    const off2 = socketService.on("message:new", onMessage);
-    return () => {
-      off1();
-      off2();
-    };
-  }, [bumpConversation]);
+    const off = socketService.on("new_message", onMessage);
+    return off;
+  }, [bumpConversation, user?.id]);
 
-  // Load messages + join room when active conversation changes
+  // Load messages + mark as read quand la conv active change.
   useEffect(() => {
     if (!activeId) return;
     setLoadingMsgs(true);
@@ -128,11 +142,12 @@ export function MessagesShell() {
       .then(({ messages }) => setMessages(messages))
       .finally(() => setLoadingMsgs(false));
 
-    socketService.joinConversation(activeId);
-    return () => {
-      socketService.leaveConversation(activeId);
-    };
-  }, [activeId]);
+    chatApi.markRead(activeId).catch(() => {});
+    clearUnreadForConv(activeId);
+    setConversations((curr) =>
+      curr.map((c) => (c.id === activeId ? { ...c, unreadCount: 0 } : c)),
+    );
+  }, [activeId, clearUnreadForConv]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -227,9 +242,19 @@ export function MessagesShell() {
                       <Avatar id={c.id} name={label} size="sm" />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-baseline gap-1.5">
-                          <span className="truncate text-[12.5px] font-medium">
+                          <span
+                            className={cn(
+                              "truncate text-[12.5px]",
+                              c.unreadCount > 0 ? "font-semibold text-ink" : "font-medium",
+                            )}
+                          >
                             {label}
                           </span>
+                          {c.unreadCount > 0 && (
+                            <span className="grid h-4 min-w-4 place-items-center rounded-full bg-[hsl(var(--brand))] px-1 text-[9.5px] font-bold text-white">
+                              {c.unreadCount}
+                            </span>
+                          )}
                           {lm && (
                             <span className="ml-auto shrink-0 font-mono text-[10px] text-[hsl(var(--ink-4))]">
                               {fmtRelative(lm.createdAt)}

@@ -46,4 +46,16 @@ const sendMessage = async (req, res, next) => {
   }
 };
 
-module.exports = { getConversations, createDM, getMessages, sendMessage };
+const markRead = async (req, res, next) => {
+  try {
+    const result = await chatService.markConversationRead(
+      req.params.id,
+      req.user.id,
+    );
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { getConversations, createDM, getMessages, sendMessage, markRead };

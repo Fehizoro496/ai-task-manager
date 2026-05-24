@@ -18,10 +18,11 @@ import { UserMenu } from "@/components/shell/user-menu";
 import {
   routerService,
   useAuth,
-  useNotifications,
   usePendingUsersStore,
   usePendingUsersWatcher,
   useProjects,
+  useUnreadMessagesStore,
+  useUnreadMessagesWatcher,
 } from "@/services";
 import { colorForProject } from "@/lib/mappers";
 import { cn } from "@/lib/utils";
@@ -40,15 +41,16 @@ export function Sidebar() {
   const pathname = usePathname();
   const { isAdmin } = useAuth();
   const { projects } = useProjects();
-  const { unreadCount } = useNotifications();
+  const messagesUnread = useUnreadMessagesStore((s) => s.total);
   const pendingCount = usePendingUsersStore((s) => s.count);
   usePendingUsersWatcher();
+  useUnreadMessagesWatcher();
 
   const items: NavItem[] = [
     { href: "/dashboard", go: () => routerService.toDashboard(), label: "Tableau de bord", icon: LayoutDashboard },
     { href: "/projects", go: () => routerService.toProjects(), label: "Projets", icon: FolderKanban },
     { href: "/my-tasks", go: () => routerService.toMyTasks(), label: "Mes tâches", icon: CheckSquare2 },
-    { href: "/messages", go: () => routerService.toMessages(), label: "Messages", icon: MessageSquare, unread: unreadCount },
+    { href: "/messages", go: () => routerService.toMessages(), label: "Messages", icon: MessageSquare, unread: messagesUnread },
     { href: "/ai/new", go: () => routerService.toAiNew(), label: "IA Planification", icon: Sparkles, accent: true },
     { href: "/calendar", go: () => routerService.toCalendar(), label: "Calendrier", icon: Calendar },
     { href: "/reports", go: () => routerService.toReports(), label: "Rapports", icon: BarChart3 },

@@ -23,4 +23,7 @@ export const chatApi = {
     apiClient.post<{ message: Message }>(endpoints.chat.messages(conversationId), {
       content,
     }),
+
+  markRead: (conversationId: string) =>
+    apiClient.post<{ conversationId: string }>(endpoints.chat.read(conversationId)),
 };

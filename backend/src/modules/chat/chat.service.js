@@ -14,15 +14,16 @@ const serializeMessage = (msg) => ({
   createdAt: msg.createdAt.toISOString(),
 });
 
-const serializeConversation = (conv, lastMessage) => ({
+const serializeConversation = (conv, lastMessage, unreadCount = 0) => ({
   id: conv.id,
   name: conv.name ?? null,
   isGroup: conv.isGroup,
   members: conv.members.map((m) => ({
-    id: m.id,
-    name: m.name,
-    avatar_url: m.avatarUrl ?? null,
+    id: m.user.id,
+    name: m.user.name,
+    avatar_url: m.user.avatarUrl ?? null,
   })),
+  unreadCount,
   lastMessage: lastMessage
     ? {
         content: lastMessage.content,
@@ -33,13 +34,30 @@ const serializeConversation = (conv, lastMessage) => ({
     : null,
 });
 
+const conversationInclude = {
+  members: { include: { user: { select: memberSelect } } },
+  messages: {
+    orderBy: { createdAt: 'desc' },
+    take: 1,
+    include: { sender: { select: memberSelect } },
+  },
+};
+
+const countUnread = async (conversationId, userId, lastReadAt) => {
+  return prisma.message.count({
+    where: {
+      conversationId,
+      senderId: { not: userId },
+      ...(lastReadAt ? { createdAt: { gt: lastReadAt } } : {}),
+    },
+  });
+};
+
 const getOrCreateGeneral = async () => {
   let general = await prisma.conversation.findFirst({
     where: { name: 'general', isGroup: true },
   });
   if (!general) {
-    // À la création, on connecte tous les utilisateurs déjà approuvés
-    // (admin compris) pour éviter qu'ils restent hors du canal général.
     const approved = await prisma.user.findMany({
       where: { status: 'APPROVED' },
       select: { id: true },
@@ -48,7 +66,7 @@ const getOrCreateGeneral = async () => {
       data: {
         name: 'general',
         isGroup: true,
-        members: { connect: approved.map((u) => ({ id: u.id })) },
+        members: { create: approved.map((u) => ({ userId: u.id })) },
       },
     });
   }
@@ -57,82 +75,63 @@ const getOrCreateGeneral = async () => {
 
 const addUserToGeneral = async (userId) => {
   const general = await getOrCreateGeneral();
-  await prisma.conversation.update({
-    where: { id: general.id },
-    data: { members: { connect: { id: userId } } },
+  await prisma.conversationMember.upsert({
+    where: { conversationId_userId: { conversationId: general.id, userId } },
+    update: {},
+    create: { conversationId: general.id, userId },
   });
 };
 
 const getConversations = async (userId) => {
   const conversations = await prisma.conversation.findMany({
-    where: { members: { some: { id: userId } } },
-    include: {
-      members: { select: memberSelect },
-      messages: {
-        orderBy: { createdAt: 'desc' },
-        take: 1,
-        include: { sender: { select: memberSelect } },
-      },
-    },
+    where: { members: { some: { userId } } },
+    include: conversationInclude,
     orderBy: { updatedAt: 'desc' },
   });
 
-  return conversations.map((conv) => {
-    const lastMessage = conv.messages[0] ?? null;
-    return serializeConversation(conv, lastMessage);
-  });
+  return Promise.all(
+    conversations.map(async (conv) => {
+      const member = conv.members.find((m) => m.userId === userId);
+      const lastMessage = conv.messages[0] ?? null;
+      const unread = await countUnread(conv.id, userId, member?.lastReadAt ?? null);
+      return serializeConversation(conv, lastMessage, unread);
+    }),
+  );
 };
 
 const getOrCreateDM = async (userId, otherId) => {
-  // Cherche une conv isGroup=false avec exactement ces 2 membres
-  const existing = await prisma.$queryRaw`
-    SELECT c.id FROM "Conversation" c
-    INNER JOIN "_ConversationMembers" cm1 ON cm1."A" = c.id AND cm1."B" = ${userId}
-    INNER JOIN "_ConversationMembers" cm2 ON cm2."A" = c.id AND cm2."B" = ${otherId}
-    WHERE c."isGroup" = false
-    LIMIT 1
-  `;
+  const existing = await prisma.conversation.findFirst({
+    where: {
+      isGroup: false,
+      AND: [
+        { members: { some: { userId } } },
+        { members: { some: { userId: otherId } } },
+      ],
+    },
+    include: conversationInclude,
+  });
 
-  if (existing && existing.length > 0) {
-    const conv = await prisma.conversation.findUnique({
-      where: { id: existing[0].id },
-      include: {
-        members: { select: memberSelect },
-        messages: {
-          orderBy: { createdAt: 'desc' },
-          take: 1,
-          include: { sender: { select: memberSelect } },
-        },
-      },
-    });
-    return serializeConversation(conv, conv.messages[0] ?? null);
+  if (existing) {
+    const member = existing.members.find((m) => m.userId === userId);
+    const unread = await countUnread(existing.id, userId, member?.lastReadAt ?? null);
+    return serializeConversation(existing, existing.messages[0] ?? null, unread);
   }
 
   const conv = await prisma.conversation.create({
     data: {
       isGroup: false,
-      members: { connect: [{ id: userId }, { id: otherId }] },
+      members: { create: [{ userId }, { userId: otherId }] },
     },
-    include: {
-      members: { select: memberSelect },
-      messages: {
-        orderBy: { createdAt: 'desc' },
-        take: 1,
-        include: { sender: { select: memberSelect } },
-      },
-    },
+    include: conversationInclude,
   });
-  return serializeConversation(conv, null);
+  return serializeConversation(conv, null, 0);
 };
 
 const getMessages = async (convId, userId) => {
-  const conv = await prisma.conversation.findUnique({
-    where: { id: convId },
-    include: { members: { select: { id: true } } },
+  const member = await prisma.conversationMember.findUnique({
+    where: { conversationId_userId: { conversationId: convId, userId } },
   });
-  if (!conv) throw new AppError('Conversation not found', 404);
-  const isMember = conv.members.some((m) => m.id === userId);
-  if (!isMember) throw new AppError('Forbidden', 403);
+  if (!member) throw new AppError('Forbidden', 403);
 
   const messages = await prisma.message.findMany({
     where: { conversationId: convId },
@@ -159,20 +158,22 @@ const createDmsForNewUser = async (userId) => {
 
   let created = 0;
   for (const other of others) {
-    // findFirst sur conversation isGroup=false avec exactement les 2 membres
-    const existing = await prisma.$queryRaw`
-      SELECT c.id FROM "Conversation" c
-      INNER JOIN "_ConversationMembers" cm1 ON cm1."A" = c.id AND cm1."B" = ${userId}
-      INNER JOIN "_ConversationMembers" cm2 ON cm2."A" = c.id AND cm2."B" = ${other.id}
-      WHERE c."isGroup" = false
-      LIMIT 1
-    `;
-    if (existing && existing.length > 0) continue;
+    const existing = await prisma.conversation.findFirst({
+      where: {
+        isGroup: false,
+        AND: [
+          { members: { some: { userId } } },
+          { members: { some: { userId: other.id } } },
+        ],
+      },
+      select: { id: true },
+    });
+    if (existing) continue;
 
     await prisma.conversation.create({
       data: {
         isGroup: false,
-        members: { connect: [{ id: userId }, { id: other.id }] },
+        members: { create: [{ userId }, { userId: other.id }] },
       },
     });
     created++;
@@ -181,38 +182,67 @@ const createDmsForNewUser = async (userId) => {
 };
 
 const sendMessage = async (convId, senderId, content) => {
-  const conv = await prisma.conversation.findUnique({
-    where: { id: convId },
-    include: { members: { select: { id: true } } },
+  const member = await prisma.conversationMember.findUnique({
+    where: { conversationId_userId: { conversationId: convId, userId: senderId } },
   });
-  if (!conv) throw new AppError('Conversation not found', 404);
-  const isMember = conv.members.some((m) => m.id === senderId);
-  if (!isMember) throw new AppError('Forbidden', 403);
+  if (!member) throw new AppError('Forbidden', 403);
 
   const message = await prisma.message.create({
     data: { conversationId: convId, senderId, content },
     include: { sender: { select: memberSelect } },
   });
 
-  // Mettre à jour updatedAt de la conversation
   await prisma.conversation.update({
     where: { id: convId },
     data: { updatedAt: new Date() },
+  });
+
+  // L'expéditeur considère son propre message comme lu.
+  await prisma.conversationMember.update({
+    where: { conversationId_userId: { conversationId: convId, userId: senderId } },
+    data: { lastReadAt: message.createdAt },
   });
 
   const serialized = serializeMessage(message);
 
   const io = getIo();
   if (io) {
-    const room = `conv:${convId}`;
-    const roomSize = io.sockets.adapter.rooms.get(room)?.size ?? 0;
-    io.to(room).emit('new_message', serialized);
-    console.log(`[socket] → new_message  conv=${convId}  sender=${serialized.senderName}  room_size=${roomSize}`);
+    // Émission vers les rooms personnelles `user:<id>` (joinées de manière
+    // synchrone à la connexion) plutôt que `conv:<id>` (joinée après un
+    // `await` côté serveur). Évite la race où un message émis pendant la
+    // fenêtre d'auto-join est perdu côté client.
+    const members = await prisma.conversationMember.findMany({
+      where: { conversationId: convId },
+      select: { userId: true },
+    });
+    for (const m of members) {
+      io.to(`user:${m.userId}`).emit('new_message', serialized);
+    }
+    console.log(`[socket] → new_message  conv=${convId}  sender=${serialized.senderName}  recipients=${members.length}`);
   } else {
     console.warn('[socket] ⚠ io non initialisé — message non émis');
   }
 
   return serialized;
+};
+
+const markConversationRead = async (convId, userId) => {
+  const member = await prisma.conversationMember.findUnique({
+    where: { conversationId_userId: { conversationId: convId, userId } },
+  });
+  if (!member) throw new AppError('Forbidden', 403);
+
+  await prisma.conversationMember.update({
+    where: { conversationId_userId: { conversationId: convId, userId } },
+    data: { lastReadAt: new Date() },
+  });
+
+  const io = getIo();
+  if (io) {
+    io.to(`user:${userId}`).emit('conversation:read', { conversationId: convId });
+  }
+
+  return { conversationId: convId };
 };
 
 module.exports = {
@@ -223,4 +253,5 @@ module.exports = {
   getOrCreateDM,
   getMessages,
   sendMessage,
+  markConversationRead,
 };
