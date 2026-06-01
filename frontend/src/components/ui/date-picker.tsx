@@ -28,9 +28,16 @@ interface DatePickerProps {
   trailing?: React.ReactNode;
 }
 
-const isoFromDate = (d: Date) => {
-  const local = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  return local.toISOString();
+// Convertit une date locale en ISO « minuit UTC » du même jour calendaire.
+// Permet ensuite de récupérer la portion YYYY-MM-DD sans dérive timezone.
+const isoFromDate = (d: Date) =>
+  new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())).toISOString();
+
+// Reconstruit une Date locale (pour l'affichage / comparaisons) à partir
+// d'un ISO stocké à minuit UTC : on lit la portion calendaire en UTC.
+const localFromIso = (iso: string): Date => {
+  const d = new Date(iso);
+  return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
 };
 
 export function DatePicker({
@@ -41,7 +48,7 @@ export function DatePicker({
   className,
   trailing,
 }: DatePickerProps) {
-  const selected = value ? new Date(value) : null;
+  const selected = value ? localFromIso(value) : null;
   const [viewMonth, setViewMonth] = useState<Date>(
     selected ?? new Date(),
   );

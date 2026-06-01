@@ -8,12 +8,23 @@ import {
   CalendarCheck,
   Hourglass,
   ArrowRight,
+  Plus,
+  Globe2,
+  Lock,
+  Trash2,
+  Users as UsersIcon,
 } from "lucide-react";
 import { PriorityPill, StatusPill } from "@/components/ui/pill";
-import { calendarApi, routerService } from "@/services";
-import type { CalendarEvent } from "@/services";
+import { Avatar } from "@/components/ui/avatar";
+import { calendarApi, routerService, toast } from "@/services";
+import type {
+  CalendarEvent,
+  CustomCalendarEvent,
+  TaskCalendarEvent,
+} from "@/services";
 import { normalizeApiPriority, normalizeApiStatus } from "@/lib/mappers";
 import { cn } from "@/lib/utils";
+import { NewEventDialog } from "./new-event-dialog";
 
 const DAYS = ["Lu", "Ma", "Me", "Je", "Ve", "Sa", "Di"];
 const MONTH_LABEL = [
@@ -47,8 +58,11 @@ export function MonthView() {
   const [selected, setSelected] = useState<string>(todayIso);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  useEffect(() => {
+  const refetch = () => {
     const fromDate = new Date(year, month, 1);
     fromDate.setDate(fromDate.getDate() - 7);
     const toDate = new Date(year, month + 1, 0);
@@ -62,7 +76,37 @@ export function MonthView() {
       .then((res) => setEvents(res.events))
       .catch(() => setEvents([]))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    refetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year, month]);
+
+  const handleEventCreated = (event: CustomCalendarEvent) => {
+    setEvents((curr) => [...curr, event]);
+    if (event.date) setSelected(event.date);
+  };
+
+  const handleDeleteEvent = async (eventId: string) => {
+    setDeletingId(eventId);
+    try {
+      await calendarApi.remove(eventId);
+      setEvents((curr) =>
+        curr.filter((e) => !(e.type === "custom" && e.eventId === eventId)),
+      );
+      setExpandedEventId(null);
+      toast.success("L'événement a été supprimé.", "Supprimé");
+    } catch (e) {
+      console.error("Delete event failed", e);
+      toast.error(
+        e instanceof Error ? e.message : "Suppression impossible.",
+        "Refusé",
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const eventsByDate = useMemo(() => {
     const map = new Map<string, CalendarEvent[]>();
@@ -143,6 +187,14 @@ export function MonthView() {
     return `Dans ${days} j`;
   }, [stats.next, todayIso]);
 
+  const nextOnClick = useMemo(() => {
+    const n = stats.next;
+    if (!n) return undefined;
+    if (n.type === "task_due") return () => routerService.toTask(n.taskId);
+    if (n.date) return () => setSelected(n.date!);
+    return undefined;
+  }, [stats.next]);
+
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
       {/* Mini-stats strip — compact */}
@@ -166,17 +218,13 @@ export function MonthView() {
           label="Prochaine échéance"
           value={nextRelative ?? "—"}
           hint={
-            stats.next?.title
-              ? `${stats.next.identifier ?? ""} ${stats.next.title}`.trim()
+            stats.next
+              ? `${stats.next.type === "task_due" ? stats.next.identifier ?? "" : ""} ${stats.next.title}`.trim()
               : "rien à venir"
           }
           tone="sage"
           isText
-          onClick={
-            stats.next?.taskId
-              ? () => routerService.toTask(stats.next!.taskId)
-              : undefined
-          }
+          onClick={nextOnClick}
         />
       </section>
 
@@ -218,6 +266,14 @@ export function MonthView() {
                 aria-label="Mois suivant"
               >
                 <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setDialogOpen(true)}
+                className="ml-1 inline-flex h-7 items-center gap-1 rounded-[7px] bg-[hsl(var(--brand))] px-2.5 text-[11.5px] font-semibold text-white shadow-[var(--shadow-brand)] hover:bg-[hsl(var(--brand-ink))]"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Événement
               </button>
             </div>
           </header>
@@ -292,6 +348,8 @@ export function MonthView() {
                   <div className="mt-1 flex min-h-0 flex-col gap-0.5">
                     {dayEvents.slice(0, 2).map((e) => {
                       const accent = e.projectColor ?? "#6366F1";
+                      const identifier =
+                        e.type === "task_due" ? e.identifier : null;
                       return (
                         <span
                           key={e.id}
@@ -301,11 +359,11 @@ export function MonthView() {
                             color: accent,
                             borderColor: `${accent}55`,
                           }}
-                          title={`${e.identifier ?? ""} ${e.title}`}
+                          title={`${identifier ?? ""} ${e.title}`}
                         >
-                          {e.identifier && (
+                          {identifier && (
                             <span className="font-mono text-[9px] opacity-80">
-                              {e.identifier}
+                              {identifier}
                             </span>
                           )}
                           <span className="truncate">{e.title}</span>
@@ -368,10 +426,20 @@ export function MonthView() {
                 </span>
               )}
             </div>
-            <div className="mt-2 text-[11px] font-medium text-[hsl(var(--ink-2))]">
-              {selectedEvents.length === 0
-                ? "Aucune échéance"
-                : `${selectedEvents.length} échéance${selectedEvents.length > 1 ? "s" : ""}`}
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <span className="text-[11px] font-medium text-[hsl(var(--ink-2))]">
+                {selectedEvents.length === 0
+                  ? "Aucune échéance"
+                  : `${selectedEvents.length} entrée${selectedEvents.length > 1 ? "s" : ""}`}
+              </span>
+              <button
+                type="button"
+                onClick={() => setDialogOpen(true)}
+                className="inline-flex h-7 items-center gap-1 rounded-[6px] border border-[hsl(var(--brand)/0.3)] bg-[hsl(var(--brand-soft))] px-2 text-[11px] font-semibold text-[hsl(var(--brand-ink))] hover:bg-[hsl(var(--brand)/0.18)]"
+              >
+                <Plus className="h-3 w-3" />
+                Ajouter
+              </button>
             </div>
           </header>
 
@@ -386,52 +454,190 @@ export function MonthView() {
                 </span>
               </li>
             ) : (
-              selectedEvents.map((e) => {
-                const accent = e.projectColor ?? "#6366F1";
-                return (
-                  <li key={e.id}>
-                    <button
-                      type="button"
-                      onClick={() => routerService.toTask(e.taskId)}
-                      className="group relative w-full overflow-hidden rounded-[var(--radius-md)] border border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))] p-2.5 text-left shadow-[var(--shadow-1)] transition-all hover:-translate-y-px hover:shadow-[var(--shadow-2)]"
-                    >
-                      <span
-                        className="absolute inset-y-0 left-0 w-1"
-                        style={{ background: accent }}
-                      />
-                      <div className="pl-2">
-                        <div className="flex items-center gap-2">
-                          {e.identifier && (
-                            <span className="font-mono text-[10px] font-semibold tracking-wider text-[hsl(var(--ink-3))]">
-                              {e.identifier}
-                            </span>
-                          )}
-                          {e.projectName && (
-                            <span className="truncate text-[10px] text-[hsl(var(--ink-4))]">
-                              · {e.projectName}
-                            </span>
-                          )}
-                          <ArrowRight className="ml-auto h-3 w-3 shrink-0 text-[hsl(var(--ink-4))] opacity-0 transition-opacity group-hover:opacity-100" />
-                        </div>
-                        <div className="mt-0.5 text-[12.5px] font-semibold leading-snug tracking-tight text-ink">
-                          {e.title}
-                        </div>
-                        <div className="mt-1.5 flex items-center gap-1.5">
-                          <StatusPill status={normalizeApiStatus(e.status)} />
-                          <PriorityPill
-                            priority={normalizeApiPriority(e.priority)}
-                          />
-                        </div>
-                      </div>
-                    </button>
-                  </li>
-                );
-              })
+              selectedEvents.map((e) =>
+                e.type === "custom" ? (
+                  <CustomEventCard
+                    key={e.id}
+                    event={e}
+                    expanded={expandedEventId === e.eventId}
+                    onToggle={() =>
+                      setExpandedEventId((curr) =>
+                        curr === e.eventId ? null : e.eventId,
+                      )
+                    }
+                    onDelete={() => handleDeleteEvent(e.eventId)}
+                    deleting={deletingId === e.eventId}
+                  />
+                ) : (
+                  <TaskEventCard key={e.id} event={e} />
+                ),
+              )
             )}
           </ul>
         </aside>
       </div>
+
+      <NewEventDialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        initialDate={selected}
+        onCreated={handleEventCreated}
+      />
     </div>
+  );
+}
+
+/* ---------- Event cards ---------- */
+
+function TaskEventCard({ event }: { event: TaskCalendarEvent }) {
+  const accent = event.projectColor ?? "#6366F1";
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={() => routerService.toTask(event.taskId)}
+        className="group relative w-full overflow-hidden rounded-[var(--radius-md)] border border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))] p-2.5 text-left shadow-[var(--shadow-1)] transition-all hover:-translate-y-px hover:shadow-[var(--shadow-2)]"
+      >
+        <span
+          className="absolute inset-y-0 left-0 w-1"
+          style={{ background: accent }}
+        />
+        <div className="pl-2">
+          <div className="flex items-center gap-2">
+            {event.identifier && (
+              <span className="font-mono text-[10px] font-semibold tracking-wider text-[hsl(var(--ink-3))]">
+                {event.identifier}
+              </span>
+            )}
+            {event.projectName && (
+              <span className="truncate text-[10px] text-[hsl(var(--ink-4))]">
+                · {event.projectName}
+              </span>
+            )}
+            <ArrowRight className="ml-auto h-3 w-3 shrink-0 text-[hsl(var(--ink-4))] opacity-0 transition-opacity group-hover:opacity-100" />
+          </div>
+          <div className="mt-0.5 text-[12.5px] font-semibold leading-snug tracking-tight text-ink">
+            {event.title}
+          </div>
+          <div className="mt-1.5 flex items-center gap-1.5">
+            <StatusPill status={normalizeApiStatus(event.status)} />
+            <PriorityPill priority={normalizeApiPriority(event.priority)} />
+          </div>
+        </div>
+      </button>
+    </li>
+  );
+}
+
+function CustomEventCard({
+  event,
+  expanded,
+  onToggle,
+  onDelete,
+  deleting,
+}: {
+  event: CustomCalendarEvent;
+  expanded: boolean;
+  onToggle: () => void;
+  onDelete: () => void;
+  deleting: boolean;
+}) {
+  const accent = event.projectColor ?? "hsl(var(--brand))";
+  const VisIcon = event.visibility === "PUBLIC" ? Globe2 : Lock;
+
+  return (
+    <li>
+      <div className="group relative overflow-hidden rounded-[var(--radius-md)] border border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))] shadow-[var(--shadow-1)] transition-all">
+        <span
+          className="absolute inset-y-0 left-0 w-1"
+          style={{ background: accent }}
+        />
+        <button
+          type="button"
+          onClick={onToggle}
+          className="block w-full p-2.5 text-left"
+        >
+          <div className="pl-2">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1 rounded-full bg-[hsl(var(--brand-soft))] px-1.5 py-0.5 text-[9.5px] font-semibold uppercase tracking-wider text-[hsl(var(--brand-ink))]">
+                <VisIcon className="h-2.5 w-2.5" />
+                {event.visibility === "PUBLIC" ? "Public" : "Restreint"}
+              </span>
+              {event.projectName && (
+                <span className="truncate text-[10px] text-[hsl(var(--ink-4))]">
+                  · {event.projectName}
+                </span>
+              )}
+            </div>
+            <div className="mt-0.5 text-[12.5px] font-semibold leading-snug tracking-tight text-ink">
+              {event.title}
+            </div>
+            {!expanded && event.description && (
+              <p className="mt-0.5 truncate text-[11.5px] text-[hsl(var(--ink-3))]">
+                {event.description}
+              </p>
+            )}
+          </div>
+        </button>
+
+        {expanded && (
+          <div className="border-t border-[hsl(var(--line))] bg-[hsl(var(--bg-sunken)/0.35)] px-3 py-2.5 pl-[14px] text-[12px]">
+            {event.description && (
+              <p className="whitespace-pre-wrap leading-relaxed text-[hsl(var(--ink-2))]">
+                {event.description}
+              </p>
+            )}
+            <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-[11.5px]">
+              <dt className="text-[hsl(var(--ink-3))]">Créé par</dt>
+              <dd className="flex items-center gap-1.5">
+                <Avatar
+                  id={event.createdBy.id}
+                  name={event.createdBy.name}
+                  size="xs"
+                />
+                <span className="font-medium">{event.createdBy.name}</span>
+              </dd>
+              {event.viewers.length > 0 && (
+                <>
+                  <dt className="text-[hsl(var(--ink-3))]">
+                    <UsersIcon className="h-3 w-3 inline-block -mt-0.5" />{" "}
+                    Partagé
+                  </dt>
+                  <dd className="flex flex-wrap gap-1">
+                    {event.viewers.map((v) => (
+                      <span
+                        key={v.id}
+                        className="inline-flex items-center gap-1 rounded-full bg-[hsl(var(--bg-elevated))] px-1.5 py-0.5 text-[10.5px] ring-1 ring-[hsl(var(--line))]"
+                      >
+                        <Avatar id={v.id} name={v.name} size="xs" />
+                        {v.name}
+                      </span>
+                    ))}
+                  </dd>
+                </>
+              )}
+            </dl>
+            {event.canDelete && (
+              <div className="mt-2.5 flex justify-end">
+                <button
+                  type="button"
+                  onClick={onDelete}
+                  disabled={deleting}
+                  className="inline-flex items-center gap-1 rounded-[5px] border border-[hsl(var(--accent-rose)/0.3)] bg-[hsl(var(--alert-danger-bg))] px-2 py-1 text-[11px] font-semibold text-[hsl(var(--accent-rose))] hover:bg-[hsl(var(--accent-rose)/0.15)] disabled:opacity-60"
+                >
+                  {deleting ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3 w-3" />
+                  )}
+                  Supprimer
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </li>
   );
 }
 

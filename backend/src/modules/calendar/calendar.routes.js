@@ -6,5 +6,7 @@ const router = Router();
 router.use(authenticate);
 
 router.get("/events", calendarController.listEvents);
+router.post("/events", calendarController.createEvent);
+router.delete("/events/:id", calendarController.deleteEvent);
 
 module.exports = router;
