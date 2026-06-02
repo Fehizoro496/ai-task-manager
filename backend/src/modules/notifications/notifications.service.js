@@ -1,5 +1,6 @@
 const prisma = require("../../prisma/client");
 const AppError = require("../../utils/AppError");
+const { getIo } = require("../../socket");
 
 const serializeNotification = (n) => ({
   id: n.id,
@@ -9,14 +10,25 @@ const serializeNotification = (n) => ({
   userId: n.userId,
   taskId: n.taskId,
   link: n.link,
-  isRead: n.isRead,
+  read: n.isRead,
   createdAt: n.createdAt.toISOString(),
 });
 
 const createNotification = async ({ type, title, message, userId, taskId, link }) => {
-  return prisma.notification.create({
+  const notif = await prisma.notification.create({
     data: { type, title, message, userId, taskId, link },
   });
+
+  try {
+    const io = getIo();
+    if (io) {
+      io.to(`user:${userId}`).emit("notification:new", serializeNotification(notif));
+    }
+  } catch (e) {
+    console.error("Socket emit notification:new failed", e);
+  }
+
+  return notif;
 };
 
 const getNotifications = async (userId) => {

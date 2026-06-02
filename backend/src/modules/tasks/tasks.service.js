@@ -2,6 +2,18 @@ const prisma = require("../../prisma/client");
 const AppError = require("../../utils/AppError");
 const { createNotification, notifyAdmins } = require("../notifications/notifications.service");
 const { isMember } = require("../projects/projects.service");
+const { createBranch } = require("../github/github.service");
+const { getIo } = require("../../socket");
+
+const emitToProject = (projectId, event, payload) => {
+  if (!projectId) return;
+  try {
+    const io = getIo();
+    if (io) io.to(`project:${projectId}`).emit(event, payload);
+  } catch (err) {
+    console.error(`Socket emit ${event} failed`, err);
+  }
+};
 
 // Map Prisma UPPERCASE status to lowercase for frontend
 const statusToLowercase = {
@@ -13,17 +25,40 @@ const statusToLowercase = {
 
 const assigneeInclude = {
   assignee: { select: { id: true, name: true, avatarUrl: true } },
+  _count: { select: { comments: true } },
 };
 
 /**
  * Serializes a Prisma Task into the format expected by the Flutter frontend.
  */
 const serializeTask = (task, projectId) => {
-  const computedProjectId = projectId || task.projectId || null;
+  const computedProjectId =
+    projectId ||
+    task.projectId ||
+    task.story?.epic?.project?.id ||
+    null;
+
+  // Quand le projet est inclus (via getById notamment), on construit l'URL
+  // directe vers la branche sur GitHub pour pouvoir l'afficher cliquable.
+  const project = task.story?.epic?.project ?? null;
+  const repoUrl = project?.githubRepoUrl ?? null;
+  const owner = project?.githubOwner ?? null;
+  const repo = project?.githubRepo ?? null;
+  const branch = task.githubBranch ?? null;
+  let githubBranchUrl = null;
+  if (branch && owner && repo) {
+    githubBranchUrl = `https://github.com/${owner}/${repo}/tree/${branch}`;
+  }
 
   return {
     id: task.id,
     identifier: task.identifier || null,
+    githubBranch: task.githubBranch || null,
+    github_branch: task.githubBranch || null,
+    githubBranchUrl,
+    github_branch_url: githubBranchUrl,
+    githubRepoUrl: repoUrl,
+    github_repo_url: repoUrl,
     title: task.title,
     description: task.description,
     status: statusToLowercase[task.status] || task.status,
@@ -44,6 +79,8 @@ const serializeTask = (task, projectId) => {
         }
       : null,
     labels: task.labels || [],
+    commentsCount: task._count?.comments ?? 0,
+    comments_count: task._count?.comments ?? 0,
     dueDate: task.dueDate ? task.dueDate.toISOString() : null,
     due_date: task.dueDate ? task.dueDate.toISOString() : null,
     createdAt: task.createdAt.toISOString(),
@@ -79,9 +116,24 @@ const verifyStoryOwnership = async (storyId, userId, isAdmin) => {
 
 const create = async (userId, isAdmin, data) => {
   const story = await verifyStoryOwnership(data.storyId, userId, isAdmin);
-  const projectId = story.epic.project.id;
-  const identifier = await generateTaskIdentifier(projectId);
-  return prisma.task.create({ data: { ...data, identifier }, include: assigneeInclude });
+  const project = story.epic.project;
+  const identifier = await generateTaskIdentifier(project.id);
+  const githubBranch = identifier;
+  const task = await prisma.task.create({
+    data: { ...data, identifier, githubBranch },
+    include: {
+      ...assigneeInclude,
+      story: { include: { epic: { include: { project: true } } } },
+    },
+  });
+
+  if (project.githubOwner && project.githubRepo) {
+    createBranch(userId, project.githubOwner, project.githubRepo, githubBranch).catch(() => {});
+  }
+
+  emitToProject(project.id, "task:created", serializeTask(task, project.id));
+
+  return task;
 };
 
 const listByStory = async (storyId, userId, isAdmin) => {
@@ -102,8 +154,16 @@ const getById = async (id, userId, isAdmin) => {
     },
   });
 
-  if (!task || (!isAdmin && task.story.epic.project.ownerId !== userId)) {
-    throw new AppError("Task not found", 404);
+  if (!task) throw new AppError("Task not found", 404);
+
+  if (!isAdmin) {
+    const project = task.story.epic.project;
+    const isOwner = project.ownerId === userId;
+    const isAssignee = task.assigneeId === userId;
+    if (!isOwner && !isAssignee) {
+      const member = await isMember(project.id, userId);
+      if (!member) throw new AppError("Task not found", 404);
+    }
   }
 
   return task;
@@ -129,10 +189,17 @@ const update = async (id, userId, isAdmin, data) => {
     if (!memberCheck) throw new AppError("User is not a member of this project", 400);
   }
 
-  const updated = await prisma.task.update({ where: { id }, data, include: assigneeInclude });
+  const updated = await prisma.task.update({
+    where: { id },
+    data,
+    include: {
+      ...assigneeInclude,
+      story: { include: { epic: { include: { project: true } } } },
+    },
+  });
 
   const projectId = task.story.epic.project.id;
-  const link = `/board/${projectId}`;
+  const link = `/projects/${projectId}/board?task=${id}`;
 
   // Notify new assignee when assigned
   if (data.assigneeId && data.assigneeId !== task.assigneeId) {
@@ -156,6 +223,8 @@ const update = async (id, userId, isAdmin, data) => {
     }).catch(() => {});
   }
 
+  emitToProject(projectId, "task:updated", serializeTask(updated, projectId));
+
   return updated;
 };
 
@@ -169,7 +238,10 @@ const remove = async (id, userId, isAdmin) => {
     throw new AppError("Task not found", 404);
   }
 
-  return prisma.task.delete({ where: { id } });
+  const projectId = task.story.epic.project.id;
+  const deleted = await prisma.task.delete({ where: { id } });
+  emitToProject(projectId, "task:deleted", { id, projectId });
+  return deleted;
 };
 
 const moveTask = async (id, userId, isAdmin, { status, position }) => {
@@ -186,11 +258,14 @@ const moveTask = async (id, userId, isAdmin, { status, position }) => {
   const updated = await prisma.task.update({
     where: { id },
     data: { status, position },
-    include: assigneeInclude,
+    include: {
+      ...assigneeInclude,
+      story: { include: { epic: { include: { project: true } } } },
+    },
   });
 
   const projectId = task.story.epic.project.id;
-  const link = `/board/${projectId}`;
+  const link = `/projects/${projectId}/board?task=${id}`;
 
   // Notify assignee if someone else moved the task
   if (task.assigneeId && task.assigneeId !== userId) {
@@ -215,6 +290,8 @@ const moveTask = async (id, userId, isAdmin, { status, position }) => {
     }).catch(() => {});
   }
 
+  emitToProject(projectId, "task:updated", serializeTask(updated, projectId));
+
   return updated;
 };
 
@@ -232,18 +309,20 @@ const listByProject = async (projectId, userId, isAdmin) => {
       story: { epic: { projectId } },
     },
     orderBy: { position: "asc" },
-    include: assigneeInclude,
+    include: {
+      ...assigneeInclude,
+      story: { include: { epic: { include: { project: true } } } },
+    },
   });
 };
 
 const createForProject = async (userId, isAdmin, projectId, data) => {
-  if (!isAdmin) {
-    const project = await prisma.project.findFirst({
-      where: { id: projectId, ownerId: userId },
-    });
-    if (!project) {
-      throw new AppError("Project not found", 404);
-    }
+  const project = await prisma.project.findUnique({ where: { id: projectId } });
+
+  if (!project) throw new AppError("Project not found", 404);
+  if (!isAdmin && project.ownerId !== userId) {
+    const member = await isMember(projectId, userId);
+    if (!member) throw new AppError("Project not found", 404);
   }
 
   // If storyId is provided, verify it belongs to this project
@@ -256,7 +335,8 @@ const createForProject = async (userId, isAdmin, projectId, data) => {
       throw new AppError("Story not found in this project", 404);
     }
     const identifier = await generateTaskIdentifier(projectId);
-    return prisma.task.create({
+    const githubBranch = identifier;
+    const task = await prisma.task.create({
       data: {
         title: data.title,
         description: data.description,
@@ -264,9 +344,17 @@ const createForProject = async (userId, isAdmin, projectId, data) => {
         status: data.status || "TODO",
         storyId,
         identifier,
+        githubBranch,
       },
       include: assigneeInclude,
     });
+
+    if (project?.githubOwner && project?.githubRepo) {
+      createBranch(userId, project.githubOwner, project.githubRepo, githubBranch).catch(() => {});
+    }
+
+    emitToProject(projectId, "task:created", serializeTask(task, projectId));
+    return task;
   }
 
   // No storyId: assign to the first story of the first epic, or create a default epic/story
@@ -285,7 +373,8 @@ const createForProject = async (userId, isAdmin, projectId, data) => {
   }
 
   const identifier = await generateTaskIdentifier(projectId);
-  return prisma.task.create({
+  const githubBranch = identifier;
+  const task = await prisma.task.create({
     data: {
       title: data.title,
       description: data.description,
@@ -293,9 +382,68 @@ const createForProject = async (userId, isAdmin, projectId, data) => {
       status: data.status || "TODO",
       storyId: story.id,
       identifier,
+      githubBranch,
     },
     include: assigneeInclude,
   });
+
+  if (project?.githubOwner && project?.githubRepo) {
+    createBranch(userId, project.githubOwner, project.githubRepo, githubBranch).catch(() => {});
+  }
+
+  emitToProject(projectId, "task:created", serializeTask(task, projectId));
+  return task;
+};
+
+const statusMap = {
+  todo: "TODO",
+  in_progress: "IN_PROGRESS",
+  in_review: "IN_REVIEW",
+  done: "DONE",
+};
+
+/**
+ * Bulk reorder pour un projet : pour chaque colonne (status), accepte la
+ * liste ordonnée d'IDs de tâches. Réassigne en transaction:
+ *   task.status = colonne, task.position = index dans la liste.
+ * Ignore silencieusement les IDs ne correspondant pas à des tâches du projet.
+ */
+const reorderForProject = async (projectId, userId, isAdmin, columns) => {
+  const project = await prisma.project.findUnique({ where: { id: projectId } });
+  if (!project) throw new AppError("Project not found", 404);
+
+  if (!isAdmin) {
+    const member = await isMember(projectId, userId);
+    if (!member && project.ownerId !== userId) {
+      throw new AppError("Project not found", 404);
+    }
+  }
+
+  // Vérifie que toutes les tâches référencées appartiennent bien au projet
+  const allIds = Object.values(columns).flat();
+  const projectTasks = await prisma.task.findMany({
+    where: { id: { in: allIds }, story: { epic: { projectId } } },
+    select: { id: true },
+  });
+  const validIds = new Set(projectTasks.map((t) => t.id));
+
+  const updates = [];
+  for (const [colKey, ids] of Object.entries(columns)) {
+    const dbStatus = statusMap[colKey?.toLowerCase()] ?? colKey;
+    ids.forEach((id, index) => {
+      if (!validIds.has(id)) return;
+      updates.push(
+        prisma.task.update({
+          where: { id },
+          data: { status: dbStatus, position: index },
+        }),
+      );
+    });
+  }
+
+  if (updates.length > 0) await prisma.$transaction(updates);
+  emitToProject(projectId, "tasks:reordered", { projectId });
+  return { updated: updates.length };
 };
 
 const assignSelf = async (id, userId, isAdmin) => {
@@ -306,11 +454,18 @@ const assignSelf = async (id, userId, isAdmin) => {
     throw new AppError("Task is already assigned to someone", 403);
   }
 
-  return prisma.task.update({
+  const updated = await prisma.task.update({
     where: { id },
     data: { assigneeId: userId },
-    include: assigneeInclude,
+    include: {
+      ...assigneeInclude,
+      story: { include: { epic: { include: { project: true } } } },
+    },
   });
+
+  const projectId = updated.story?.epic?.project?.id;
+  emitToProject(projectId, "task:updated", serializeTask(updated, projectId));
+  return updated;
 };
 
 module.exports = {
@@ -322,6 +477,7 @@ module.exports = {
   moveTask,
   listByProject,
   createForProject,
+  reorderForProject,
   assignSelf,
   serializeTask,
 };

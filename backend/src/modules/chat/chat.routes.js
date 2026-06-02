@@ -10,5 +10,6 @@ router.get('/conversations', chatController.getConversations);
 router.post('/conversations', chatController.createDM);
 router.get('/conversations/:id/messages', chatController.getMessages);
 router.post('/conversations/:id/messages', chatController.sendMessage);
+router.post('/conversations/:id/read', chatController.markRead);
 
 module.exports = router;

@@ -56,4 +56,15 @@ const assign = asyncHandler(async (req, res) => {
   res.json(tasksService.serializeTask(task));
 });
 
-module.exports = { create, listByStory, getById, update, remove, move, listByProject, createForProject, assign };
+const reorderForProject = asyncHandler(async (req, res) => {
+  const isAdmin = req.user.role === "ADMIN";
+  const result = await tasksService.reorderForProject(
+    req.params.projectId,
+    req.user.id,
+    isAdmin,
+    req.body?.columns ?? {},
+  );
+  res.json(result);
+});
+
+module.exports = { create, listByStory, getById, update, remove, move, listByProject, createForProject, assign, reorderForProject };

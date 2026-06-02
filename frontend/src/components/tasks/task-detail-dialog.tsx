@@ -1,0 +1,840 @@
+"use client";
+import { useEffect, useState } from "react";
+import * as Dialog from "@radix-ui/react-dialog";
+import {
+  X,
+  GitBranch,
+  Calendar as CalIcon,
+  User,
+  Tag,
+  Link as LinkIcon,
+  Sparkles,
+  Loader2,
+  UserPlus,
+  UserMinus,
+  MessageSquare,
+  Send,
+  Trash2,
+  Plus,
+} from "lucide-react";
+import { Avatar } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { DatePicker } from "@/components/ui/date-picker";
+import { Select } from "@/components/ui/select";
+import { UserCombobox } from "@/components/ui/user-combobox";
+import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
+import {
+  commentsApi,
+  projectsApi,
+  routerService,
+  tasksApi,
+  toast,
+  useAuth,
+  useTask,
+} from "@/services";
+import type {
+  ProjectMember,
+  Task,
+  TaskComment,
+  TaskPriority,
+  TaskStatus,
+  User as ApiUser,
+} from "@/services";
+import type { UpdateTaskInput } from "@/services/api/tasks.api";
+import { normalizeApiStatus, normalizeApiPriority } from "@/lib/mappers";
+
+const STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
+  { value: "todo", label: "À faire" },
+  { value: "in_progress", label: "En cours" },
+  { value: "in_review", label: "En revue" },
+  { value: "done", label: "Terminé" },
+];
+
+const PRIORITY_OPTIONS: { value: TaskPriority; label: string; swatch: string }[] = [
+  { value: "urgent", label: "Urgent", swatch: "hsl(var(--accent-rose))" },
+  { value: "high", label: "Élevée", swatch: "hsl(var(--accent-amber))" },
+  { value: "medium", label: "Moyenne", swatch: "hsl(var(--brand))" },
+  { value: "low", label: "Faible", swatch: "hsl(var(--ink-3))" },
+];
+
+
+interface TaskDetailDialogProps {
+  taskId: string | null;
+  onClose: () => void;
+  /** Appelé à chaque mutation locale de la tâche pour que le parent
+   *  (board, my-tasks, etc.) puisse synchroniser sa propre liste. */
+  onUpdated?: (task: Task) => void;
+}
+
+export function TaskDetailDialog({
+  taskId,
+  onClose,
+  onUpdated,
+}: TaskDetailDialogProps) {
+  const open = !!taskId;
+
+  return (
+    <Dialog.Root open={open} onOpenChange={(v) => !v && onClose()}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-[hsl(230_30%_8%/0.45)] backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in-0" />
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 grid max-h-[88vh] w-[760px] max-w-[94vw] -translate-x-1/2 -translate-y-1/2 grid-rows-[auto_1fr] overflow-hidden rounded-[var(--radius-xl)] border border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))] shadow-[var(--shadow-3)] data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95">
+          <VisuallyHidden.Root>
+            <Dialog.Title>Détails de la tâche</Dialog.Title>
+          </VisuallyHidden.Root>
+          {taskId && (
+            <TaskDetailBody
+              taskId={taskId}
+              onClose={onClose}
+              onUpdated={onUpdated}
+            />
+          )}
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
+function TaskDetailBody({
+  taskId,
+  onClose,
+  onUpdated,
+}: {
+  taskId: string;
+  onClose: () => void;
+  onUpdated?: (task: Task) => void;
+}) {
+  const { task, loading, error, refetch, setTask } = useTask(taskId);
+  const { user, isAdmin } = useAuth();
+  const [comment, setComment] = useState("");
+  const [submittingComment, setSubmittingComment] = useState(false);
+  const [comments, setComments] = useState<TaskComment[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [members, setMembers] = useState<ProjectMember[]>([]);
+  const [membersLoaded, setMembersLoaded] = useState(false);
+  const [saving, setSaving] = useState(false);
+  // Edition inline du titre / description : drafts locaux + flag d'édition.
+  const [titleDraft, setTitleDraft] = useState<string | null>(null);
+  const [descDraft, setDescDraft] = useState<string | null>(null);
+  const [labelDraft, setLabelDraft] = useState("");
+
+  // Patch unifié : optimistic, rollback en cas d'erreur, toast.
+  const patchTask = async (
+    patch: UpdateTaskInput,
+    optimistic: Partial<Task>,
+    successMsg?: string,
+  ) => {
+    if (!task) return;
+    const previous = task;
+    setTask({ ...task, ...optimistic });
+    setSaving(true);
+    try {
+      const updated = await tasksApi.update(task.id, patch);
+      setTask(updated);
+      onUpdated?.(updated);
+      if (successMsg) toast.success(successMsg, "Mise à jour");
+    } catch (e) {
+      console.error("Update task failed", e);
+      setTask(previous);
+      toast.error(
+        e instanceof Error ? e.message : "Modification impossible.",
+        "Modification refusée",
+      );
+      refetch();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Charge les commentaires à chaque ouverture / changement de tâche
+  useEffect(() => {
+    setComments([]);
+    setCommentsLoading(true);
+    commentsApi
+      .list(taskId)
+      .then((res) => setComments(res.comments))
+      .catch((e) => {
+        console.error("Load comments failed", e);
+        setComments([]);
+      })
+      .finally(() => setCommentsLoading(false));
+  }, [taskId]);
+
+  const handleSubmitComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const body = comment.trim();
+    if (!body || submittingComment) return;
+    setSubmittingComment(true);
+    try {
+      const created = await commentsApi.create(taskId, body);
+      setComments((curr) => [...curr, created]);
+      setComment("");
+      if (task) {
+        const next = {
+          ...task,
+          commentsCount: (task.commentsCount ?? 0) + 1,
+        };
+        setTask(next);
+        onUpdated?.(next);
+      }
+    } catch (err) {
+      console.error("Submit comment failed", err);
+      toast.error(
+        err instanceof Error ? err.message : "Envoi impossible.",
+        "Commentaire refusé",
+      );
+    } finally {
+      setSubmittingComment(false);
+    }
+  };
+
+  const handleDeleteComment = async (id: string) => {
+    setDeletingId(id);
+    try {
+      await commentsApi.remove(id);
+      setComments((curr) => curr.filter((c) => c.id !== id));
+      if (task) {
+        const next = {
+          ...task,
+          commentsCount: Math.max((task.commentsCount ?? 1) - 1, 0),
+        };
+        setTask(next);
+        onUpdated?.(next);
+      }
+    } catch (err) {
+      console.error("Delete comment failed", err);
+      toast.error(
+        err instanceof Error ? err.message : "Suppression impossible.",
+        "Refusé",
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  // Reset comment when task changes
+  useEffect(() => setComment(""), [taskId]);
+
+  // Charge la liste des membres du projet pour le sélecteur.
+  // Ne déclenche le reset que si projectId change vers une autre valeur
+  // définie — sinon on conserve la liste précédente pour éviter de vider
+  // l'autocomplete pendant une réponse API tronquée.
+  const projectId = task?.projectId ?? null;
+  useEffect(() => {
+    if (!projectId) return;
+    setMembersLoaded(false);
+    projectsApi
+      .listMembers(projectId)
+      .then((res) => setMembers(res.members))
+      .catch(() => setMembers([]))
+      .finally(() => setMembersLoaded(true));
+  }, [projectId]);
+
+  const handleAssign = async (assigneeId: string | null) => {
+    if (!task) return;
+    if (assigneeId === task.assigneeId) return;
+    await patchTask(
+      { assigneeId },
+      { assigneeId },
+      assigneeId ? "Tâche assignée." : "Assignation retirée.",
+    );
+  };
+
+  const handleAssignSelf = async () => {
+    if (!task || !user) return;
+    const previous = task;
+    setTask({ ...task, assigneeId: user.id });
+    setSaving(true);
+    try {
+      const updated = await tasksApi.assign(task.id);
+      setTask(updated);
+      onUpdated?.(updated);
+      toast.success("Vous êtes assigné à cette tâche.", "Assignation");
+    } catch (e) {
+      console.error("Self-assign failed", e);
+      setTask(previous);
+      toast.error(
+        e instanceof Error ? e.message : "Assignation impossible.",
+        "Assignation refusée",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const commitTitle = () => {
+    if (!task || titleDraft === null) return;
+    const next = titleDraft.trim();
+    setTitleDraft(null);
+    if (!next || next === task.title) return;
+    patchTask({ title: next }, { title: next });
+  };
+
+  const commitDescription = () => {
+    if (!task || descDraft === null) return;
+    const next = descDraft.trim();
+    setDescDraft(null);
+    if (next === (task.description ?? "")) return;
+    patchTask(
+      { description: next || undefined },
+      { description: next || null },
+    );
+  };
+
+  const addLabel = () => {
+    if (!task) return;
+    const next = labelDraft.trim().toLowerCase();
+    setLabelDraft("");
+    if (!next) return;
+    const current = task.labels ?? [];
+    if (current.includes(next)) return;
+    const labels = [...current, next];
+    patchTask({ labels }, { labels });
+  };
+
+  const removeLabel = (label: string) => {
+    if (!task) return;
+    const labels = (task.labels ?? []).filter((l) => l !== label);
+    patchTask({ labels }, { labels });
+  };
+
+  if (loading) {
+    return (
+      <div className="grid place-items-center py-16">
+        <div className="flex items-center gap-2 text-[13px] text-[hsl(var(--ink-3))]">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Chargement…
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !task) {
+    return (
+      <div className="px-6 py-8">
+        <div className="rounded-[var(--radius-md)] border border-[hsl(var(--accent-rose)/0.3)] bg-[hsl(var(--alert-danger-bg))] px-4 py-3 text-[13px] text-[hsl(var(--accent-rose))]">
+          Tâche introuvable.
+        </div>
+        <div className="mt-3 flex justify-end">
+          <button
+            onClick={onClose}
+            className="rounded-[var(--radius-sm)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-elevated))] px-3 py-1.5 text-[12.5px] font-medium hover:bg-[hsl(var(--bg-muted))]"
+          >
+            Fermer
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const status = normalizeApiStatus(task.status);
+  const priority = normalizeApiPriority(task.priority);
+  const code = task.identifier ?? task.id.slice(0, 8);
+  const overdue = task.dueDate ? new Date(task.dueDate) < new Date() : false;
+  const branchName = task.githubBranch ?? task.branch ?? null;
+  const branchUrl = task.githubBranchUrl ?? null;
+
+  return (
+    <>
+      <header className="flex items-center gap-3 border-b border-[hsl(var(--line))] px-6 py-4">
+        <span className="font-mono text-[12px] font-semibold tracking-wider text-[hsl(var(--ink-3))]">
+          {code}
+        </span>
+        <Select
+          value={status}
+          onChange={(v) =>
+            patchTask({ status: v as TaskStatus }, { status: v as TaskStatus })
+          }
+          disabled={saving}
+          options={STATUS_OPTIONS}
+          className="!h-8 w-[148px] !px-2.5 text-[12px]"
+        />
+        <Dialog.Close
+          asChild
+          aria-label="Fermer"
+        >
+          <button className="ml-auto grid h-8 w-8 place-items-center rounded-[8px] text-[hsl(var(--ink-3))] hover:bg-[hsl(var(--bg-muted))] hover:text-ink">
+            <X className="h-4 w-4" />
+          </button>
+        </Dialog.Close>
+      </header>
+
+      <div className="overflow-y-auto px-6 py-5">
+        {titleDraft !== null ? (
+          <input
+            autoFocus
+            value={titleDraft}
+            onChange={(e) => setTitleDraft(e.target.value)}
+            onBlur={commitTitle}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                (e.target as HTMLInputElement).blur();
+              } else if (e.key === "Escape") {
+                e.preventDefault();
+                setTitleDraft(null);
+              }
+            }}
+            disabled={saving}
+            className="-mx-2 block w-[calc(100%+1rem)] rounded-[var(--radius-sm)] border border-[hsl(var(--brand)/0.5)] bg-[hsl(var(--bg))] px-2 py-1 font-display text-[22px] font-semibold leading-tight tracking-tight text-ink outline-none ring-2 ring-[hsl(var(--brand)/0.3)] disabled:opacity-60"
+          />
+        ) : (
+          <h1
+            onClick={() => setTitleDraft(task.title)}
+            title="Cliquer pour modifier"
+            className="-mx-2 cursor-text rounded-[var(--radius-sm)] px-2 py-1 font-display text-[22px] font-semibold leading-tight tracking-tight hover:bg-[hsl(var(--bg-sunken)/0.6)]"
+          >
+            {task.title}
+          </h1>
+        )}
+
+        {descDraft !== null ? (
+          <textarea
+            autoFocus
+            value={descDraft}
+            onChange={(e) => setDescDraft(e.target.value)}
+            onBlur={commitDescription}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                e.preventDefault();
+                setDescDraft(null);
+              } else if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                (e.target as HTMLTextAreaElement).blur();
+              }
+            }}
+            disabled={saving}
+            rows={4}
+            placeholder="Décrire la tâche…"
+            className="mt-3 block w-full resize-y rounded-[var(--radius-sm)] border border-[hsl(var(--brand)/0.5)] bg-[hsl(var(--bg))] px-3 py-2 text-[14px] leading-relaxed text-[hsl(var(--ink-2))] outline-none ring-2 ring-[hsl(var(--brand)/0.3)] disabled:opacity-60"
+          />
+        ) : task.description ? (
+          <p
+            onClick={() => setDescDraft(task.description ?? "")}
+            title="Cliquer pour modifier"
+            className="mt-3 -mx-2 cursor-text rounded-[var(--radius-sm)] px-2 py-1 text-[14px] leading-relaxed text-[hsl(var(--ink-2))] hover:bg-[hsl(var(--bg-sunken)/0.6)]"
+          >
+            {task.description}
+          </p>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setDescDraft("")}
+            className="mt-3 -mx-2 block w-[calc(100%+1rem)] rounded-[var(--radius-sm)] px-2 py-1 text-left text-[13px] italic text-[hsl(var(--ink-4))] hover:bg-[hsl(var(--bg-sunken)/0.6)]"
+          >
+            Ajouter une description…
+          </button>
+        )}
+
+        <div className="mt-5 grid grid-cols-2 gap-x-6 gap-y-3 rounded-[var(--radius-md)] border border-[hsl(var(--line))] bg-[hsl(var(--bg-sunken)/0.4)] p-4 text-[13px]">
+          <Meta Icon={User} label="Assigné" className="col-span-2">
+            <AssigneePicker
+              currentAssigneeId={task.assigneeId}
+              members={members}
+              membersLoaded={membersLoaded}
+              currentUser={user}
+              disabled={saving}
+              onAssign={handleAssign}
+              onAssignSelf={handleAssignSelf}
+            />
+          </Meta>
+          <Meta Icon={Sparkles} label="Priorité">
+            <Select
+              value={priority}
+              onChange={(v) =>
+                patchTask(
+                  { priority: v as TaskPriority },
+                  { priority: v as TaskPriority },
+                )
+              }
+              disabled={saving}
+              options={PRIORITY_OPTIONS}
+              className="!h-9"
+            />
+          </Meta>
+          <Meta Icon={CalIcon} label="Échéance">
+            <DatePicker
+              value={task.dueDate}
+              onChange={(iso) => patchTask({ dueDate: iso }, { dueDate: iso })}
+              disabled={saving}
+              placeholder="Aucune échéance"
+              className={
+                overdue
+                  ? "!border-[hsl(var(--accent-rose)/0.5)] !text-[hsl(var(--accent-rose))]"
+                  : undefined
+              }
+              trailing={
+                overdue ? (
+                  <Badge tone="rose" className="!text-[10px]">
+                    en retard
+                  </Badge>
+                ) : null
+              }
+            />
+          </Meta>
+          <Meta Icon={Tag} label="Labels">
+            <div className="flex flex-wrap items-center gap-1.5">
+              {(task.labels ?? []).map((l) => (
+                <span
+                  key={l}
+                  className="inline-flex items-center gap-1 rounded-full bg-[hsl(var(--bg-elevated))] px-2 py-0.5 text-[11px] ring-1 ring-[hsl(var(--line))]"
+                >
+                  {l}
+                  <button
+                    type="button"
+                    onClick={() => removeLabel(l)}
+                    disabled={saving}
+                    title="Retirer"
+                    className="grid h-3.5 w-3.5 place-items-center rounded-full text-[hsl(var(--ink-4))] hover:bg-[hsl(var(--bg-muted))] hover:text-[hsl(var(--accent-rose))] disabled:opacity-60"
+                  >
+                    <X className="h-2.5 w-2.5" />
+                  </button>
+                </span>
+              ))}
+              <div className="inline-flex items-center gap-1 rounded-full border border-dashed border-[hsl(var(--line-strong))] px-2 py-0.5">
+                <input
+                  value={labelDraft}
+                  onChange={(e) => setLabelDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addLabel();
+                    } else if (e.key === "Escape") {
+                      setLabelDraft("");
+                    }
+                  }}
+                  placeholder="ajouter…"
+                  disabled={saving}
+                  className="w-20 bg-transparent text-[11px] outline-none placeholder:text-[hsl(var(--ink-4))] disabled:opacity-60"
+                />
+                <button
+                  type="button"
+                  onClick={addLabel}
+                  disabled={saving || !labelDraft.trim()}
+                  className="grid h-3.5 w-3.5 place-items-center rounded-full text-[hsl(var(--ink-3))] hover:text-ink disabled:opacity-40"
+                  title="Ajouter"
+                >
+                  <Plus className="h-2.5 w-2.5" />
+                </button>
+              </div>
+            </div>
+          </Meta>
+          {branchName && (
+            <Meta Icon={GitBranch} label="Branche">
+              {branchUrl ? (
+                <button
+                  type="button"
+                  onClick={() => routerService.openExternal(branchUrl)}
+                  className="font-mono text-[12px] text-[hsl(var(--brand-ink))] underline-offset-2 hover:underline"
+                >
+                  {branchName}
+                </button>
+              ) : (
+                <span className="font-mono text-[12px]">{branchName}</span>
+              )}
+            </Meta>
+          )}
+          {task.storyId && (
+            <Meta Icon={LinkIcon} label="Story liée">
+              <span className="font-mono text-[11px]">
+                {task.storyId.slice(0, 8)}…
+              </span>
+            </Meta>
+          )}
+        </div>
+
+        <CommentsSection
+          comments={comments}
+          loading={commentsLoading}
+          currentUserId={user?.id ?? null}
+          isAdmin={isAdmin}
+          deletingId={deletingId}
+          onDelete={handleDeleteComment}
+          comment={comment}
+          setComment={setComment}
+          submitting={submittingComment}
+          onSubmit={handleSubmitComment}
+        />
+      </div>
+    </>
+  );
+}
+
+/* ---------- CommentsSection ---------- */
+
+function CommentsSection({
+  comments,
+  loading,
+  currentUserId,
+  isAdmin,
+  deletingId,
+  onDelete,
+  comment,
+  setComment,
+  submitting,
+  onSubmit,
+}: {
+  comments: TaskComment[];
+  loading: boolean;
+  currentUserId: string | null;
+  isAdmin: boolean;
+  deletingId: string | null;
+  onDelete: (id: string) => void;
+  comment: string;
+  setComment: (v: string) => void;
+  submitting: boolean;
+  onSubmit: (e: React.FormEvent) => void;
+}) {
+  const sorted = [...comments].sort((a, b) =>
+    a.createdAt < b.createdAt ? -1 : 1,
+  );
+  const canSubmit = comment.trim().length > 0 && !submitting;
+
+  return (
+    <section className="mt-6">
+      <header className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <MessageSquare className="h-3.5 w-3.5 text-[hsl(var(--ink-3))]" />
+          <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[hsl(var(--ink-3))]">
+            Commentaires
+          </div>
+          {comments.length > 0 && (
+            <Badge tone="neutral" className="!text-[10px]">
+              {comments.length}
+            </Badge>
+          )}
+        </div>
+      </header>
+
+      {/* Liste */}
+      <div className="mt-3 space-y-3">
+        {loading ? (
+          <div className="flex items-center gap-2 py-2 text-[12px] text-[hsl(var(--ink-3))]">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            Chargement…
+          </div>
+        ) : sorted.length === 0 ? (
+          <p className="rounded-[var(--radius-sm)] border border-dashed border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-sunken)/0.4)] px-3 py-3 text-center text-[12px] text-[hsl(var(--ink-3))]">
+            <span className="font-serif italic">Pas encore de mot écrit.</span>{" "}
+            Soyez le premier à commenter.
+          </p>
+        ) : (
+          sorted.map((c) => {
+            const canDelete =
+              isAdmin || (currentUserId && c.authorId === currentUserId);
+            const isDeleting = deletingId === c.id;
+            return (
+              <article
+                key={c.id}
+                className="group relative flex gap-2.5 rounded-[var(--radius-md)] border border-[hsl(var(--line))] bg-[hsl(var(--bg))] p-3"
+              >
+                <Avatar
+                  id={c.authorId}
+                  name={c.author?.name ?? c.authorId}
+                  size="sm"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline gap-2">
+                    <span className="truncate text-[12.5px] font-semibold tracking-tight">
+                      {c.author?.name ?? "Auteur inconnu"}
+                    </span>
+                    <span className="font-mono text-[10.5px] text-[hsl(var(--ink-4))]">
+                      {formatCommentDate(c.createdAt)}
+                    </span>
+                  </div>
+                  <p className="mt-1 whitespace-pre-wrap break-words text-[13px] leading-relaxed text-[hsl(var(--ink-2))]">
+                    {c.body}
+                  </p>
+                </div>
+                {canDelete && (
+                  <button
+                    type="button"
+                    onClick={() => onDelete(c.id)}
+                    disabled={isDeleting}
+                    title="Supprimer"
+                    className="absolute right-2 top-2 grid h-6 w-6 place-items-center rounded-[5px] text-[hsl(var(--ink-4))] opacity-0 transition hover:bg-[hsl(var(--bg-muted))] hover:text-[hsl(var(--accent-rose))] focus:opacity-100 group-hover:opacity-100 disabled:opacity-40"
+                  >
+                    {isDeleting ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-3 w-3" />
+                    )}
+                  </button>
+                )}
+              </article>
+            );
+          })
+        )}
+      </div>
+
+      {/* Form */}
+      <form
+        onSubmit={onSubmit}
+        className="mt-3 rounded-[var(--radius-md)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg))] focus-within:border-[hsl(var(--brand)/0.5)] focus-within:ring-2 focus-within:ring-[hsl(var(--brand)/0.3)]"
+      >
+        <textarea
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          onKeyDown={(e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+              e.preventDefault();
+              onSubmit(e);
+            }
+          }}
+          placeholder="Ajouter un commentaire…"
+          rows={2}
+          maxLength={2000}
+          disabled={submitting}
+          className="block w-full resize-none bg-transparent px-3 py-2.5 text-[13px] placeholder:text-[hsl(var(--ink-4))] focus:outline-none disabled:opacity-60"
+        />
+        <div className="flex items-center justify-between gap-2 border-t border-[hsl(var(--line))] px-3 py-2">
+          <span className="font-mono text-[10px] text-[hsl(var(--ink-4))]">
+            <kbd className="rounded border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-elevated))] px-1.5 py-0.5 text-[9.5px]">
+              ⌘
+            </kbd>
+            <span className="mx-1">+</span>
+            <kbd className="rounded border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-elevated))] px-1.5 py-0.5 text-[9.5px]">
+              Entrée
+            </kbd>{" "}
+            pour publier
+          </span>
+          <button
+            type="submit"
+            disabled={!canSubmit}
+            className="inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-sm)] bg-[hsl(var(--brand))] px-3 text-[12px] font-semibold text-white shadow-[var(--shadow-brand)] hover:bg-[hsl(var(--brand-ink))] disabled:opacity-50"
+          >
+            {submitting ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Send className="h-3 w-3" />
+            )}
+            Publier
+          </button>
+        </div>
+      </form>
+    </section>
+  );
+}
+
+function formatCommentDate(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const min = Math.round(diffMs / 60000);
+  if (min < 1) return "à l'instant";
+  if (min < 60) return `il y a ${min} min`;
+  const h = Math.round(min / 60);
+  if (h < 24) return `il y a ${h} h`;
+  const days = Math.round(h / 24);
+  if (days < 7) return `il y a ${days} j`;
+  return d.toLocaleDateString("fr-FR", {
+    day: "2-digit",
+    month: "short",
+    year: now.getFullYear() === d.getFullYear() ? undefined : "numeric",
+  });
+}
+
+function Meta({
+  Icon,
+  label,
+  children,
+  className,
+}: {
+  Icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={`flex items-start gap-2.5${className ? " " + className : ""}`}>
+      <span className="mt-0.5 grid h-5 w-5 place-items-center rounded-md bg-[hsl(var(--bg-elevated))] text-[hsl(var(--ink-3))] ring-1 ring-[hsl(var(--line))]">
+        <Icon className="h-3 w-3" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="text-[10.5px] uppercase tracking-[0.14em] text-[hsl(var(--ink-3))] font-semibold">
+          {label}
+        </div>
+        <div className="mt-0.5">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- AssigneePicker ---------- */
+
+function AssigneePicker({
+  currentAssigneeId,
+  members,
+  membersLoaded,
+  currentUser,
+  disabled,
+  onAssign,
+  onAssignSelf,
+}: {
+  currentAssigneeId: string | null;
+  members: ProjectMember[];
+  membersLoaded: boolean;
+  currentUser: ApiUser | null;
+  disabled: boolean;
+  onAssign: (id: string | null) => void;
+  onAssignSelf: () => void;
+}) {
+  const options = members
+    .filter((m) => !!m.user)
+    .map((m) => ({
+      id: m.userId,
+      name: m.user!.name,
+      email: m.user!.email,
+      avatar_url: m.user!.avatar_url ?? null,
+    }));
+
+  const selfIsMember =
+    !!currentUser &&
+    members.some((m) => m.userId === currentUser.id);
+  const canSelfAssign =
+    !!currentUser && selfIsMember && currentAssigneeId !== currentUser.id;
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <div className="min-w-[260px] flex-1">
+        <UserCombobox
+          users={options}
+          value={currentAssigneeId ?? ""}
+          onChange={(id) => onAssign(id || null)}
+          placeholder={
+            membersLoaded
+              ? "Choisir un assigné…"
+              : "Chargement des membres…"
+          }
+          emptyLabel={
+            membersLoaded ? "Aucun membre disponible" : "Chargement…"
+          }
+          disabled={disabled || !membersLoaded}
+        />
+      </div>
+      {currentAssigneeId && (
+        <button
+          type="button"
+          onClick={() => onAssign(null)}
+          disabled={disabled}
+          className="inline-flex h-9 items-center gap-1 rounded-[var(--radius-sm)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-elevated))] px-2.5 text-[11.5px] font-medium text-[hsl(var(--ink-2))] hover:bg-[hsl(var(--bg-muted))] hover:text-ink disabled:opacity-60"
+          title="Retirer l'assignation"
+        >
+          <UserMinus className="h-3.5 w-3.5" />
+          Retirer
+        </button>
+      )}
+      {canSelfAssign && (
+        <button
+          type="button"
+          onClick={onAssignSelf}
+          disabled={disabled}
+          className="inline-flex h-9 items-center gap-1 rounded-[var(--radius-sm)] bg-[hsl(var(--brand))] px-2.5 text-[11.5px] font-semibold text-white shadow-[var(--shadow-brand)] hover:bg-[hsl(var(--brand-ink))] disabled:opacity-60"
+        >
+          <UserPlus className="h-3.5 w-3.5" />
+          M&apos;assigner
+        </button>
+      )}
+    </div>
+  );
+}

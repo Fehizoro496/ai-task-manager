@@ -1,7 +1,9 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:ai_task_manager/core/design_system/app_button.dart';
 import 'package:ai_task_manager/core/design_system/app_toast.dart';
@@ -11,6 +13,7 @@ import 'package:ai_task_manager/features/admin/model/project_member_model.dart';
 import 'package:ai_task_manager/features/admin/viewmodel/admin_viewmodel.dart';
 import 'package:ai_task_manager/features/auth/viewmodel/auth_viewmodel.dart';
 import 'package:ai_task_manager/features/board/viewmodel/board_viewmodel.dart';
+import 'package:ai_task_manager/features/projects/viewmodel/project_viewmodel.dart';
 import 'package:ai_task_manager/features/tasks/model/task_entity.dart';
 import 'package:ai_task_manager/features/tasks/viewmodel/task_viewmodel.dart';
 import 'package:ai_task_manager/shared/user_avatar.dart';
@@ -144,6 +147,8 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> {
         }
         final updated = TaskEntity(
           id: widget.task.id,
+          identifier: widget.task.identifier,
+          githubBranch: widget.task.githubBranch,
           title: title,
           description: _descriptionController.text.trim(),
           status: _status,
@@ -281,15 +286,29 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> {
                 ),
                 child: Row(
                   children: [
-                    Text(
-                      'Task Details',
-                      style: TextStyle(
-                        color: titleColor,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Task Details',
+                            style: TextStyle(
+                              color: titleColor,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          if (widget.task.identifier != null) ...[
+                            const SizedBox(height: 4),
+                            _IdentifierBadge(
+                              identifier: widget.task.identifier!,
+                              isDark: isDark,
+                            ),
+                          ],
+                        ],
                       ),
                     ),
-                    const Spacer(),
                     if (isAdmin)
                       _HeaderIconButton(
                         onTap: _deleteTask,
@@ -604,6 +623,19 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> {
                           ),
                         ),
                       ),
+
+                      if (widget.task.githubBranch != null) ...[
+                        const SizedBox(height: AppSpacing.xl),
+                        _SectionLabel(label: 'GitHub Branch', color: labelColor),
+                        const SizedBox(height: AppSpacing.xs),
+                        _GitHubBranchRow(
+                          branch: widget.task.githubBranch!,
+                          isDark: isDark,
+                          borderColor: borderColor,
+                          titleColor: titleColor,
+                          hintColor: hintColor,
+                        ),
+                      ],
 
                       const SizedBox(height: AppSpacing.xxxl),
                       Text(
@@ -1092,6 +1124,181 @@ class _PriorityDropdown extends StatelessWidget {
               )
               .toList(),
           onChanged: enabled ? onChanged : null,
+        ),
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// Identifier Badge (header)
+// =============================================================================
+
+class _IdentifierBadge extends StatelessWidget {
+  const _IdentifierBadge({required this.identifier, required this.isDark});
+
+  final String identifier;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceDark : AppColors.hoverLight,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+        border: Border.all(
+          color: isDark ? AppColors.borderDark : AppColors.borderLight,
+          width: 0.8,
+        ),
+      ),
+      child: Text(
+        identifier,
+        style: TextStyle(
+          color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.5,
+          fontFamily: 'monospace',
+        ),
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// GitHub Branch Row
+// =============================================================================
+
+class _GitHubBranchRow extends ConsumerWidget {
+  const _GitHubBranchRow({
+    required this.branch,
+    required this.isDark,
+    required this.borderColor,
+    required this.titleColor,
+    required this.hintColor,
+  });
+
+  final String branch;
+  final bool isDark;
+  final Color borderColor;
+  final Color titleColor;
+  final Color hintColor;
+
+  Future<void> _copyBranch(BuildContext context) async {
+    await Clipboard.setData(ClipboardData(text: branch));
+    if (!context.mounted) return;
+    AppToast.success(context, 'Branche copiée');
+  }
+
+  Future<void> _openOnGitHub(BuildContext context, WidgetRef ref) async {
+    final project = ref.read(selectedProjectProvider);
+    if (project == null || !project.hasGithubRepo) {
+      if (!context.mounted) return;
+      AppToast.error(context, 'Aucun dépôt GitHub lié au projet');
+      return;
+    }
+    final uri = Uri.parse(
+      'https://github.com/${project.githubOwner}/${project.githubRepo}/tree/$branch',
+    );
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        border: Border.all(color: borderColor),
+        color: isDark
+            ? const Color(0xFF24292F).withOpacity(0.4)
+            : const Color(0xFFF6F8FA),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.call_split_rounded, size: 14, color: hintColor),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              branch,
+              style: TextStyle(
+                color: titleColor,
+                fontSize: 12,
+                fontFamily: 'monospace',
+                fontWeight: FontWeight.w500,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          _BranchActionButton(
+            icon: Icons.copy_rounded,
+            tooltip: 'Copier la branche',
+            color: hintColor,
+            onTap: () => _copyBranch(context),
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          _BranchActionButton(
+            icon: Icons.open_in_new_rounded,
+            tooltip: 'Ouvrir sur GitHub',
+            color: hintColor,
+            onTap: () => _openOnGitHub(context, ref),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BranchActionButton extends StatefulWidget {
+  const _BranchActionButton({
+    required this.icon,
+    required this.tooltip,
+    required this.color,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  State<_BranchActionButton> createState() => _BranchActionButtonState();
+}
+
+class _BranchActionButtonState extends State<_BranchActionButton> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: widget.tooltip,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: GestureDetector(
+          onTap: widget.onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 120),
+            width: 26,
+            height: 26,
+            decoration: BoxDecoration(
+              color: _hovered
+                  ? Colors.black.withOpacity(0.06)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+            ),
+            child: Icon(widget.icon, size: 14, color: widget.color),
+          ),
         ),
       ),
     );

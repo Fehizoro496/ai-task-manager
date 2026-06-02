@@ -21,35 +21,53 @@ const init = (httpServer) => {
     }
   });
 
-  io.on('connection', async (socket) => {
+  io.on('connection', (socket) => {
     const userId = socket.user?.id ?? '?';
     const userName = socket.user?.name ?? socket.user?.email ?? '?';
-    console.log(`[socket] ✓ Connecté  — user=${userName} (${userId})  id=${socket.id}`);
+    const userRole = socket.user?.role ?? null;
+    console.log(`[socket] ✓ Connecté  — user=${userName} (${userId})  role=${userRole}  id=${socket.id}`);
 
-    // Auto-rejoindre toutes les conversations de l'utilisateur
-    // pour recevoir les nouveaux messages même sans ouvrir la conversation
-    try {
-      const prisma = require('./prisma/client');
-      const convs = await prisma.conversation.findMany({
-        where: { members: { some: { id: userId } } },
-        select: { id: true },
-      });
-      for (const conv of convs) {
-        socket.join(`conv:${conv.id}`);
-      }
-      console.log(`[socket]   auto-join  ${convs.length} conversations  ← ${userName}`);
-    } catch (err) {
-      console.error(`[socket] ✗ auto-join échoué  err=${err.message}`);
+    // Room personnelle pour notifier ce user (chat, notifs, status change…)
+    // Joinée de manière synchrone : c'est sur cette room qu'on émet les
+    // events temps réel pour éviter toute race avec un `await` en amont.
+    socket.join(`user:${userId}`);
+    // Room admins pour les events globaux (nouvelles demandes, count change…)
+    if (userRole === 'ADMIN') {
+      socket.join('admins');
+      console.log(`[socket]   join  admins  ← ${userName}`);
     }
 
-    socket.on('join_conversation', (convId) => {
-      socket.join(`conv:${convId}`);
-      console.log(`[socket]   join  conv:${convId}  ← ${userName}`);
+    // Rooms projet pour le live update du board (TaskCard temps réel)
+    socket.on('join_project', async (projectId) => {
+      if (!projectId || typeof projectId !== 'string') return;
+      try {
+        if (userRole === 'ADMIN') {
+          socket.join(`project:${projectId}`);
+          console.log(`[socket]   join  project:${projectId}  ← ${userName} (admin)`);
+          return;
+        }
+        const prisma = require('./prisma/client');
+        const member = await prisma.projectMember.findUnique({
+          where: { projectId_userId: { projectId, userId } },
+        });
+        const owned = member
+          ? true
+          : (await prisma.project.findFirst({ where: { id: projectId, ownerId: userId }, select: { id: true } })) !== null;
+        if (member || owned) {
+          socket.join(`project:${projectId}`);
+          console.log(`[socket]   join  project:${projectId}  ← ${userName}`);
+        } else {
+          console.log(`[socket]   ✗ refus join project:${projectId}  ← ${userName} (non membre)`);
+        }
+      } catch (err) {
+        console.error(`[socket] ✗ join_project échec  err=${err.message}`);
+      }
     });
 
-    socket.on('leave_conversation', (convId) => {
-      socket.leave(`conv:${convId}`);
-      console.log(`[socket]   leave conv:${convId}  ← ${userName}`);
+    socket.on('leave_project', (projectId) => {
+      if (!projectId || typeof projectId !== 'string') return;
+      socket.leave(`project:${projectId}`);
+      console.log(`[socket]   leave project:${projectId}  ← ${userName}`);
     });
 
     socket.on('disconnect', (reason) => {

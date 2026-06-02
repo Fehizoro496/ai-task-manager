@@ -1,6 +1,7 @@
 const prisma = require("../../prisma/client");
 const AppError = require("../../utils/AppError");
-const { addUserToGeneral } = require("../chat/chat.service");
+const { addUserToGeneral, createDmsForNewUser } = require("../chat/chat.service");
+const { getIo } = require("../../socket");
 
 const userSelect = {
   id: true,
@@ -34,7 +35,18 @@ const approveUser = async (id) => {
     select: userSelect,
   });
   await addUserToGeneral(id);
-  return serializeUser(updated);
+  await createDmsForNewUser(id);
+
+  const payload = serializeUser(updated);
+  const io = getIo();
+  if (io) {
+    // Notifier le user concerné (il peut etre sur /pending avec un socket ouvert)
+    io.to(`user:${id}`).emit("user:status_change", { user: payload });
+    // Notifier les autres admins pour refresh leur compteur pending
+    io.to("admins").emit("admin:pending_changed");
+  }
+
+  return payload;
 };
 
 const rejectUser = async (id) => {
@@ -47,7 +59,15 @@ const rejectUser = async (id) => {
     data: { status: "REJECTED" },
     select: userSelect,
   });
-  return serializeUser(updated);
+
+  const payload = serializeUser(updated);
+  const io = getIo();
+  if (io) {
+    io.to(`user:${id}`).emit("user:status_change", { user: payload });
+    io.to("admins").emit("admin:pending_changed");
+  }
+
+  return payload;
 };
 
 module.exports = { listUsers, approveUser, rejectUser };
