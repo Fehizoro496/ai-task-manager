@@ -30,6 +30,7 @@ import {
   Loader2,
   X,
   MessageSquare,
+  Wand2,
 } from "lucide-react";
 import { statusLabel, statusToken } from "@/lib/labels";
 import {
@@ -42,6 +43,7 @@ import { PriorityPill } from "@/components/ui/pill";
 import { Badge } from "@/components/ui/badge";
 import { TaskDetailDialog } from "@/components/tasks/task-detail-dialog";
 import { NewTaskDialog } from "@/components/tasks/new-task-dialog";
+import { DistributeDialog } from "@/components/kanban/distribute-dialog";
 import { FilterPopover } from "@/components/ui/filter-popover";
 import { projectsApi, toast, useProjectTasks } from "@/services";
 import type { TaskPriority, TaskStatus } from "@/services";
@@ -86,9 +88,15 @@ const isColumnId = (id: string): id is Status =>
 interface KanbanBoardProps {
   projectId: string;
   projectPrefix: string;
+  /** Affiche la répartition automatique (owner du projet ou admin). */
+  canDistribute?: boolean;
 }
 
-export function KanbanBoard({ projectId, projectPrefix: prefix }: KanbanBoardProps) {
+export function KanbanBoard({
+  projectId,
+  projectPrefix: prefix,
+  canDistribute = false,
+}: KanbanBoardProps) {
   const { tasks, loading, refetch, applyUpdate } = useProjectTasks(projectId);
   // Liste locale pour les rearrangements optimistes inter-colonnes pendant
   // le drag, avant la confirmation API au drop.
@@ -106,6 +114,7 @@ export function KanbanBoard({ projectId, projectPrefix: prefix }: KanbanBoardPro
     if (t) setOpenTaskId(t);
   }, [searchParams]);
   const [createForStatus, setCreateForStatus] = useState<Status | null>(null);
+  const [distributeOpen, setDistributeOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [priorityFilter, setPriorityFilter] = useState<Set<TaskPriority>>(
     new Set(),
@@ -396,6 +405,17 @@ export function KanbanBoard({ projectId, projectPrefix: prefix }: KanbanBoardPro
               Réinitialiser ({activeFiltersCount})
             </button>
           )}
+
+          {canDistribute && (
+            <button
+              onClick={() => setDistributeOpen(true)}
+              title="Répartir automatiquement le backlog non assigné"
+              className="ml-auto inline-flex h-9 items-center gap-1.5 rounded-[var(--radius-sm)] bg-[hsl(var(--brand))] px-3 text-[12.5px] font-semibold text-white shadow-[var(--shadow-brand)] hover:bg-[hsl(var(--brand-ink))]"
+            >
+              <Wand2 className="h-3.5 w-3.5" />
+              Répartir
+            </button>
+          )}
         </div>
       </div>
 
@@ -442,6 +462,15 @@ export function KanbanBoard({ projectId, projectPrefix: prefix }: KanbanBoardPro
         }
         onCreated={() => refetch()}
       />
+
+      {canDistribute && (
+        <DistributeDialog
+          open={distributeOpen}
+          projectId={projectId}
+          onClose={() => setDistributeOpen(false)}
+          onApplied={() => refetch()}
+        />
+      )}
     </DndContext>
   );
 }

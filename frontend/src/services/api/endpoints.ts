@@ -93,6 +93,22 @@ export const endpoints = {
     overview: () => "/api/reports/overview",
   },
 
+  skills: {
+    root: () => "/api/skills",
+    bootstrap: () => "/api/skills/bootstrap",
+    forUser: (userId: string) => `/api/skills/users/${userId}`,
+    userSkill: (userId: string, skillId: string) =>
+      `/api/skills/users/${userId}/${skillId}`,
+  },
+
+  distribution: {
+    suggestAssignee: (taskId: string) =>
+      `/api/tasks/${taskId}/suggest-assignee`,
+    distribute: (projectId: string) => `/api/projects/${projectId}/distribute`,
+    applyDistribution: (projectId: string) =>
+      `/api/projects/${projectId}/distribute/apply`,
+  },
+
   comments: {
     listForTask: (taskId: string) => `/api/tasks/${taskId}/comments`,
     createForTask: (taskId: string) => `/api/tasks/${taskId}/comments`,
