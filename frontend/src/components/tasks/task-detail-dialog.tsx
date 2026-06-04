@@ -16,6 +16,7 @@ import {
   Send,
   Trash2,
   Plus,
+  Wand2,
 } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +26,7 @@ import { UserCombobox } from "@/components/ui/user-combobox";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import {
   commentsApi,
+  distributionApi,
   projectsApi,
   routerService,
   tasksApi,
@@ -33,6 +35,7 @@ import {
   useTask,
 } from "@/services";
 import type {
+  AssigneeSuggestion,
   ProjectMember,
   Task,
   TaskComment,
@@ -42,6 +45,7 @@ import type {
 } from "@/services";
 import type { UpdateTaskInput } from "@/services/api/tasks.api";
 import { normalizeApiStatus, normalizeApiPriority } from "@/lib/mappers";
+import { cn } from "@/lib/utils";
 
 const STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
   { value: "todo", label: "À faire" },
@@ -117,6 +121,9 @@ function TaskDetailBody({
   const [titleDraft, setTitleDraft] = useState<string | null>(null);
   const [descDraft, setDescDraft] = useState<string | null>(null);
   const [labelDraft, setLabelDraft] = useState("");
+  // Suggestion d'assigné (algo de répartition).
+  const [suggestions, setSuggestions] = useState<AssigneeSuggestion[] | null>(null);
+  const [loadingSuggest, setLoadingSuggest] = useState(false);
 
   // Patch unifié : optimistic, rollback en cas d'erreur, toast.
   const patchTask = async (
@@ -298,6 +305,28 @@ function TaskDetailBody({
     patchTask({ labels }, { labels });
   };
 
+  const fetchSuggestions = async () => {
+    if (!task) return;
+    setLoadingSuggest(true);
+    try {
+      const res = await distributionApi.suggestAssignee(task.id);
+      setSuggestions(res.suggestions);
+    } catch (e) {
+      console.error("Suggest assignee failed", e);
+      toast.error(
+        e instanceof Error ? e.message : "Suggestion impossible.",
+        "Échec",
+      );
+    } finally {
+      setLoadingSuggest(false);
+    }
+  };
+
+  // Réinitialise les suggestions quand on change de tâche.
+  useEffect(() => {
+    setSuggestions(null);
+  }, [taskId]);
+
   if (loading) {
     return (
       <div className="grid place-items-center py-16">
@@ -436,6 +465,14 @@ function TaskDetailBody({
               disabled={saving}
               onAssign={handleAssign}
               onAssignSelf={handleAssignSelf}
+            />
+            <SuggestionStrip
+              suggestions={suggestions}
+              loading={loadingSuggest}
+              currentAssigneeId={task.assigneeId}
+              disabled={saving}
+              onFetch={fetchSuggestions}
+              onPick={(id) => handleAssign(id)}
             />
           </Meta>
           <Meta Icon={Sparkles} label="Priorité">
@@ -756,6 +793,94 @@ function Meta({
         </div>
         <div className="mt-0.5">{children}</div>
       </div>
+    </div>
+  );
+}
+
+/* ---------- SuggestionStrip ---------- */
+
+function SuggestionStrip({
+  suggestions,
+  loading,
+  currentAssigneeId,
+  disabled,
+  onFetch,
+  onPick,
+}: {
+  suggestions: AssigneeSuggestion[] | null;
+  loading: boolean;
+  currentAssigneeId: string | null;
+  disabled: boolean;
+  onFetch: () => void;
+  onPick: (id: string) => void;
+}) {
+  const top = suggestions?.slice(0, 3) ?? [];
+
+  return (
+    <div className="mt-2">
+      {suggestions === null ? (
+        <button
+          type="button"
+          onClick={onFetch}
+          disabled={disabled || loading}
+          className="inline-flex h-7 items-center gap-1.5 rounded-[var(--radius-sm)] border border-[hsl(var(--brand)/0.3)] bg-[hsl(var(--brand-soft))] px-2.5 text-[11.5px] font-semibold text-[hsl(var(--brand-ink))] hover:bg-[hsl(var(--brand)/0.18)] disabled:opacity-60"
+        >
+          {loading ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Wand2 className="h-3.5 w-3.5" />
+          )}
+          Suggérer un assigné
+        </button>
+      ) : top.length === 0 ? (
+        <p className="text-[11.5px] italic text-[hsl(var(--ink-3))]">
+          Aucun membre à suggérer.
+        </p>
+      ) : (
+        <div>
+          <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[hsl(var(--ink-3))]">
+            <Wand2 className="h-3 w-3" />
+            Recommandations
+          </div>
+          <ul className="flex flex-wrap gap-1.5">
+            {top.map((s, i) => {
+              const isCurrent = s.id === currentAssigneeId;
+              const pct = Math.round(s.score * 100);
+              return (
+                <li key={s.id}>
+                  <button
+                    type="button"
+                    onClick={() => onPick(s.id)}
+                    disabled={disabled || isCurrent}
+                    title={`Compétence ${Math.round(
+                      s.breakdown.skill * 100,
+                    )}% · Dispo ${Math.round(
+                      s.breakdown.availability * 100,
+                    )}% · Perf ${Math.round(s.breakdown.performance * 100)}%`}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-full border py-0.5 pl-0.5 pr-2 text-[11.5px] transition-colors",
+                      isCurrent
+                        ? "border-[hsl(var(--accent-sage)/0.4)] bg-[hsl(152_50%_95%)] text-[hsl(var(--accent-sage))]"
+                        : "border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-elevated))] hover:border-[hsl(var(--brand)/0.5)] hover:bg-[hsl(var(--brand-soft)/0.5)]",
+                    )}
+                  >
+                    {i === 0 && !isCurrent && (
+                      <span className="grid h-5 w-5 place-items-center rounded-full bg-[hsl(var(--brand))] text-[9px] font-bold text-white">
+                        ★
+                      </span>
+                    )}
+                    <Avatar id={s.id} name={s.name} size="xs" />
+                    <span className="font-medium">{s.name}</span>
+                    <span className="font-mono text-[10px] text-[hsl(var(--ink-3))]">
+                      {pct}%
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

@@ -32,9 +32,11 @@ model User {
   role          UserRole       @default(USER)
   status        UserStatus     @default(PENDING)
   preferences   Json?
+  weeklyCapacity Int           @default(10)
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   projects      Project[]
+  skills        UserSkill[]
   assignedTasks Task[]         @relation("TaskAssignee")
   notifications    Notification[]
   projectMembers   ProjectMember[]
@@ -190,6 +192,25 @@ model Notification {
   link      String
   isRead    Boolean          @default(false)
   createdAt DateTime         @default(now())
+}
+
+model Skill {
+  id        String      @id @default(uuid())
+  name      String      @unique
+  createdAt DateTime    @default(now())
+  users     UserSkill[]
+}
+
+model UserSkill {
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skillId String
+  skill   Skill  @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  level   Int    @default(3) // 1..5, niveau de maîtrise déclaré
+  source  String @default("manual") // "manual" (saisi) | "derived" (déduit de l'historique)
+
+  @@id([userId, skillId])
+  @@index([skillId])
 }
 
 enum CalendarEventVisibility {

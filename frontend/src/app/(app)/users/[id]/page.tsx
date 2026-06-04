@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { StatusPill, PriorityPill } from "@/components/ui/pill";
 import { Github } from "@/components/icons/github";
 import { TaskDetailDialog } from "@/components/tasks/task-detail-dialog";
+import { SkillsPanel } from "@/components/users/skills-panel";
 import { routerService, usersApi } from "@/services";
 import type { UserDetail } from "@/services";
 import {
@@ -160,6 +161,9 @@ export default function UserDetailPage({
               tone="apricot"
             />
           </section>
+
+          {/* Compétences */}
+          <SkillsPanel userId={user.id} />
 
           {/* Recent tasks */}
           <section className="rounded-[var(--radius-lg)] border border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))] shadow-[var(--shadow-1)]">

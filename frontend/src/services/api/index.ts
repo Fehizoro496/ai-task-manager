@@ -24,6 +24,16 @@ export type {
 } from "./calendar.api";
 export { commentsApi } from "./comments.api";
 export type { TaskComment } from "./comments.api";
+export { skillsApi } from "./skills.api";
+export type { Skill, UserSkill } from "./skills.api";
+export { distributionApi } from "./distribution.api";
+export type {
+  ScoreBreakdown,
+  AssigneeSuggestion,
+  SuggestResponse,
+  DistributionAssignment,
+  DistributionPreview,
+} from "./distribution.api";
 export { reportsApi } from "./reports.api";
 export type {
   ReportTotals,
