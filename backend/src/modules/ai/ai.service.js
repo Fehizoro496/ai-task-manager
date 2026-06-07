@@ -1,34 +1,52 @@
-const OpenAI = require("openai");
+const Anthropic = require("@anthropic-ai/sdk");
 const prisma = require("../../prisma/client");
 const config = require("../../config/env");
 const AppError = require("../../utils/AppError");
 const { aiPlanSchema } = require("./ai.schema");
 
-const openai = new OpenAI({ apiKey: config.openaiApiKey });
+const anthropic = new Anthropic({ apiKey: config.anthropicApiKey });
 
-const SYSTEM_PROMPT = `You are a project planning assistant. Given a feature document, break it down into a structured plan with Epics, Stories, and Tasks.
+const SYSTEM_PROMPT = `You are a project planning assistant. Given a feature document, break it down into a structured plan of Epics, each containing Stories, each containing Tasks.
 
-Return ONLY valid JSON in this exact format:
-{
-  "epics": [
-    {
-      "title": "Epic title",
-      "description": "Epic description",
-      "stories": [
-        {
-          "title": "Story title",
-          "description": "Story description",
-          "tasks": [
-            {
-              "title": "Task title",
-              "description": "Task description"
-            }
-          ]
-        }
-      ]
-    }
-  ]
-}`;
+- Epics are high-level themes; Stories are user-facing increments; Tasks are concrete, actionable units of work.
+- Write concise, descriptive titles and short descriptions.
+- Cover the document thoroughly without inventing scope that isn't implied.`;
+
+// JSON Schema utilisé pour les structured outputs (équivalent de aiPlanSchema).
+// Écrit à la main pour éviter le couplage avec la version de zod (le helper
+// zodOutputFormat du SDK exige des schémas zod v4).
+const titleDescObject = (required, extraProps = {}) => ({
+  type: "object",
+  properties: {
+    title: { type: "string" },
+    description: { type: "string" },
+    ...extraProps,
+  },
+  required,
+  additionalProperties: false,
+});
+
+const PLAN_JSON_SCHEMA = {
+  type: "object",
+  properties: {
+    epics: {
+      type: "array",
+      items: titleDescObject(["title", "stories"], {
+        stories: {
+          type: "array",
+          items: titleDescObject(["title", "tasks"], {
+            tasks: {
+              type: "array",
+              items: titleDescObject(["title"]),
+            },
+          }),
+        },
+      }),
+    },
+  },
+  required: ["epics"],
+  additionalProperties: false,
+};
 
 /**
  * Serializes a Prisma AiDraft into the format expected by the Flutter frontend.
@@ -68,17 +86,29 @@ const generatePlan = async (userId, { projectId, document }) => {
     throw new AppError("Project not found", 404);
   }
 
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4o",
-    response_format: { type: "json_object" },
-    messages: [
-      { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: document },
+  // Structured outputs : la réponse est contrainte au JSON Schema du plan,
+  // donc garantie parseable. Adaptive thinking améliore la décomposition.
+  const response = await anthropic.messages.create({
+    model: "claude-opus-4-8",
+    max_tokens: 16000,
+    thinking: { type: "adaptive" },
+    system: [
+      {
+        type: "text",
+        text: SYSTEM_PROMPT,
+        cache_control: { type: "ephemeral" },
+      },
     ],
+    messages: [{ role: "user", content: document }],
+    output_config: { format: { type: "json_schema", schema: PLAN_JSON_SCHEMA } },
   });
 
-  const raw = JSON.parse(completion.choices[0].message.content);
-  const plan = aiPlanSchema.parse(raw);
+  const textBlock = response.content.find((b) => b.type === "text");
+  if (!textBlock) {
+    throw new AppError("AI plan generation failed", 502);
+  }
+  // Re-validation côté serveur avec le schéma zod existant (défense en profondeur).
+  const plan = aiPlanSchema.parse(JSON.parse(textBlock.text));
 
   const draft = await prisma.aiDraft.create({
     data: {

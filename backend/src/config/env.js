@@ -4,7 +4,9 @@ const config = {
   port: parseInt(process.env.PORT, 10) || 3000,
   jwtSecret: process.env.JWT_SECRET,
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || "7d",
-  openaiApiKey: process.env.OPENAI_API_KEY,
+  // Clé Anthropic (Claude). Fallback sur OPENAI_API_KEY pour les .env existants
+  // qui stockaient déjà une clé sk-ant sous cet ancien nom.
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY,
   nodeEnv: process.env.NODE_ENV || "development",
   googleClientId: process.env.GOOGLE_CLIENT_ID,
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
