@@ -73,6 +73,23 @@ frontend/.eslintcache
 frontend/tsconfig.tsbuildinfo
 
 # ========================
+# Env files (toutes variantes, partout)
+# ========================
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# ========================
+# Documents Office
+# ========================
+*.docx
+~$*.docx
+*.doc
+
+# ========================
 # Logs
 # ========================
 *.log
