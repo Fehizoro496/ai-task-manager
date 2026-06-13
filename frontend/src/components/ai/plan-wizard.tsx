@@ -42,10 +42,11 @@ interface PlanEpicShape {
 
 function readPlan(draft: AiDraft | null): PlanEpicShape[] {
   if (!draft) return [];
-  const payload = draft.payload as unknown;
+  // L'API renvoie le plan sous `generated_plan` / `plan` (forme { epics: [...] }).
+  const payload = (draft.generated_plan ?? draft.plan) as unknown;
   if (!payload || typeof payload !== "object") return [];
   const obj = payload as Record<string, unknown>;
-  const epics = (obj.epics ?? obj.plan ?? obj) as unknown;
+  const epics = (obj.epics ?? obj) as unknown;
   return Array.isArray(epics) ? (epics as PlanEpicShape[]) : [];
 }
 
@@ -72,12 +73,16 @@ export function PlanWizard() {
 
   async function generate() {
     if (brief.trim().length < 10) return;
+    if (!projectId) {
+      setError("Sélectionnez d'abord un projet de destination.");
+      return;
+    }
     setError(null);
     setLoading(true);
     try {
       const created = await aiApi.generatePlan({
         document: brief.trim(),
-        projectId: projectId || undefined,
+        projectId,
       });
       setDraft(created);
       setStep(2);
@@ -164,7 +169,7 @@ export function PlanWizard() {
                     <Select
                       value={projectId}
                       onChange={setProjectId}
-                      placeholder="— Aucun (brouillon seul) —"
+                      placeholder="— Sélectionner un projet —"
                       options={projects.map((p) => ({
                         value: p.id,
                         label: p.name,
@@ -199,7 +204,7 @@ export function PlanWizard() {
                 onClick={generate}
                 variant="brand"
                 size="lg"
-                disabled={loading || brief.trim().length < 10}
+                disabled={loading || brief.trim().length < 10 || !projectId}
               >
                 {loading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />

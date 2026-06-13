@@ -112,9 +112,18 @@ export interface Task {
 export interface AiDraft {
   id: UUID;
   projectId: UUID;
-  status: "PENDING" | "APPROVED" | "REJECTED";
-  payload: unknown;
+  project_id?: UUID;
+  document?: string;
+  input_document?: string;
+  /** Plan généré (structure { epics: [...] }). `generated_plan` en est l'alias. */
+  plan?: unknown;
+  generated_plan?: unknown;
+  approved?: boolean;
+  status?: "pending" | "generated" | "approved";
   createdAt: string;
+  created_at?: string;
+  updatedAt?: string;
+  updated_at?: string;
 }
 
 export interface ProjectMember {

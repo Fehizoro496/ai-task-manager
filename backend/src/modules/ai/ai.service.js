@@ -78,6 +78,12 @@ const serializeDraft = (draft) => {
 };
 
 const generatePlan = async (userId, { projectId, document }) => {
+  // Un brouillon est rattaché à un projet (FK obligatoire) : on exige donc
+  // un projectId, sinon `findFirst({ id: undefined })` matcherait au hasard.
+  if (!projectId) {
+    throw new AppError("Un projet doit être sélectionné pour générer un plan.", 400);
+  }
+
   const project = await prisma.project.findFirst({
     where: { id: projectId, ownerId: userId },
   });
@@ -89,7 +95,7 @@ const generatePlan = async (userId, { projectId, document }) => {
   // Structured outputs : la réponse est contrainte au JSON Schema du plan,
   // donc garantie parseable. Adaptive thinking améliore la décomposition.
   const response = await anthropic.messages.create({
-    model: "claude-opus-4-8",
+    model: "claude-sonnet-4-6",
     max_tokens: 16000,
     thinking: { type: "adaptive" },
     system: [
@@ -112,7 +118,7 @@ const generatePlan = async (userId, { projectId, document }) => {
 
   const draft = await prisma.aiDraft.create({
     data: {
-      projectId,
+      projectId: project.id,
       document,
       plan,
     },
