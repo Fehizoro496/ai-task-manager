@@ -267,7 +267,7 @@ export function MessagesShell() {
                             {lm.content}
                           </div>
                         ) : (
-                          <div className="truncate text-[11px] italic text-[hsl(var(--ink-4))]">
+                          <div className="truncate text-[11px] text-[hsl(var(--ink-4))]">
                             Aucun message
                           </div>
                         )}

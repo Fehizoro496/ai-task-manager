@@ -87,10 +87,13 @@
   --shadow-3: 0 1px 0 0 hsl(230 18% 78% / 0.6), 0 20px 40px -20px hsl(230 30% 12% / 0.20);
   --shadow-brand: 0 1px 0 0 hsl(239 70% 50% / 0.5), 0 10px 30px -10px hsl(239 84% 60% / 0.4);
 
-  --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
-  --font-body: "Manrope", ui-sans-serif, system-ui, sans-serif;
-  --font-serif: "Instrument Serif", ui-serif, Georgia, serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* Police unique : toutes les familles pointent vers --font-sans (Manrope),
+     définie une seule fois dans layout.tsx. */
+  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-sans);
+  --font-body: var(--font-sans);
+  --font-serif: var(--font-sans);
+  --font-mono: var(--font-sans);
 }
 
 /* ---------------------------------------------------------
@@ -293,7 +296,8 @@ html, body {
 
 .font-display { font-family: var(--font-display); letter-spacing: -0.02em; }
 .font-serif   { font-family: var(--font-serif); letter-spacing: -0.01em; }
-.font-mono    { font-family: var(--font-mono); font-feature-settings: "ss01", "ss02"; }
+/* Police unique : on conserve l'alignement des chiffres sans police mono. */
+.font-mono    { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
 /* Paper texture — barely there */
 .bg-paper {

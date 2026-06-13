@@ -400,7 +400,7 @@ export function MonthView() {
               {WEEKDAY_LABEL[selectedDate.getDay()]}
             </div>
             <div className="mt-1 flex items-baseline gap-2">
-              <div className="font-serif text-[44px] italic leading-none tracking-tight text-ink">
+              <div className="text-[44px] leading-none tracking-tight text-ink">
                 {selectedDate.getDate()}
               </div>
               <div className="font-display text-[14px] font-semibold tracking-tight text-[hsl(var(--ink-2))]">
@@ -416,7 +416,7 @@ export function MonthView() {
                 })}
               </span>
               {!dayInMonth && (
-                <span className="italic text-[hsl(var(--ink-4))]">
+                <span className="text-[hsl(var(--ink-4))]">
                   · hors du mois
                 </span>
               )}
@@ -446,7 +446,7 @@ export function MonthView() {
           <ul className="relative min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
             {selectedEvents.length === 0 ? (
               <li className="grid place-items-center rounded-[var(--radius-sm)] border border-dashed border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-sunken)/0.4)] px-4 py-6 text-center">
-                <span className="font-serif text-[15px] italic text-[hsl(var(--ink-3))]">
+                <span className="text-[15px] text-[hsl(var(--ink-3))]">
                   Une page blanche.
                 </span>
                 <span className="mt-0.5 text-[11px] text-[hsl(var(--ink-4))]">
@@ -707,7 +707,7 @@ function MiniStat({
         </div>
       </div>
       {hint && (
-        <div className="mt-1.5 truncate font-serif text-[11.5px] italic text-[hsl(var(--ink-3))]">
+        <div className="mt-1.5 truncate text-[11.5px] text-[hsl(var(--ink-3))]">
           {hint}
         </div>
       )}

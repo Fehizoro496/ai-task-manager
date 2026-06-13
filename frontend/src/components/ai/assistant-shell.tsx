@@ -126,7 +126,7 @@ export function AssistantShell() {
               </div>
               <h2 className="font-display text-[26px] font-semibold leading-tight tracking-tight">
                 Bonjour {currentUser.name.split(" ")[0]}{" "}
-                <span className="font-serif italic font-normal text-[hsl(var(--ink-2))]">
+                <span className="font-normal text-[hsl(var(--ink-2))]">
                   👋
                 </span>
               </h2>

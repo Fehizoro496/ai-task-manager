@@ -65,7 +65,7 @@ export default function PendingPage() {
           </span>
           <h1 className="mt-4 font-display text-[34px] font-semibold leading-[1.08] tracking-tight">
             Compte{" "}
-            <span className="font-serif italic font-normal text-[hsl(var(--ink-2))]">
+            <span className="font-normal text-[hsl(var(--ink-2))]">
               en attente
             </span>{" "}
             d&apos;approbation
@@ -158,7 +158,7 @@ export default function PendingPage() {
               <div className="text-[10.5px] font-semibold tracking-[0.18em] uppercase text-[hsl(var(--brand-ink))]">
                 Statut
               </div>
-              <div className="mt-1.5 font-serif text-[28px] italic leading-tight tracking-tight">
+              <div className="mt-1.5 text-[28px] leading-tight tracking-tight">
                 Patience,
                 <br />
                 <span className="font-display not-italic font-semibold">

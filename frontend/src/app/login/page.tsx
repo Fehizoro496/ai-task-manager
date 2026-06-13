@@ -117,7 +117,7 @@ export default function LoginPage() {
               </div>
               <h1 className="mt-3 text-[26px] leading-[1.1] font-display font-semibold tracking-tight">
                 Connectez-vous{" "}
-                <span className="font-serif italic font-normal text-[hsl(var(--ink-2))]">
+                <span className="font-normal text-[hsl(var(--ink-2))]">
                   avec votre
                 </span>{" "}
                 compte GitHub

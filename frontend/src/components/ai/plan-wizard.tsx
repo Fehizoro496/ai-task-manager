@@ -124,7 +124,7 @@ export function PlanWizard() {
             {step === 1 && (
               <>
                 Décrivez votre projet —{" "}
-                <span className="font-serif italic font-normal text-[hsl(var(--ink-2))]">
+                <span className="font-normal text-[hsl(var(--ink-2))]">
                   l&apos;IA s&apos;occupe du reste
                 </span>
               </>
