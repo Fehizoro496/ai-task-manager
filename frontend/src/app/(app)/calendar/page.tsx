@@ -22,7 +22,7 @@ export default function CalendarPage() {
               </span>
               <h1 className="mt-1.5 font-display text-[20px] font-semibold leading-[1.1] tracking-tight">
                 Les jours qui{" "}
-                <span className="font-serif italic font-normal text-[hsl(var(--ink-2))]">
+                <span className="font-normal text-[hsl(var(--ink-2))]">
                   comptent
                 </span>
               </h1>

@@ -449,7 +449,7 @@ function TaskDetailBody({
           <button
             type="button"
             onClick={() => setDescDraft("")}
-            className="mt-3 -mx-2 block w-[calc(100%+1rem)] rounded-[var(--radius-sm)] px-2 py-1 text-left text-[13px] italic text-[hsl(var(--ink-4))] hover:bg-[hsl(var(--bg-sunken)/0.6)]"
+            className="mt-3 -mx-2 block w-[calc(100%+1rem)] rounded-[var(--radius-sm)] px-2 py-1 text-left text-[13px] text-[hsl(var(--ink-4))] hover:bg-[hsl(var(--bg-sunken)/0.6)]"
           >
             Ajouter une description…
           </button>
@@ -652,7 +652,7 @@ function CommentsSection({
           </div>
         ) : sorted.length === 0 ? (
           <p className="rounded-[var(--radius-sm)] border border-dashed border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-sunken)/0.4)] px-3 py-3 text-center text-[12px] text-[hsl(var(--ink-3))]">
-            <span className="font-serif italic">Pas encore de mot écrit.</span>{" "}
+            <span className="">Pas encore de mot écrit.</span>{" "}
             Soyez le premier à commenter.
           </p>
         ) : (
@@ -833,7 +833,7 @@ function SuggestionStrip({
           Suggérer un assigné
         </button>
       ) : top.length === 0 ? (
-        <p className="text-[11.5px] italic text-[hsl(var(--ink-3))]">
+        <p className="text-[11.5px] text-[hsl(var(--ink-3))]">
           Aucun membre à suggérer.
         </p>
       ) : (

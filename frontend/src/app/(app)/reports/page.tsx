@@ -71,13 +71,13 @@ export default function ReportsPage() {
               </span>
               <h1 className="mt-3 font-display text-[38px] font-semibold leading-[1.02] tracking-tight">
                 Rapports{" "}
-                <span className="font-serif italic font-normal text-[hsl(var(--ink-2))]">
+                <span className="font-normal text-[hsl(var(--ink-2))]">
                   &amp; signaux faibles
                 </span>
               </h1>
               <p className="mt-2.5 max-w-[520px] text-[14px] leading-relaxed text-[hsl(var(--ink-2))]">
                 Une lecture éditoriale de l&apos;activité —{" "}
-                <span className="font-serif italic">recomposée à chaque visite</span>{" "}
+                <span className="">recomposée à chaque visite</span>{" "}
                 à partir de vos projets et de vos tâches.
               </p>
 
@@ -114,7 +114,7 @@ export default function ReportsPage() {
                 <div className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-[hsl(var(--brand-ink))]">
                   {new Date().toLocaleDateString("fr-FR", { weekday: "long" })}
                 </div>
-                <div className="mt-1 font-serif text-[42px] italic leading-none tracking-tight text-ink">
+                <div className="mt-1 text-[42px] leading-none tracking-tight text-ink">
                   {new Date().getDate()}
                 </div>
                 <div className="mt-1 font-display text-[13px] font-semibold tracking-tight uppercase text-[hsl(var(--ink-2))]">
@@ -270,7 +270,7 @@ function Content({
             <span className="font-mono text-[10.5px] text-[hsl(var(--ink-4))]">
               fenêtre J-13 → J
             </span>
-            <span className="ml-auto font-serif italic">
+            <span className="ml-auto">
               {last7Total === 0
                 ? "Pas de livraison cette semaine."
                 : `${last7Total} livraison${last7Total > 1 ? "s" : ""} sur 7 jours.`}
@@ -426,7 +426,7 @@ function Content({
                           </div>
                           <div className="mt-1 text-[11.5px] text-[hsl(var(--ink-3))]">
                             {p.total} tâche{p.total > 1 ? "s" : ""} ·{" "}
-                            <span className="font-serif italic">{pct}%</span>{" "}
+                            <span className="">{pct}%</span>{" "}
                             achevées
                           </div>
                         </div>
@@ -487,7 +487,7 @@ function Content({
                       onClick={() => routerService.toUser(a.userId)}
                       className="group flex w-full items-center gap-3 rounded-[var(--radius-md)] border border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))] p-3 text-left transition-all hover:-translate-y-px hover:shadow-[var(--shadow-2)]"
                     >
-                      <span className="font-serif text-[24px] italic leading-none text-[hsl(var(--ink-4))] w-5 text-center">
+                      <span className="text-[24px] leading-none text-[hsl(var(--ink-4))] w-5 text-center">
                         {i + 1}
                       </span>
                       <Avatar id={a.userId} name={a.name} size="md" />
@@ -529,7 +529,7 @@ function Content({
 
       {/* Footer */}
       <footer className="mt-8 flex items-center justify-between border-t border-dashed border-[hsl(var(--line-strong))] pt-4 text-[10.5px] text-[hsl(var(--ink-3))]">
-        <span className="font-serif italic">— Fin du rapport —</span>
+        <span className="">— Fin du rapport —</span>
         {computedAt && (
           <span className="font-mono">
             Calculé le{" "}
@@ -613,7 +613,7 @@ function Kpi({
           {value}
         </span>
         {hint && (
-          <span className="font-serif italic text-[12px] text-[hsl(var(--ink-3))]">
+          <span className="text-[12px] text-[hsl(var(--ink-3))]">
             {hint}
           </span>
         )}
@@ -652,7 +652,7 @@ function Panel({
           <h2 className="mt-0.5 font-display text-[18px] font-semibold leading-tight tracking-tight">
             {title}{" "}
             {flourish && (
-              <span className="font-serif italic font-normal text-[hsl(var(--ink-3))]">
+              <span className="font-normal text-[hsl(var(--ink-3))]">
                 {flourish}
               </span>
             )}

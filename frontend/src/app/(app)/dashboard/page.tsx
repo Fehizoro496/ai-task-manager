@@ -157,9 +157,7 @@ export default function DashboardPage() {
                   <Sparkles className="h-3 w-3" /> Planification IA
                 </span>
                 <h3 className="mt-3 font-display text-[24px] font-semibold tracking-tight leading-tight">
-                  Du brief à la{" "}
-                  <span className="font-serif italic font-normal">roadmap</span>{" "}
-                  en 90 secondes.
+                  Du brief à la roadmap en 90 secondes.
                 </h3>
                 <p className="mt-1.5 max-w-md text-[13.5px] text-[hsl(var(--ink-2))]">
                   Décrivez votre projet, l&apos;IA structure les epics, stories et tâches.

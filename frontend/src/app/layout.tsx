@@ -1,34 +1,14 @@
 import type { Metadata } from "next";
-import {
-  Bricolage_Grotesque,
-  Manrope,
-  Instrument_Serif,
-  JetBrains_Mono,
-} from "next/font/google";
+import { Manrope } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/services/auth";
 import { RouterBridge } from "@/services/router";
 import { Toaster } from "@/components/ui/toaster";
 
-const display = Bricolage_Grotesque({
-  variable: "--font-display",
-  subsets: ["latin"],
-  display: "swap",
-});
-const body = Manrope({
-  variable: "--font-body",
-  subsets: ["latin"],
-  display: "swap",
-});
-const serif = Instrument_Serif({
-  variable: "--font-serif",
-  subsets: ["latin"],
-  weight: ["400"],
-  style: ["normal", "italic"],
-  display: "swap",
-});
-const mono = JetBrains_Mono({
-  variable: "--font-mono",
+// Police unique pour toute la plateforme. Toutes les variables --font-*
+// (globals.css) pointent vers --font-sans → un seul rendu typographique.
+const sans = Manrope({
+  variable: "--font-sans",
   subsets: ["latin"],
   display: "swap",
 });
@@ -48,7 +28,7 @@ export default function RootLayout({
       data-theme="clair"
       data-density="standard"
       suppressHydrationWarning
-      className={`${display.variable} ${body.variable} ${serif.variable} ${mono.variable} antialiased`}
+      className={`${sans.variable} antialiased`}
     >
       <head>
         {/* Restaure le theme avant l'hydratation pour eviter le flash

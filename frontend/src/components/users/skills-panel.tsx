@@ -95,7 +95,7 @@ export function SkillsPanel({ userId }: { userId: string }) {
             Chargement…
           </div>
         ) : skills.length === 0 ? (
-          <p className="text-[12.5px] italic text-[hsl(var(--ink-3))]">
+          <p className="text-[12.5px] text-[hsl(var(--ink-3))]">
             Aucune compétence renseignée.
           </p>
         ) : (

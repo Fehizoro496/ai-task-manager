@@ -39,7 +39,7 @@ export function Wordmark({ className }: { className?: string }) {
     <div className={cn("flex items-center gap-2.5", className)}>
       <Logo size={32} />
       <span className="font-display text-[15px] font-semibold tracking-tight leading-none">
-        AI Task <span className="font-serif italic font-normal text-[hsl(var(--brand-ink))]">Manager</span>
+        AI Task <span className="text-[hsl(var(--brand-ink))]">Manager</span>
       </span>
     </div>
   );
