@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Sparkles,
@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { PriorityPill } from "@/components/ui/pill";
 import { Select } from "@/components/ui/select";
 import { WizardStepper } from "@/components/ai/wizard-stepper";
-import { aiApi, toast, useProjects } from "@/services";
+import { aiApi, toast, useAiGenerationStore, useProjects } from "@/services";
 import type { AiDraft } from "@/services";
 import { normalizeApiPriority, projectPrefix } from "@/lib/mappers";
 import { cn } from "@/lib/utils";
@@ -56,15 +56,32 @@ function readPlan(draft: AiDraft | null): PlanEpicShape[] {
 export function PlanWizard() {
   const router = useRouter();
   const { projects } = useProjects();
+  // Génération pilotée par un store global : survit à la navigation in-app,
+  // notifie à la fin, et restitue le brouillon au retour sur la page.
+  const {
+    status,
+    draft,
+    projectId: genProjectId,
+    error: genError,
+    start,
+    setDraft,
+    reset: resetGeneration,
+  } = useAiGenerationStore();
+  const loading = status === "generating";
+
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [brief, setBrief] = useState("");
   const [projectId, setProjectId] = useState<string>("");
-  const [loading, setLoading] = useState(false);
   const [approving, setApproving] = useState(false);
-  const [draft, setDraft] = useState<AiDraft | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refineInput, setRefineInput] = useState("");
   const [refining, setRefining] = useState(false);
+
+  // Si la génération est terminée (y compris pendant qu'on était sur une
+  // autre page), on affiche l'aperçu au montage / à la transition.
+  useEffect(() => {
+    if (status === "done" && draft) setStep(2);
+  }, [status, draft]);
 
   const epics = useMemo(() => readPlan(draft), [draft]);
   const storiesTotal = epics.reduce((acc, e) => acc + (e.stories?.length ?? 0), 0);
@@ -81,21 +98,9 @@ export function PlanWizard() {
       return;
     }
     setError(null);
-    setLoading(true);
-    try {
-      const created = await aiApi.generatePlan({
-        document: brief.trim(),
-        projectId,
-      });
-      setDraft(created);
-      setStep(2);
-    } catch (e) {
-      const message = e instanceof Error ? e.message : "La génération a échoué.";
-      setError(message);
-      toast.error(message, "Génération du plan");
-    } finally {
-      setLoading(false);
-    }
+    // La génération vit dans le store : on peut quitter la page sans la perdre.
+    // Le passage à l'étape 2 se fait via l'effet quand le store est "done".
+    await start({ projectId, document: brief.trim() });
   }
 
   async function refine() {
@@ -123,7 +128,9 @@ export function PlanWizard() {
     try {
       await aiApi.approveDraft(draft.id);
       toast.success("Le plan a été converti en epics, stories et tâches.", "Plan approuvé");
-      if (projectId) router.push(`/projects/${projectId}/board`);
+      const targetProject = genProjectId ?? projectId;
+      resetGeneration();
+      if (targetProject) router.push(`/projects/${targetProject}/board`);
       else router.push("/projects");
     } catch (e) {
       const message = e instanceof Error ? e.message : "Approbation impossible.";
@@ -157,9 +164,9 @@ export function PlanWizard() {
         <WizardStepper step={step} />
       </header>
 
-      {error && (
+      {(error || genError) && (
         <div className="mt-4 rounded-[var(--radius-sm)] border border-[hsl(var(--accent-rose)/0.3)] bg-[hsl(var(--alert-danger-bg))] px-3 py-2 text-[12.5px] text-[hsl(var(--accent-rose))]">
-          {error}
+          {error ?? genError}
         </div>
       )}
 
@@ -341,7 +348,15 @@ export function PlanWizard() {
           </div>
 
           <footer className="flex items-center justify-end gap-2 border-t border-[hsl(var(--line))] bg-[hsl(var(--bg-sunken)/0.4)] px-5 py-3">
-            <Button variant="outline" size="sm" onClick={() => setStep(1)} disabled={refining}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                resetGeneration();
+                setStep(1);
+              }}
+              disabled={refining}
+            >
               <RefreshCw className="h-3.5 w-3.5" />
               Régénérer
             </Button>

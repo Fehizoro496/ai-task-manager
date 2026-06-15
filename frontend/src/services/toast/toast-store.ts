@@ -3,12 +3,18 @@ import { create } from "zustand";
 
 export type ToastKind = "success" | "error" | "info" | "warning";
 
+export interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
 export interface Toast {
   id: string;
   kind: ToastKind;
   title?: string;
   message: string;
   duration: number;
+  action?: ToastAction;
 }
 
 interface ToastState {
