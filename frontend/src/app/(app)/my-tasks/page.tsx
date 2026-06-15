@@ -163,14 +163,14 @@ export default function MyTasksPage() {
               Tout ce qui vous concerne, du backlog au sprint en cours.
             </p>
           </div>
-          <Button
+          {/* <Button
             variant="brand"
             size="md"
             onClick={() => setNewTaskOpen(true)}
           >
             <Plus className="h-4 w-4" />
             Nouvelle tâche
-          </Button>
+          </Button> */}
         </div>
 
         <div className="mt-6 rounded-[var(--radius-lg)] border border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))] shadow-[var(--shadow-1)]">

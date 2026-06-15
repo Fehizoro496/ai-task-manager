@@ -58,6 +58,14 @@ export default function ProjectSettingsPage({
     setIdentifierPrefix(project.identifierPrefix ?? "");
   }, [project]);
 
+  // Garde d'accès : seul le propriétaire ou un admin peut voir les paramètres.
+  // Un membre simple qui arrive par URL directe est redirigé vers l'aperçu.
+  useEffect(() => {
+    if (loading || !project) return;
+    const allowed = isAdmin || project.ownerId === user?.id;
+    if (!allowed) router.replace(`/projects/${projectId}`);
+  }, [loading, project, isAdmin, user?.id, projectId, router]);
+
   if (loading || !project) {
     return (
       <main className="px-8 py-7">
@@ -123,11 +131,13 @@ export default function ProjectSettingsPage({
   };
 
   if (!canEdit) {
+    // L'effet de garde ci-dessus déclenche la redirection ; on affiche juste
+    // un état transitoire (pas le formulaire).
     return (
       <main className="px-8 py-7">
-        <div className="mt-6 rounded-[var(--radius-md)] border border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))] p-6 text-[13px] text-[hsl(var(--ink-3))]">
-          Seul le propriétaire du projet ou un administrateur peut modifier ces
-          paramètres.
+        <div className="flex items-center gap-2 text-[13px] text-[hsl(var(--ink-3))]">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Redirection…
         </div>
       </main>
     );

@@ -1,13 +1,13 @@
 "use client";
 import { use } from "react";
-import { Loader2, MoreHorizontal } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Topbar } from "@/components/shell/topbar";
 import { Breadcrumb } from "@/components/shell/breadcrumb";
 import { ProjectTabs } from "@/components/projects/project-tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Github } from "@/components/icons/github";
-import { routerService, useProject } from "@/services";
+import { routerService, useAuth, useProject } from "@/services";
 import { colorForProject, projectPrefix } from "@/lib/mappers";
 
 export default function ProjectLayout({
@@ -19,6 +19,7 @@ export default function ProjectLayout({
 }) {
   const { id } = use(params);
   const { project, loading, error } = useProject(id);
+  const { user, isAdmin } = useAuth();
 
   if (loading) {
     return (
@@ -43,6 +44,7 @@ export default function ProjectLayout({
 
   const color = colorForProject(project.id);
   const prefix = projectPrefix(project);
+  const canManage = isAdmin || (!!project.ownerId && project.ownerId === user?.id);
 
   return (
     <>
@@ -99,14 +101,11 @@ export default function ProjectLayout({
                       : "Dépôt GitHub"}
                   </Button>
                 )}
-              <button className="grid h-9 w-9 place-items-center rounded-[8px] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-elevated))] hover:bg-[hsl(var(--bg-muted))]">
-                <MoreHorizontal className="h-4 w-4" />
-              </button>
             </div>
           </div>
         </div>
         <div className="px-6">
-          <ProjectTabs projectId={project.id} />
+          <ProjectTabs projectId={project.id} canManage={canManage} />
         </div>
       </div>
       {children}

@@ -3,14 +3,23 @@ import { usePathname } from "next/navigation";
 import { routerService } from "@/services";
 import { cn } from "@/lib/utils";
 
-export function ProjectTabs({ projectId }: { projectId: string }) {
+export function ProjectTabs({
+  projectId,
+  canManage = false,
+}: {
+  projectId: string;
+  /** Affiche l'onglet Paramètres (owner du projet ou admin uniquement). */
+  canManage?: boolean;
+}) {
   const pathname = usePathname();
   const base = `/projects/${projectId}`;
   const items = [
     { href: base, label: "Aperçu", exact: true, go: () => routerService.toProject(projectId) },
     { href: `${base}/board`, label: "Tâches", go: () => routerService.toProjectBoard(projectId) },
     { href: `${base}/members`, label: "Membres", go: () => routerService.toProjectMembers(projectId) },
-    { href: `${base}/settings`, label: "Paramètres", go: () => routerService.toProjectSettings(projectId) },
+    ...(canManage
+      ? [{ href: `${base}/settings`, label: "Paramètres", go: () => routerService.toProjectSettings(projectId) }]
+      : []),
   ];
   return (
     <div className="border-b border-[hsl(var(--line))]">
