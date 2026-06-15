@@ -45,6 +45,7 @@ export const endpoints = {
     draftById: (id: string) => `/api/ai/drafts/${id}`,
     approveDraft: (id: string) => `/api/ai/drafts/${id}/approve`,
     rejectDraft: (id: string) => `/api/ai/drafts/${id}/reject`,
+    refineDraft: (id: string) => `/api/ai/drafts/${id}/refine`,
     listDraftsByProject: (projectId: string) =>
       `/api/ai/drafts?projectId=${encodeURIComponent(projectId)}`,
   },

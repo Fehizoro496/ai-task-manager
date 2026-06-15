@@ -149,4 +149,37 @@ router.post("/drafts/:id/approve", aiController.approve);
  */
 router.post("/drafts/:id/reject", aiController.reject);
 
+/**
+ * @swagger
+ * /ai/drafts/{id}/refine:
+ *   post:
+ *     tags: [AI]
+ *     summary: Refine an existing draft plan via a natural-language instruction
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [instruction]
+ *             properties:
+ *               instruction:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Revised draft
+ *       404:
+ *         description: Draft not found
+ */
+router.post("/drafts/:id/refine", aiController.refine);
+
 module.exports = router;

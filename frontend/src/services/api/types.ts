@@ -120,10 +120,19 @@ export interface AiDraft {
   generated_plan?: unknown;
   approved?: boolean;
   status?: "pending" | "generated" | "approved";
+  /** Fil de discussion de raffinement (persisté). */
+  messages?: AiDraftMessage[];
   createdAt: string;
   created_at?: string;
   updatedAt?: string;
   updated_at?: string;
+}
+
+export interface AiDraftMessage {
+  id: UUID;
+  role: "user" | "assistant";
+  content: string;
+  createdAt: string;
 }
 
 export interface ProjectMember {

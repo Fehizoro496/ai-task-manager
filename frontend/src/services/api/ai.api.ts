@@ -27,4 +27,7 @@ export const aiApi = {
 
   rejectDraft: (id: string) =>
     apiClient.post<{ message: string }>(endpoints.ai.rejectDraft(id)),
+
+  refineDraft: (id: string, instruction: string) =>
+    apiClient.post<AiDraft>(endpoints.ai.refineDraft(id), { instruction }),
 };

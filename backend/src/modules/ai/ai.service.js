@@ -6,11 +6,13 @@ const { aiPlanSchema } = require("./ai.schema");
 
 const anthropic = new Anthropic({ apiKey: config.anthropicApiKey });
 
-const SYSTEM_PROMPT = `You are a project planning assistant. Given a feature document, break it down into a structured plan of Epics, each containing Stories, each containing Tasks.
+const SYSTEM_PROMPT = `Tu es un assistant de planification de projet. À partir d'un document de fonctionnalités, décompose-le en un plan structuré d'Epics, contenant chacun des Stories, contenant chacune des Tâches.
 
-- Epics are high-level themes; Stories are user-facing increments; Tasks are concrete, actionable units of work.
-- Write concise, descriptive titles and short descriptions.
-- Cover the document thoroughly without inventing scope that isn't implied.`;
+- Les Epics sont des thèmes de haut niveau ; les Stories des incréments orientés utilisateur ; les Tâches des unités de travail concrètes et actionnables.
+- Rédige TOUT le contenu (titres et descriptions) en français.
+- Pour chaque tâche, ajoute 1 à 3 "labels" : des mots-clés courts en minuscules, sans espace (ex. "auth", "ui", "api", "database", "paiement", "tests", "design"). Réutilise les mêmes labels d'une tâche à l'autre quand le domaine est identique — ils servent à affecter les tâches selon les compétences.
+- Ton : TOUJOURS concis. Titres courts à l'impératif, une phrase courte maximum par description, sans remplissage.
+- Couvre le document de manière exhaustive sans inventer de périmètre non implicite.`;
 
 // JSON Schema utilisé pour les structured outputs (équivalent de aiPlanSchema).
 // Écrit à la main pour éviter le couplage avec la version de zod (le helper
@@ -37,7 +39,9 @@ const PLAN_JSON_SCHEMA = {
           items: titleDescObject(["title", "tasks"], {
             tasks: {
               type: "array",
-              items: titleDescObject(["title"]),
+              items: titleDescObject(["title"], {
+                labels: { type: "array", items: { type: "string" } },
+              }),
             },
           }),
         },
@@ -70,11 +74,22 @@ const serializeDraft = (draft) => {
     generated_plan: draft.plan,
     approved: draft.approved,
     status,
+    messages: (draft.messages ?? []).map((m) => ({
+      id: m.id,
+      role: m.role,
+      content: m.content,
+      createdAt: m.createdAt.toISOString(),
+    })),
     createdAt: draft.createdAt.toISOString(),
     created_at: draft.createdAt.toISOString(),
     updatedAt: draft.updatedAt.toISOString(),
     updated_at: draft.updatedAt.toISOString(),
   };
+};
+
+// Inclusion standard des messages (fil de discussion) pour les lectures.
+const draftWithMessages = {
+  messages: { orderBy: { createdAt: "asc" } },
 };
 
 const generatePlan = async (userId, { projectId, document }) => {
@@ -130,7 +145,7 @@ const generatePlan = async (userId, { projectId, document }) => {
 const getDraft = async (draftId, userId) => {
   const draft = await prisma.aiDraft.findUnique({
     where: { id: draftId },
-    include: { project: true },
+    include: { project: true, ...draftWithMessages },
   });
 
   if (!draft || draft.project.ownerId !== userId) {
@@ -138,6 +153,74 @@ const getDraft = async (draftId, userId) => {
   }
 
   return draft;
+};
+
+const REFINE_SYSTEM_PROMPT = `Tu raffines un plan de projet EXISTANT composé d'Epics → Stories → Tâches.
+
+- Tu reçois le plan actuel (JSON), le brief initial et une instruction.
+- Applique l'instruction et renvoie le plan révisé COMPLET dans la même structure.
+- Rédige tout le contenu en français, sur un ton concis.
+- Conserve les "labels" des tâches (1 à 3 mots-clés courts en minuscules) ; ajoute-en aux nouvelles tâches.
+- Conserve à l'identique toute partie non concernée par l'instruction (mêmes titres/descriptions).
+- Ne supprime aucun contenu existant sauf si l'instruction le demande.`;
+
+/**
+ * Raffine un brouillon existant via une instruction en langage naturel.
+ * Stateless côté IA : on renvoie le plan courant + l'instruction, l'IA
+ * retourne le plan complet révisé. La discussion est persistée.
+ */
+const refineDraft = async (draftId, userId, instruction) => {
+  const text = (instruction ?? "").trim();
+  if (!text) throw new AppError("Une instruction est requise.", 400);
+
+  const draft = await prisma.aiDraft.findUnique({
+    where: { id: draftId },
+    include: { project: true, ...draftWithMessages },
+  });
+  if (!draft || draft.project.ownerId !== userId) {
+    throw new AppError("Draft not found", 404);
+  }
+  if (draft.approved) {
+    throw new AppError("Draft already approved", 400);
+  }
+
+  const userContent = `Brief initial :\n${draft.document}\n\nPlan actuel (JSON) :\n${JSON.stringify(
+    draft.plan,
+  )}\n\nInstruction :\n${text}`;
+
+  const response = await anthropic.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 16000,
+    thinking: { type: "adaptive" },
+    system: [
+      { type: "text", text: REFINE_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } },
+    ],
+    messages: [{ role: "user", content: userContent }],
+    output_config: { format: { type: "json_schema", schema: PLAN_JSON_SCHEMA } },
+  });
+
+  const block = response.content.find((b) => b.type === "text");
+  if (!block) throw new AppError("AI plan refinement failed", 502);
+  const revisedPlan = aiPlanSchema.parse(JSON.parse(block.text));
+
+  // Persiste le tour de discussion + le plan révisé.
+  const [updated] = await prisma.$transaction([
+    prisma.aiDraft.update({
+      where: { id: draftId },
+      data: {
+        plan: revisedPlan,
+        messages: {
+          create: [
+            { role: "user", content: text },
+            { role: "assistant", content: "Plan révisé." },
+          ],
+        },
+      },
+      include: { project: true, ...draftWithMessages },
+    }),
+  ]);
+
+  return updated;
 };
 
 const listDrafts = async (projectId, userId) => {
@@ -202,12 +285,25 @@ const approveDraft = async (draftId, userId) => {
 
         for (let ti = 0; ti < storyData.tasks.length; ti++) {
           const taskData = storyData.tasks[ti];
+          // Génère un identifiant unique (ex. AM-001) en incrémentant le
+          // compteur du projet, comme le fait la création de tâche normale.
+          const counter = await tx.project.update({
+            where: { id: draft.projectId },
+            data: { taskCounter: { increment: 1 } },
+            select: { taskCounter: true, identifierPrefix: true },
+          });
+          const identifier = `${counter.identifierPrefix}-${String(
+            counter.taskCounter,
+          ).padStart(3, "0")}`;
           const task = await tx.task.create({
             data: {
               title: taskData.title,
               description: taskData.description || null,
               position: ti,
               storyId: story.id,
+              identifier,
+              githubBranch: identifier,
+              labels: Array.isArray(taskData.labels) ? taskData.labels : [],
             },
           });
           createdTasks.push(task);
@@ -245,4 +341,4 @@ const rejectDraft = async (draftId, userId) => {
   });
 };
 
-module.exports = { generatePlan, getDraft, listDrafts, approveDraft, rejectDraft, serializeDraft };
+module.exports = { generatePlan, getDraft, listDrafts, approveDraft, rejectDraft, refineDraft, serializeDraft };

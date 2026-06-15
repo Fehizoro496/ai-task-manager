@@ -14,6 +14,7 @@ const planRequestSchema = z
 const aiTaskSchema = z.object({
   title: z.string(),
   description: z.string().optional(),
+  labels: z.array(z.string()).optional(),
 });
 
 const aiStorySchema = z.object({

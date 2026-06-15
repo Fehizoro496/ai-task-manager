@@ -4,13 +4,14 @@ import { useRouter } from "next/navigation";
 import {
   Sparkles,
   Loader2,
-  ChevronDown,
   RefreshCw,
   Check,
   Layers,
   ListTree,
   BookCheck,
   FolderKanban,
+  Send,
+  MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PriorityPill } from "@/components/ui/pill";
@@ -29,7 +30,9 @@ const EXAMPLE = `Je veux créer une plateforme e-learning avec les fonctionnalit
 
 interface PlanTaskShape {
   title: string;
+  description?: string;
   priority?: string;
+  labels?: string[];
 }
 interface PlanStoryShape {
   title: string;
@@ -55,13 +58,13 @@ export function PlanWizard() {
   const { projects } = useProjects();
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [brief, setBrief] = useState("");
-  const [tone, setTone] = useState("Standard");
   const [projectId, setProjectId] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [approving, setApproving] = useState(false);
   const [draft, setDraft] = useState<AiDraft | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [openEpic, setOpenEpic] = useState<number | null>(0);
+  const [refineInput, setRefineInput] = useState("");
+  const [refining, setRefining] = useState(false);
 
   const epics = useMemo(() => readPlan(draft), [draft]);
   const storiesTotal = epics.reduce((acc, e) => acc + (e.stories?.length ?? 0), 0);
@@ -92,6 +95,24 @@ export function PlanWizard() {
       toast.error(message, "Génération du plan");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function refine() {
+    const instruction = refineInput.trim();
+    if (!draft || instruction.length < 3 || refining) return;
+    setRefining(true);
+    setError(null);
+    try {
+      const updated = await aiApi.refineDraft(draft.id, instruction);
+      setDraft(updated);
+      setRefineInput("");
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Le raffinement a échoué.";
+      setError(message);
+      toast.error(message, "Affinage du plan");
+    } finally {
+      setRefining(false);
     }
   }
 
@@ -179,25 +200,6 @@ export function PlanWizard() {
                     />
                   </div>
                 </div>
-                <div className="flex items-center gap-2 text-[12.5px]">
-                  <span className="text-[hsl(var(--ink-3))]">Ton :</span>
-                  <div className="inline-flex items-center gap-0.5 rounded-[var(--radius-sm)] bg-[hsl(var(--bg-sunken)/0.7)] p-0.5">
-                    {["Concis", "Standard", "Détaillé"].map((t) => (
-                      <button
-                        key={t}
-                        onClick={() => setTone(t)}
-                        className={cn(
-                          "h-7 rounded-[6px] px-2.5 text-[11.5px] font-medium",
-                          tone === t
-                            ? "bg-[hsl(var(--bg-elevated))] shadow-[var(--shadow-1)] text-ink"
-                            : "text-[hsl(var(--ink-3))]",
-                        )}
-                      >
-                        {t}
-                      </button>
-                    ))}
-                  </div>
-                </div>
               </div>
 
               <Button
@@ -229,84 +231,121 @@ export function PlanWizard() {
                 Aperçu du plan généré par l&apos;IA
               </div>
               <div className="mt-1 text-[12px] text-[hsl(var(--ink-3))]">
-                {epics.length} epics · {storiesTotal} stories · {tasksTotal} tâches
+                {tasksTotal} tâche{tasksTotal > 1 ? "s" : ""}
               </div>
             </div>
           </header>
 
-          <div className="p-2">
-            {epics.map((epic, ei) => {
-              const open = openEpic === ei;
-              const epicTasks =
-                epic.stories?.reduce((acc, s) => acc + (s.tasks?.length ?? 0), 0) ?? 0;
-              return (
-                <div key={ei} className="rounded-[var(--radius-md)] m-1">
-                  <button
-                    onClick={() => setOpenEpic(open ? null : ei)}
-                    className="flex w-full items-center gap-2 rounded-[var(--radius-md)] px-3 py-2.5 text-left hover:bg-[hsl(var(--bg-sunken)/0.5)]"
-                  >
-                    <Layers className="h-4 w-4 text-[hsl(var(--brand))]" />
-                    <span className="font-semibold text-[14px]">
-                      Epic {ei + 1} — {epic.title}
-                    </span>
-                    <span className="ml-2 rounded-md bg-[hsl(var(--bg-sunken))] px-1.5 py-0.5 text-[10.5px] font-semibold text-[hsl(var(--ink-2))]">
-                      {epic.stories?.length ?? 0} stories
-                    </span>
-                    <span className="ml-1 rounded-md bg-[hsl(var(--bg-sunken))] px-1.5 py-0.5 text-[10.5px] font-semibold text-[hsl(var(--ink-2))]">
-                      {epicTasks} tâches
-                    </span>
-                    <ChevronDown
-                      className={cn(
-                        "ml-auto h-4 w-4 text-[hsl(var(--ink-3))] transition-transform",
-                        open && "rotate-180",
-                      )}
-                    />
-                  </button>
-                  {open && (
-                    <div className="ml-6 mb-2 border-l border-dashed border-[hsl(var(--line-strong))] pl-4">
-                      {(epic.stories ?? []).map((story, si) => (
-                        <div key={si} className="mt-2">
-                          <div className="flex items-center gap-2">
-                            <ListTree className="h-3.5 w-3.5 text-[hsl(var(--accent-apricot))]" />
-                            <span className="font-semibold text-[13px] tracking-tight">
-                              Story {ei + 1}.{si + 1} — {story.title}
-                            </span>
-                            <span className="ml-2 text-[11px] text-[hsl(var(--ink-3))]">
-                              {story.tasks?.length ?? 0} tâches
-                            </span>
-                          </div>
-                          <ul className="ml-5 mt-1 space-y-1">
-                            {(story.tasks ?? []).map((task, ti) => (
-                              <li
-                                key={ti}
-                                className="flex items-center gap-2.5 rounded-[var(--radius-sm)] px-2 py-1 hover:bg-[hsl(var(--bg-sunken)/0.6)]"
-                              >
-                                <span className="grid h-4 w-4 place-items-center rounded border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-elevated))]" />
-                                <span className="text-[12.5px] tracking-tight">
-                                  Tâche {ti + 1} — {task.title}
-                                </span>
-                                <PriorityPill
-                                  priority={normalizeApiPriority(task.priority)}
-                                  className="ml-auto"
-                                />
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ))}
+          <ul className="space-y-1 p-2">
+            {epics
+              .flatMap((e) => e.stories ?? [])
+              .flatMap((s) => s.tasks ?? [])
+              .map((task, ti) => (
+                <li
+                  key={ti}
+                  className="flex items-start gap-2.5 rounded-[var(--radius-sm)] px-3 py-2 hover:bg-[hsl(var(--bg-sunken)/0.5)]"
+                >
+                  <span className="mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-elevated))]" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start gap-2">
+                      <span className="text-[13px] font-medium leading-snug tracking-tight">
+                        {task.title}
+                      </span>
+                      <PriorityPill
+                        priority={normalizeApiPriority(task.priority)}
+                        className="ml-auto shrink-0"
+                      />
                     </div>
+                    {task.description && (
+                      <p className="mt-0.5 text-[12px] leading-relaxed text-[hsl(var(--ink-3))]">
+                        {task.description}
+                      </p>
+                    )}
+                    {task.labels && task.labels.length > 0 && (
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {task.labels.map((l) => (
+                          <span
+                            key={l}
+                            className="rounded-full bg-[hsl(var(--bg-sunken))] px-1.5 py-0.5 text-[10px] font-medium text-[hsl(var(--ink-3))]"
+                          >
+                            {l}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </li>
+              ))}
+          </ul>
+
+          {/* Affiner par la discussion : raffinement itératif sans tout régénérer */}
+          <div className="border-t border-[hsl(var(--line))] px-5 py-4">
+            <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-[hsl(var(--ink-3))]">
+              <MessageSquare className="h-3.5 w-3.5" />
+              Affiner avec l&apos;IA
+            </div>
+
+            {draft.messages && draft.messages.length > 0 && (
+              <ul className="mt-3 space-y-1.5">
+                {draft.messages.map((m) =>
+                  m.role === "user" ? (
+                    <li key={m.id} className="flex justify-end">
+                      <span className="max-w-[80%] rounded-[var(--radius-md)] rounded-br-sm bg-[hsl(var(--brand))] px-3 py-1.5 text-[12.5px] text-white">
+                        {m.content}
+                      </span>
+                    </li>
+                  ) : (
+                    <li key={m.id} className="flex items-center gap-1.5 text-[11.5px] text-[hsl(var(--ink-3))]">
+                      <Check className="h-3 w-3 text-[hsl(var(--accent-sage))]" />
+                      {m.content}
+                    </li>
+                  ),
+                )}
+              </ul>
+            )}
+
+            <div className="mt-3 rounded-[var(--radius-md)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg))] focus-within:border-[hsl(var(--brand)/0.5)] focus-within:ring-2 focus-within:ring-[hsl(var(--brand)/0.3)]">
+              <textarea
+                value={refineInput}
+                onChange={(e) => setRefineInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    refine();
+                  }
+                }}
+                placeholder="Ex. : ajoute un epic sécurité · regroupe les tâches de paiement · simplifie le suivi de progression…"
+                rows={2}
+                disabled={refining}
+                className="block w-full resize-none bg-transparent px-3 py-2.5 text-[13px] placeholder:text-[hsl(var(--ink-4))] focus:outline-none disabled:opacity-60"
+              />
+              <div className="flex items-center justify-between gap-2 border-t border-[hsl(var(--line))] px-3 py-2">
+                <span className="text-[10.5px] text-[hsl(var(--ink-4))]">
+                  <kbd className="font-mono">↵</kbd> envoyer · le plan est révisé sans tout régénérer
+                </span>
+                <Button
+                  variant="brand"
+                  size="sm"
+                  onClick={refine}
+                  disabled={refining || refineInput.trim().length < 3}
+                >
+                  {refining ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Send className="h-3 w-3" />
                   )}
-                </div>
-              );
-            })}
+                  Affiner
+                </Button>
+              </div>
+            </div>
           </div>
 
           <footer className="flex items-center justify-end gap-2 border-t border-[hsl(var(--line))] bg-[hsl(var(--bg-sunken)/0.4)] px-5 py-3">
-            <Button variant="outline" size="sm" onClick={() => setStep(1)}>
+            <Button variant="outline" size="sm" onClick={() => setStep(1)} disabled={refining}>
               <RefreshCw className="h-3.5 w-3.5" />
               Régénérer
             </Button>
-            <Button variant="sage" size="sm" onClick={() => setStep(3)}>
+            <Button variant="sage" size="sm" onClick={() => setStep(3)} disabled={refining}>
               Continuer
             </Button>
           </footer>

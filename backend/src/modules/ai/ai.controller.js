@@ -27,4 +27,13 @@ const reject = asyncHandler(async (req, res) => {
   res.json({ message: "Draft rejected" });
 });
 
-module.exports = { plan, getDraft, listDrafts, approve, reject };
+const refine = asyncHandler(async (req, res) => {
+  const draft = await aiService.refineDraft(
+    req.params.id,
+    req.user.id,
+    req.body?.instruction,
+  );
+  res.json(aiService.serializeDraft(draft));
+});
+
+module.exports = { plan, getDraft, listDrafts, approve, reject, refine };

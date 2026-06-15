@@ -254,6 +254,18 @@ model AiDraft {
   document  String
   plan      Json
   approved  Boolean  @default(false)
+  messages  AiDraftMessage[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model AiDraftMessage {
+  id        String   @id @default(uuid())
+  draftId   String
+  draft     AiDraft  @relation(fields: [draftId], references: [id], onDelete: Cascade)
+  role      String   // "user" (instruction) | "assistant" (marqueur de révision)
+  content   String
+  createdAt DateTime @default(now())
+
+  @@index([draftId, createdAt])
 }
