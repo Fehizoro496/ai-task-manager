@@ -94,6 +94,11 @@ export const endpoints = {
     overview: () => "/api/reports/overview",
   },
 
+  labels: {
+    root: () => "/api/labels",
+    byId: (id: string) => `/api/labels/${id}`,
+  },
+
   skills: {
     root: () => "/api/skills",
     bootstrap: () => "/api/skills/bootstrap",

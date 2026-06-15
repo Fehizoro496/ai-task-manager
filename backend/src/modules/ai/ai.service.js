@@ -3,14 +3,26 @@ const prisma = require("../../prisma/client");
 const config = require("../../config/env");
 const AppError = require("../../utils/AppError");
 const { aiPlanSchema } = require("./ai.schema");
+const labelsService = require("../labels/labels.service");
 
 const anthropic = new Anthropic({ apiKey: config.anthropicApiKey });
+
+// Construit la consigne de labels injectée dans le prompt : l'IA ne doit
+// utiliser QUE les labels du catalogue (géré par l'admin).
+const buildLabelsDirective = async () => {
+  const names = [...(await labelsService.knownNames())].sort();
+  if (names.length === 0) {
+    return "- N'ajoute AUCUN label aux tâches (le catalogue de labels est vide).";
+  }
+  return `- Pour chaque tâche, ajoute 1 à 3 "labels" choisis EXCLUSIVEMENT dans cette liste (n'invente jamais de nouveau label) : ${names.join(
+    ", ",
+  )}.`;
+};
 
 const SYSTEM_PROMPT = `Tu es un assistant de planification de projet. À partir d'un document de fonctionnalités, décompose-le en un plan structuré d'Epics, contenant chacun des Stories, contenant chacune des Tâches.
 
 - Les Epics sont des thèmes de haut niveau ; les Stories des incréments orientés utilisateur ; les Tâches des unités de travail concrètes et actionnables.
 - Rédige TOUT le contenu (titres et descriptions) en français.
-- Pour chaque tâche, ajoute 1 à 3 "labels" : des mots-clés courts en minuscules, sans espace (ex. "auth", "ui", "api", "database", "paiement", "tests", "design"). Réutilise les mêmes labels d'une tâche à l'autre quand le domaine est identique — ils servent à affecter les tâches selon les compétences.
 - Ton : TOUJOURS concis. Titres courts à l'impératif, une phrase courte maximum par description, sans remplissage.
 - Couvre le document de manière exhaustive sans inventer de périmètre non implicite.`;
 
@@ -107,6 +119,8 @@ const generatePlan = async (userId, { projectId, document }) => {
     throw new AppError("Project not found", 404);
   }
 
+  const labelsDirective = await buildLabelsDirective();
+
   // Structured outputs : la réponse est contrainte au JSON Schema du plan,
   // donc garantie parseable. Adaptive thinking améliore la décomposition.
   const response = await anthropic.messages.create({
@@ -116,7 +130,7 @@ const generatePlan = async (userId, { projectId, document }) => {
     system: [
       {
         type: "text",
-        text: SYSTEM_PROMPT,
+        text: `${SYSTEM_PROMPT}\n${labelsDirective}`,
         cache_control: { type: "ephemeral" },
       },
     ],
@@ -160,7 +174,6 @@ const REFINE_SYSTEM_PROMPT = `Tu raffines un plan de projet EXISTANT composé d'
 - Tu reçois le plan actuel (JSON), le brief initial et une instruction.
 - Applique l'instruction et renvoie le plan révisé COMPLET dans la même structure.
 - Rédige tout le contenu en français, sur un ton concis.
-- Conserve les "labels" des tâches (1 à 3 mots-clés courts en minuscules) ; ajoute-en aux nouvelles tâches.
 - Conserve à l'identique toute partie non concernée par l'instruction (mêmes titres/descriptions).
 - Ne supprime aucun contenu existant sauf si l'instruction le demande.`;
 
@@ -188,12 +201,18 @@ const refineDraft = async (draftId, userId, instruction) => {
     draft.plan,
   )}\n\nInstruction :\n${text}`;
 
+  const labelsDirective = await buildLabelsDirective();
+
   const response = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
     max_tokens: 16000,
     thinking: { type: "adaptive" },
     system: [
-      { type: "text", text: REFINE_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } },
+      {
+        type: "text",
+        text: `${REFINE_SYSTEM_PROMPT}\n${labelsDirective}`,
+        cache_control: { type: "ephemeral" },
+      },
     ],
     messages: [{ role: "user", content: userContent }],
     output_config: { format: { type: "json_schema", schema: PLAN_JSON_SCHEMA } },
@@ -253,6 +272,8 @@ const approveDraft = async (draftId, userId) => {
   }
 
   const plan = draft.plan;
+  // Catalogue de labels valides : on ignore tout label hors catalogue.
+  const knownLabels = await labelsService.knownNames();
 
   const result = await prisma.$transaction(async (tx) => {
     const createdEpics = [];
@@ -303,7 +324,11 @@ const approveDraft = async (draftId, userId) => {
               storyId: story.id,
               identifier,
               githubBranch: identifier,
-              labels: Array.isArray(taskData.labels) ? taskData.labels : [],
+              labels: Array.isArray(taskData.labels)
+                ? taskData.labels
+                    .map((l) => String(l).trim().toLowerCase())
+                    .filter((l) => knownLabels.has(l))
+                : [],
             },
           });
           createdTasks.push(task);
