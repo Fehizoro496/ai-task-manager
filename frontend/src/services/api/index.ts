@@ -26,6 +26,8 @@ export { commentsApi } from "./comments.api";
 export type { TaskComment } from "./comments.api";
 export { skillsApi } from "./skills.api";
 export type { Skill, UserSkill } from "./skills.api";
+export { labelsApi } from "./labels.api";
+export type { Label } from "./labels.api";
 export { distributionApi } from "./distribution.api";
 export type {
   ScoreBreakdown,

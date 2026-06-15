@@ -27,6 +27,7 @@ import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import {
   commentsApi,
   distributionApi,
+  labelsApi,
   projectsApi,
   routerService,
   tasksApi,
@@ -36,6 +37,7 @@ import {
 } from "@/services";
 import type {
   AssigneeSuggestion,
+  Label,
   ProjectMember,
   Task,
   TaskComment,
@@ -120,7 +122,7 @@ function TaskDetailBody({
   // Edition inline du titre / description : drafts locaux + flag d'édition.
   const [titleDraft, setTitleDraft] = useState<string | null>(null);
   const [descDraft, setDescDraft] = useState<string | null>(null);
-  const [labelDraft, setLabelDraft] = useState("");
+  const [labelCatalog, setLabelCatalog] = useState<Label[]>([]);
   // Suggestion d'assigné (algo de répartition).
   const [suggestions, setSuggestions] = useState<AssigneeSuggestion[] | null>(null);
   const [loadingSuggest, setLoadingSuggest] = useState(false);
@@ -288,14 +290,11 @@ function TaskDetailBody({
     );
   };
 
-  const addLabel = () => {
-    if (!task) return;
-    const next = labelDraft.trim().toLowerCase();
-    setLabelDraft("");
-    if (!next) return;
+  const addLabel = (name: string) => {
+    if (!task || !name) return;
     const current = task.labels ?? [];
-    if (current.includes(next)) return;
-    const labels = [...current, next];
+    if (current.includes(name)) return;
+    const labels = [...current, name];
     patchTask({ labels }, { labels });
   };
 
@@ -326,6 +325,14 @@ function TaskDetailBody({
   useEffect(() => {
     setSuggestions(null);
   }, [taskId]);
+
+  // Catalogue de labels (géré par l'admin) — on ne peut choisir que parmi eux.
+  useEffect(() => {
+    labelsApi
+      .listAll()
+      .then((res) => setLabelCatalog(res.labels))
+      .catch(() => setLabelCatalog([]));
+  }, []);
 
   if (loading) {
     return (
@@ -528,32 +535,30 @@ function TaskDetailBody({
                   </button>
                 </span>
               ))}
-              <div className="inline-flex items-center gap-1 rounded-full border border-dashed border-[hsl(var(--line-strong))] px-2 py-0.5">
-                <input
-                  value={labelDraft}
-                  onChange={(e) => setLabelDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      addLabel();
-                    } else if (e.key === "Escape") {
-                      setLabelDraft("");
-                    }
-                  }}
-                  placeholder="ajouter…"
-                  disabled={saving}
-                  className="w-20 bg-transparent text-[11px] outline-none placeholder:text-[hsl(var(--ink-4))] disabled:opacity-60"
-                />
-                <button
-                  type="button"
-                  onClick={addLabel}
-                  disabled={saving || !labelDraft.trim()}
-                  className="grid h-3.5 w-3.5 place-items-center rounded-full text-[hsl(var(--ink-3))] hover:text-ink disabled:opacity-40"
-                  title="Ajouter"
-                >
-                  <Plus className="h-2.5 w-2.5" />
-                </button>
-              </div>
+              {(() => {
+                const available = labelCatalog.filter(
+                  (l) => !(task.labels ?? []).includes(l.name),
+                );
+                if (available.length === 0) return null;
+                return (
+                  <select
+                    value=""
+                    onChange={(e) => {
+                      if (e.target.value) addLabel(e.target.value);
+                    }}
+                    disabled={saving}
+                    className="h-6 rounded-full border border-dashed border-[hsl(var(--line-strong))] bg-transparent px-2 text-[11px] text-[hsl(var(--ink-3))] outline-none focus:border-[hsl(var(--brand)/0.5)] disabled:opacity-60"
+                    title="Ajouter un label"
+                  >
+                    <option value="">+ label…</option>
+                    {available.map((l) => (
+                      <option key={l.id} value={l.name}>
+                        {l.name}
+                      </option>
+                    ))}
+                  </select>
+                );
+              })()}
             </div>
           </Meta>
           {branchName && (

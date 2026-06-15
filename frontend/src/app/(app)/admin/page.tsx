@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Check, X, Loader2, ShieldCheck, Users as UsersIcon } from "lucide-react";
 import { Topbar } from "@/components/shell/topbar";
 import { Breadcrumb } from "@/components/shell/breadcrumb";
+import { LabelManager } from "@/components/admin/label-manager";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -212,6 +213,8 @@ export default function AdminPage() {
             </ul>
           )}
         </div>
+
+        <LabelManager />
       </main>
     </>
   );

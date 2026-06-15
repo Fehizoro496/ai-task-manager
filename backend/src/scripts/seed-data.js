@@ -27,8 +27,32 @@ async function wipe() {
   await prisma.projectMember.deleteMany();
   await prisma.project.deleteMany();
   await prisma.skill.deleteMany();
+  await prisma.label.deleteMany();
   await prisma.user.deleteMany();
   console.log("✓ Données métier réinitialisées");
+}
+
+// Catalogue de labels (géré par l'admin), orienté technos + features.
+// Inclut les labels utilisés par les tâches du seed + les compétences, pour
+// que la répartition par compétences fonctionne dès le départ.
+const LABELS = [
+  // technos
+  "flutter", "react", "vue", "next", "nest", "node", "typescript", "dart",
+  // features / domaines
+  "auth", "payment", "testing", "design", "optimisation", "ui", "api",
+  "database", "mobile", "navigation", "css", "devops", "ci", "docker",
+  "realtime",
+];
+
+async function seedLabels() {
+  for (const name of LABELS) {
+    await prisma.label.upsert({
+      where: { name },
+      update: {},
+      create: { name },
+    });
+  }
+  console.log(`✓ ${LABELS.length} labels créés`);
 }
 
 /** Crée la compétence (nom normalisé, unique) si besoin et renvoie son id. */
@@ -56,6 +80,9 @@ async function addSkills(userId, pairs) {
 
 async function main() {
   await wipe();
+
+  // ─── Catalogue de labels (en tout premier) ───────────────────────────────
+  await seedLabels();
 
   // ─── Admin (GitHub OAuth) ─────────────────────────────────────────────────
   const admin = await prisma.user.create({

@@ -201,6 +201,14 @@ model Skill {
   users     UserSkill[]
 }
 
+// Catalogue de labels géré par l'admin. Les tâches (Task.labels) et l'IA
+// n'utilisent que des noms présents ici.
+model Label {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+}
+
 model UserSkill {
   userId  String
   user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)

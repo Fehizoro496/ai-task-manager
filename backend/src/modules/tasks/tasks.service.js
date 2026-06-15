@@ -3,6 +3,7 @@ const AppError = require("../../utils/AppError");
 const { createNotification, notifyAdmins } = require("../notifications/notifications.service");
 const { isMember } = require("../projects/projects.service");
 const { createBranch } = require("../github/github.service");
+const { filterToCatalog: filterLabelsToCatalog } = require("../labels/labels.service");
 const { getIo } = require("../../socket");
 
 const emitToProject = (projectId, event, payload) => {
@@ -187,6 +188,12 @@ const update = async (id, userId, isAdmin, data) => {
     const projectId = task.story.epic.project.id;
     const memberCheck = await isMember(projectId, data.assigneeId);
     if (!memberCheck) throw new AppError("User is not a member of this project", 400);
+  }
+
+  // Les labels sont restreints au catalogue géré par l'admin : on ignore
+  // silencieusement tout label hors catalogue.
+  if (data.labels !== undefined) {
+    data = { ...data, labels: await filterLabelsToCatalog(data.labels) };
   }
 
   const updated = await prisma.task.update({
