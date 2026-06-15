@@ -85,6 +85,17 @@ function ToastItem({ toast }: { toast: Toast }) {
         <div className="text-[12.5px] leading-snug text-[hsl(var(--ink-2))]">
           {toast.message}
         </div>
+        {toast.action && (
+          <button
+            onClick={() => {
+              toast.action!.onClick();
+              dismiss(toast.id);
+            }}
+            className="mt-1.5 text-[12px] font-semibold text-[hsl(var(--brand-ink))] hover:underline"
+          >
+            {toast.action.label}
+          </button>
+        )}
       </div>
       <button
         onClick={() => dismiss(toast.id)}

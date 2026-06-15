@@ -9,3 +9,4 @@ export {
   useUnreadMessagesStore,
   useUnreadMessagesWatcher,
 } from "./use-unread-messages";
+export { useAiGenerationStore } from "./use-ai-generation";
