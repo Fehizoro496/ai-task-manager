@@ -95,7 +95,6 @@ export const routerService = {
     admin: () => "/admin",
     messages: () => "/messages",
     aiNew: () => "/ai/new",
-    aiAssistant: () => "/ai/assistant",
     calendar: () => "/calendar",
     reports: () => "/reports",
   },
@@ -123,7 +122,6 @@ export const routerService = {
   toAdmin: () => routerService.push(routerService.paths.admin()),
   toMessages: () => routerService.push(routerService.paths.messages()),
   toAiNew: () => routerService.push(routerService.paths.aiNew()),
-  toAiAssistant: () => routerService.push(routerService.paths.aiAssistant()),
   toCalendar: () => routerService.push(routerService.paths.calendar()),
   toReports: () => routerService.push(routerService.paths.reports()),
 };

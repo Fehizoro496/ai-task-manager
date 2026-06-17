@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import {
   User as UserIcon,
   Settings as SettingsIcon,
-  Sparkles,
   Sun,
   Moon,
   LifeBuoy,
@@ -134,12 +133,6 @@ export function UserMenu({
               Icon={SettingsIcon}
               label="Paramètres"
               shortcut="⌘,"
-            />
-            <MenuLink
-              href="/ai/assistant"
-              Icon={Sparkles}
-              label="Assistant IA"
-              accent
             />
           </ul>
 

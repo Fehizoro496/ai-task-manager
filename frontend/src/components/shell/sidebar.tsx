@@ -9,7 +9,6 @@ import {
   BarChart3,
   Settings,
   Plus,
-  Bot,
   MessageSquare,
   ShieldCheck,
 } from "lucide-react";
@@ -72,25 +71,7 @@ export function Sidebar() {
         </button>
       </div>
 
-      <div className="px-3 py-3">
-        <button
-          type="button"
-          onClick={() => routerService.toAiAssistant()}
-          className="group flex w-full items-center gap-2 rounded-[var(--radius-md)] border border-[hsl(var(--brand)/0.25)] bg-[hsl(var(--brand-soft))] px-3 py-2.5 text-left transition-colors hover:bg-[hsl(var(--brand-tint))]"
-        >
-          <span className="grid h-6 w-6 place-items-center rounded-[6px] bg-gradient-to-br from-[hsl(var(--brand))] to-[#A78BFA] text-white">
-            <Bot className="h-3.5 w-3.5" />
-          </span>
-          <span className="text-[13px] font-semibold text-[hsl(var(--brand-ink))]">
-            Assistant IA
-          </span>
-          <span className="ml-auto text-[10px] font-bold tracking-wider text-[hsl(var(--brand-ink)/0.7)]">
-            BETA
-          </span>
-        </button>
-      </div>
-
-      <nav className="flex-1 min-h-0 px-2 pb-3 overflow-y-auto">
+      <nav className="flex-1 min-h-0 px-2 pb-3 overflow-y-auto pt-3">
         <ul className="flex flex-col gap-0.5">
           {items
             .filter((it) => !it.adminOnly || isAdmin)
