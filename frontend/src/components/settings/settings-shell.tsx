@@ -4,10 +4,7 @@ import {
   User as UserIcon,
   Bell,
   Palette,
-  Plug,
-  Shield,
   Users,
-  CreditCard,
   Sparkles,
   Check,
   Sun,
@@ -42,10 +39,9 @@ const SECTIONS = [
   { id: "compte",        label: "Compte",        Icon: UserIcon,   group: "Vous"    },
   { id: "apparence",     label: "Apparence",     Icon: Palette,    group: "Vous"    },
   { id: "notifications", label: "Notifications", Icon: Bell,       group: "Vous"    },
-  { id: "integrations",  label: "Intégrations",  Icon: Plug,       group: "Équipe"  },
+  // { id: "integrations",  label: "Intégrations",  Icon: Plug,       group: "Équipe"  },
   { id: "membres",       label: "Membres",       Icon: Users,      group: "Équipe"  },
-  { id: "securite",      label: "Sécurité",      Icon: Shield,     group: "Équipe"  },
-  { id: "facturation",   label: "Facturation",   Icon: CreditCard, group: "Équipe"  },
+  // { id: "securite",      label: "Sécurité",      Icon: Shield,     group: "Équipe"  },
 ] as const;
 
 type SectionId = (typeof SECTIONS)[number]["id"];
@@ -100,10 +96,9 @@ export function SettingsShell() {
         {active === "compte" && <AccountSection />}
         {active === "apparence" && <AppearanceSection />}
         {active === "notifications" && <NotificationsSection />}
-        {active === "integrations" && <IntegrationsSection />}
+        {/* {active === "integrations" && <IntegrationsSection />} */}
         {active === "membres" && <MembersSection />}
-        {active === "securite" && <SecuritySection />}
-        {active === "facturation" && <ComingSoonSection title="Facturation" message="Forfaits, factures et moyens de paiement. À venir." />}
+        {/* {active === "securite" && <SecuritySection />} */}
       </div>
     </div>
   );
@@ -132,27 +127,6 @@ function Panel({
       </header>
       <div className="px-6 py-5">{children}</div>
     </section>
-  );
-}
-
-function ComingSoonSection({
-  title,
-  message,
-}: {
-  title: string;
-  message: string;
-}) {
-  return (
-    <Panel title={title}>
-      <div className="grid place-items-center py-8 text-center">
-        <span className="grid h-10 w-10 place-items-center rounded-full bg-[hsl(var(--bg-sunken))] text-[hsl(var(--ink-3))]">
-          <Sparkles className="h-4 w-4" />
-        </span>
-        <p className="mt-3 max-w-[360px] text-[13px] text-[hsl(var(--ink-3))]">
-          {message}
-        </p>
-      </div>
-    </Panel>
   );
 }
 
