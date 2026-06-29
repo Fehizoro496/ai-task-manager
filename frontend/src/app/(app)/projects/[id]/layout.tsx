@@ -48,7 +48,7 @@ export default function ProjectLayout({
   const canManage = isAdmin;
 
   return (
-    <>
+    <div className="flex h-dvh flex-col overflow-hidden">
       <Topbar
         breadcrumb={
           <Breadcrumb
@@ -59,7 +59,7 @@ export default function ProjectLayout({
           />
         }
       />
-      <div className="border-b border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))]">
+      <div className="shrink-0 border-b border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))]">
         <div className="px-8 pt-6 pb-3">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-4">
@@ -109,7 +109,7 @@ export default function ProjectLayout({
           <ProjectTabs projectId={project.id} canManage={canManage} />
         </div>
       </div>
-      {children}
-    </>
+      <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+    </div>
   );
 }

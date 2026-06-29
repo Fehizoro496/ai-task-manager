@@ -17,7 +17,7 @@ export default function BoardPage({
   const canDistribute = isAdmin;
 
   return (
-    <div className="flex min-h-[calc(100dvh-180px)] flex-col">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <KanbanBoard
         projectId={id}
         projectPrefix={prefix}

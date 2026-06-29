@@ -321,7 +321,7 @@ export function KanbanBoard({
       onDragOver={onDragOver}
       onDragEnd={onDragEnd}
     >
-      <div className="px-6 py-4 border-b border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))]">
+      <div className="shrink-0 px-6 py-4 border-b border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))]">
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[hsl(var(--ink-3))]" />
@@ -426,8 +426,8 @@ export function KanbanBoard({
           Chargement du board…
         </div>
       ) : (
-        <div className="flex-1 overflow-x-auto">
-          <div className="flex min-w-max gap-3 p-6">
+        <div className="min-h-0 flex-1 overflow-x-auto">
+          <div className="flex h-full min-w-max gap-3 p-6">
             {COLUMNS.map((col) => (
               <Column
                 key={col}
@@ -499,13 +499,13 @@ function Column({
     <section
       ref={setNodeRef}
       className={cn(
-        "flex w-[300px] shrink-0 flex-col rounded-[var(--radius-lg)] border border-[hsl(var(--line))] transition-all duration-150",
+        "flex max-h-full w-[300px] min-h-0 shrink-0 flex-col rounded-[var(--radius-lg)] border border-[hsl(var(--line))] transition-all duration-150",
         bg,
         isOver &&
           "ring-2 ring-[hsl(var(--brand)/0.5)] border-[hsl(var(--brand)/0.4)] shadow-[var(--shadow-2)]",
       )}
     >
-      <header className="flex items-center justify-between px-3.5 pt-3 pb-2">
+      <header className="flex shrink-0 items-center justify-between px-3.5 pt-3 pb-2">
         <div className="flex items-center gap-2">
           <span className={cn("h-2 w-2 rounded-full", accent)} />
           <h3 className="text-[12.5px] font-semibold tracking-tight">
@@ -529,7 +529,7 @@ function Column({
         items={tasks.map((t) => t.id)}
         strategy={verticalListSortingStrategy}
       >
-        <div className="flex flex-1 flex-col gap-2.5 px-2 pb-3 min-h-[40px]">
+        <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-2 pb-3">
           {tasks.map((t) => (
             <SortableTaskCard
               key={t.id}
