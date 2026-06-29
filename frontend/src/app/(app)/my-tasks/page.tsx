@@ -18,7 +18,6 @@ import { StatusPill, PriorityPill } from "@/components/ui/pill";
 import { TaskDetailDialog } from "@/components/tasks/task-detail-dialog";
 import { NewTaskDialog } from "@/components/tasks/new-task-dialog";
 import { Button } from "@/components/ui/button";
-import { FilterPopover } from "@/components/ui/filter-popover";
 import { projectsApi, routerService, useAuth, useProjects } from "@/services";
 import type { Task, TaskPriority } from "@/services";
 import {
@@ -37,6 +36,28 @@ const PRIORITY_OPTIONS: readonly { value: TaskPriority; label: string }[] = [
   { value: "medium", label: "Moyenne" },
   { value: "low", label: "Faible" },
 ];
+
+function toggleSet<T>(set: ReadonlySet<T>, v: T): Set<T> {
+  const next = new Set(set);
+  if (next.has(v)) next.delete(v);
+  else next.add(v);
+  return next;
+}
+
+function CheckBox({ on }: { on: boolean }) {
+  return (
+    <span
+      className={cn(
+        "grid h-4 w-4 shrink-0 place-items-center rounded border transition-colors",
+        on
+          ? "border-[hsl(var(--brand))] bg-[hsl(var(--brand))] text-white"
+          : "border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-elevated))]",
+      )}
+    >
+      {on && <Check className="h-3 w-3" strokeWidth={3} />}
+    </span>
+  );
+}
 
 const PRIORITY_RANK: Record<TaskPriority, number> = {
   urgent: 0,
@@ -215,56 +236,111 @@ export default function MyTasksPage() {
               )}
             </div>
 
-            <FilterPopover<TaskPriority>
-              title="Priorité"
-              options={PRIORITY_OPTIONS}
-              selected={priorityFilter}
-              onChange={(s) => setPriorityFilter(s)}
-              trigger={
+            <Popover.Root>
+              <Popover.Trigger asChild>
                 <button
                   className={cn(
                     "inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-sm)] border px-2.5 text-[12px] font-medium",
-                    priorityFilter.size > 0
+                    priorityFilter.size + projectFilter.size > 0
                       ? "border-[hsl(var(--brand)/0.5)] bg-[hsl(var(--brand-soft))] text-[hsl(var(--brand-ink))]"
                       : "border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-elevated))] hover:bg-[hsl(var(--bg-muted))]",
                   )}
                 >
                   <Filter className="h-3.5 w-3.5" />
-                  Priorité
-                  {priorityFilter.size > 0 && (
+                  Filtrer
+                  {priorityFilter.size + projectFilter.size > 0 && (
                     <span className="rounded-full bg-[hsl(var(--brand))] px-1.5 py-0.5 text-[10px] font-bold text-white">
-                      {priorityFilter.size}
+                      {priorityFilter.size + projectFilter.size}
                     </span>
                   )}
                 </button>
-              }
-            />
+              </Popover.Trigger>
+              <Popover.Portal>
+                <Popover.Content
+                  align="end"
+                  sideOffset={6}
+                  className="z-40 w-[260px] overflow-hidden rounded-[var(--radius-md)] border border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))] shadow-[var(--shadow-3)] outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
+                >
+                  <header className="flex items-center justify-between border-b border-[hsl(var(--line))] px-3 py-2">
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[hsl(var(--ink-3))]">
+                      Filtres
+                    </span>
+                    {priorityFilter.size + projectFilter.size > 0 && (
+                      <button
+                        onClick={() => {
+                          setPriorityFilter(new Set());
+                          setProjectFilter(new Set());
+                        }}
+                        className="inline-flex h-6 items-center gap-1 rounded px-1.5 text-[11px] font-medium text-[hsl(var(--ink-3))] hover:bg-[hsl(var(--bg-sunken)/0.6)] hover:text-ink"
+                      >
+                        <X className="h-3 w-3" />
+                        Effacer
+                      </button>
+                    )}
+                  </header>
 
-            <FilterPopover<string>
-              title="Projet"
-              options={projectOptions}
-              selected={projectFilter}
-              onChange={(s) => setProjectFilter(s)}
-              emptyLabel="Aucun projet"
-              trigger={
-                <button
-                  className={cn(
-                    "inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-sm)] border px-2.5 text-[12px] font-medium",
-                    projectFilter.size > 0
-                      ? "border-[hsl(var(--brand)/0.5)] bg-[hsl(var(--brand-soft))] text-[hsl(var(--brand-ink))]"
-                      : "border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-elevated))] hover:bg-[hsl(var(--bg-muted))]",
-                  )}
-                >
-                  <Filter className="h-3.5 w-3.5" />
-                  Projet
-                  {projectFilter.size > 0 && (
-                    <span className="rounded-full bg-[hsl(var(--brand))] px-1.5 py-0.5 text-[10px] font-bold text-white">
-                      {projectFilter.size}
-                    </span>
-                  )}
-                </button>
-              }
-            />
+                  <div className="max-h-[360px] overflow-y-auto">
+                    <div className="border-b border-[hsl(var(--line))] pb-1">
+                      <div className="px-3 pt-2 pb-1 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[hsl(var(--ink-4))]">
+                        Priorité
+                      </div>
+                      <ul>
+                        {PRIORITY_OPTIONS.map((opt) => {
+                          const isOn = priorityFilter.has(opt.value);
+                          return (
+                            <li key={opt.value}>
+                              <button
+                                onClick={() =>
+                                  setPriorityFilter(toggleSet(priorityFilter, opt.value))
+                                }
+                                className="flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-[12.5px] hover:bg-[hsl(var(--bg-sunken)/0.6)]"
+                              >
+                                <CheckBox on={isOn} />
+                                <span className="flex-1 truncate">{opt.label}</span>
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+
+                    <div className="pb-1">
+                      <div className="px-3 pt-2 pb-1 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[hsl(var(--ink-4))]">
+                        Projet
+                      </div>
+                      {projectOptions.length === 0 ? (
+                        <div className="px-3 py-3 text-center text-[12px] text-[hsl(var(--ink-3))]">
+                          Aucun projet
+                        </div>
+                      ) : (
+                        <ul>
+                          {projectOptions.map((opt) => {
+                            const isOn = projectFilter.has(opt.value);
+                            return (
+                              <li key={opt.value}>
+                                <button
+                                  onClick={() =>
+                                    setProjectFilter(toggleSet(projectFilter, opt.value))
+                                  }
+                                  className="flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-[12.5px] hover:bg-[hsl(var(--bg-sunken)/0.6)]"
+                                >
+                                  <CheckBox on={isOn} />
+                                  <span
+                                    className="h-2.5 w-2.5 shrink-0 rounded-[3px]"
+                                    style={{ background: colorForProject(opt.value) }}
+                                  />
+                                  <span className="flex-1 truncate">{opt.label}</span>
+                                </button>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
+                </Popover.Content>
+              </Popover.Portal>
+            </Popover.Root>
 
             <Popover.Root>
               <Popover.Trigger asChild>
