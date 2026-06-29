@@ -70,12 +70,15 @@ interface TaskDetailDialogProps {
   /** Appelé à chaque mutation locale de la tâche pour que le parent
    *  (board, my-tasks, etc.) puisse synchroniser sa propre liste. */
   onUpdated?: (task: Task) => void;
+  /** Appelé après suppression de la tâche (admin) pour retirer la carte. */
+  onDeleted?: (taskId: string) => void;
 }
 
 export function TaskDetailDialog({
   taskId,
   onClose,
   onUpdated,
+  onDeleted,
 }: TaskDetailDialogProps) {
   const open = !!taskId;
 
@@ -92,6 +95,7 @@ export function TaskDetailDialog({
               taskId={taskId}
               onClose={onClose}
               onUpdated={onUpdated}
+              onDeleted={onDeleted}
             />
           )}
         </Dialog.Content>
@@ -104,10 +108,12 @@ function TaskDetailBody({
   taskId,
   onClose,
   onUpdated,
+  onDeleted,
 }: {
   taskId: string;
   onClose: () => void;
   onUpdated?: (task: Task) => void;
+  onDeleted?: (taskId: string) => void;
 }) {
   const { task, loading, error, refetch, setTask } = useTask(taskId);
   const { user, isAdmin } = useAuth();
@@ -126,6 +132,9 @@ function TaskDetailBody({
   // Suggestion d'assigné (algo de répartition).
   const [suggestions, setSuggestions] = useState<AssigneeSuggestion[] | null>(null);
   const [loadingSuggest, setLoadingSuggest] = useState(false);
+  // Suppression de la tâche (admin) : confirmation inline.
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deletingTask, setDeletingTask] = useState(false);
 
   // Patch unifié : optimistic, rollback en cas d'erreur, toast.
   const patchTask = async (
@@ -321,9 +330,29 @@ function TaskDetailBody({
     }
   };
 
-  // Réinitialise les suggestions quand on change de tâche.
+  const handleDeleteTask = async () => {
+    if (!task || deletingTask) return;
+    setDeletingTask(true);
+    try {
+      await tasksApi.remove(task.id);
+      toast.success("La tâche a été supprimée.", "Tâche supprimée");
+      onDeleted?.(task.id);
+      onClose();
+    } catch (e) {
+      console.error("Delete task failed", e);
+      toast.error(
+        e instanceof Error ? e.message : "Suppression impossible.",
+        "Suppression refusée",
+      );
+      setDeletingTask(false);
+      setConfirmDelete(false);
+    }
+  };
+
+  // Réinitialise les suggestions + la confirmation quand on change de tâche.
   useEffect(() => {
     setSuggestions(null);
+    setConfirmDelete(false);
   }, [taskId]);
 
   // Catalogue de labels (géré par l'admin) — on ne peut choisir que parmi eux.
@@ -385,17 +414,56 @@ function TaskDetailBody({
           options={STATUS_OPTIONS}
           className="!h-8 w-[148px] !px-2.5 text-[12px]"
         />
-        <Dialog.Close
-          asChild
-          aria-label="Fermer"
-        >
-          <button className="ml-auto grid h-8 w-8 place-items-center rounded-[8px] text-[hsl(var(--ink-3))] hover:bg-[hsl(var(--bg-muted))] hover:text-ink">
-            <X className="h-4 w-4" />
-          </button>
-        </Dialog.Close>
+        <div className="ml-auto flex items-center gap-1">
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => setConfirmDelete(true)}
+              title="Supprimer la tâche"
+              className="grid h-8 w-8 place-items-center rounded-[8px] text-[hsl(var(--ink-3))] hover:bg-[hsl(var(--alert-danger-bg))] hover:text-[hsl(var(--accent-rose))]"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
+          <Dialog.Close asChild aria-label="Fermer">
+            <button className="grid h-8 w-8 place-items-center rounded-[8px] text-[hsl(var(--ink-3))] hover:bg-[hsl(var(--bg-muted))] hover:text-ink">
+              <X className="h-4 w-4" />
+            </button>
+          </Dialog.Close>
+        </div>
       </header>
 
       <div className="overflow-y-auto px-6 py-5">
+        {confirmDelete && (
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[hsl(var(--accent-rose)/0.3)] bg-[hsl(var(--alert-danger-bg))] px-3.5 py-2.5">
+            <span className="text-[12.5px] text-[hsl(var(--accent-rose))]">
+              Supprimer définitivement cette tâche ? Action irréversible.
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(false)}
+                disabled={deletingTask}
+                className="rounded-[var(--radius-sm)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-elevated))] px-2.5 py-1 text-[12px] font-medium hover:bg-[hsl(var(--bg-muted))] disabled:opacity-60"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteTask}
+                disabled={deletingTask}
+                className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[hsl(var(--accent-rose))] px-2.5 py-1 text-[12px] font-semibold text-white hover:bg-[hsl(348_70%_50%)] disabled:opacity-60"
+              >
+                {deletingTask ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="h-3.5 w-3.5" />
+                )}
+                Supprimer
+              </button>
+            </div>
+          </div>
+        )}
         {titleDraft !== null ? (
           <input
             autoFocus

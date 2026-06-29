@@ -247,6 +247,7 @@ export default function UserDetailPage({
         taskId={openTaskId}
         onClose={() => setOpenTaskId(null)}
         onUpdated={() => refetch()}
+        onDeleted={() => refetch()}
       />
     </>
   );

@@ -422,6 +422,7 @@ export default function MyTasksPage() {
         taskId={openTaskId}
         onClose={() => setOpenTaskId(null)}
         onUpdated={() => setRefreshTick((n) => n + 1)}
+        onDeleted={() => setRefreshTick((n) => n + 1)}
       />
       <NewTaskDialog
         open={newTaskOpen}

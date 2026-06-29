@@ -452,6 +452,7 @@ export function KanbanBoard({
         taskId={openTaskId}
         onClose={() => setOpenTaskId(null)}
         onUpdated={(t) => applyUpdate(t)}
+        onDeleted={() => refetch()}
       />
 
       <NewTaskDialog
