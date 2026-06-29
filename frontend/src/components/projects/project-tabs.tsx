@@ -16,9 +16,12 @@ export function ProjectTabs({
   const items = [
     { href: base, label: "Aperçu", exact: true, go: () => routerService.toProject(projectId) },
     { href: `${base}/board`, label: "Tâches", go: () => routerService.toProjectBoard(projectId) },
-    { href: `${base}/members`, label: "Membres", go: () => routerService.toProjectMembers(projectId) },
+    // Membres et Paramètres : réservés aux managers (admin).
     ...(canManage
-      ? [{ href: `${base}/settings`, label: "Paramètres", go: () => routerService.toProjectSettings(projectId) }]
+      ? [
+          { href: `${base}/members`, label: "Membres", go: () => routerService.toProjectMembers(projectId) },
+          { href: `${base}/settings`, label: "Paramètres", go: () => routerService.toProjectSettings(projectId) },
+        ]
       : []),
   ];
   return (

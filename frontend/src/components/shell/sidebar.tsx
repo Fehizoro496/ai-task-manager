@@ -50,7 +50,7 @@ export function Sidebar() {
     { href: "/projects", go: () => routerService.toProjects(), label: "Projets", icon: FolderKanban },
     { href: "/my-tasks", go: () => routerService.toMyTasks(), label: "Mes tâches", icon: CheckSquare2 },
     { href: "/messages", go: () => routerService.toMessages(), label: "Messages", icon: MessageSquare, unread: messagesUnread },
-    { href: "/ai/new", go: () => routerService.toAiNew(), label: "IA Planification", icon: Sparkles, accent: true },
+    { href: "/ai/new", go: () => routerService.toAiNew(), label: "IA Planification", icon: Sparkles, accent: true, adminOnly: true },
     { href: "/calendar", go: () => routerService.toCalendar(), label: "Calendrier", icon: Calendar },
     { href: "/reports", go: () => routerService.toReports(), label: "Rapports", icon: BarChart3 },
     { href: "/admin", go: () => routerService.toAdmin(), label: "Administration", icon: ShieldCheck, adminOnly: true, unread: pendingCount },

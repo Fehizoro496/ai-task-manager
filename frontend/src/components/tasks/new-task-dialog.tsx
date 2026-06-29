@@ -5,7 +5,7 @@ import { X, Sparkles, Loader2, Plus } from "lucide-react";
 import { Input, Textarea, Field } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
-import { projectsApi, toast, useProjects } from "@/services";
+import { projectsApi, toast, useAuth, useProjects } from "@/services";
 import type { TaskPriority, TaskStatus } from "@/services";
 
 const PRIORITY: { v: TaskPriority; l: string }[] = [
@@ -34,6 +34,7 @@ export function NewTaskDialog({
   onCreated,
 }: NewTaskDialogProps) {
   const { projects } = useProjects();
+  const { isAdmin } = useAuth();
   const [projectId, setProjectId] = useState<string>(lockedProjectId ?? "");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -80,6 +81,9 @@ export function NewTaskDialog({
       setSaving(false);
     }
   };
+
+  // Création de tâche réservée à l'admin (filet de sécurité côté UI).
+  if (!isAdmin) return null;
 
   return (
     <Dialog.Root open={open} onOpenChange={(v) => !v && onClose()}>

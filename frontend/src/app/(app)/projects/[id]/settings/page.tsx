@@ -35,7 +35,7 @@ export default function ProjectSettingsPage({
 }) {
   const { id: projectId } = use(params);
   const router = useRouter();
-  const { user, isAdmin } = useAuth();
+  const { isAdmin } = useAuth();
   const { project, loading } = useProject(projectId);
   const { update, remove } = useProjects();
 
@@ -58,13 +58,12 @@ export default function ProjectSettingsPage({
     setIdentifierPrefix(project.identifierPrefix ?? "");
   }, [project]);
 
-  // Garde d'accès : seul le propriétaire ou un admin peut voir les paramètres.
+  // Garde d'accès : paramètres projet réservés à l'admin.
   // Un membre simple qui arrive par URL directe est redirigé vers l'aperçu.
   useEffect(() => {
     if (loading || !project) return;
-    const allowed = isAdmin || project.ownerId === user?.id;
-    if (!allowed) router.replace(`/projects/${projectId}`);
-  }, [loading, project, isAdmin, user?.id, projectId, router]);
+    if (!isAdmin) router.replace(`/projects/${projectId}`);
+  }, [loading, project, isAdmin, projectId, router]);
 
   if (loading || !project) {
     return (
@@ -77,7 +76,7 @@ export default function ProjectSettingsPage({
     );
   }
 
-  const canEdit = isAdmin || project.ownerId === user?.id;
+  const canEdit = isAdmin;
   const canDelete = canEdit;
 
   const isDirty =

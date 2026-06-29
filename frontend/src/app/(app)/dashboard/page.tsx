@@ -18,7 +18,7 @@ import { colorForProject, projectPrefix } from "@/lib/mappers";
 import { cn } from "@/lib/utils";
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { projects, loading } = useProjects();
 
   const firstName = user?.name?.split(" ")[0] ?? "vous";
@@ -148,30 +148,32 @@ export default function DashboardPage() {
           )}
         </section>
 
-        <section className="mt-7">
-          <div className="relative overflow-hidden rounded-[var(--radius-lg)] border border-[hsl(var(--brand)/0.18)] bg-[hsl(var(--bg-elevated))] shadow-[var(--shadow-1)] grain">
-            <div className="absolute inset-0 -z-0 bg-aurora opacity-90" />
-            <div className="relative grid items-center gap-6 px-7 py-7 md:grid-cols-[1.4fr_auto]">
-              <div>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/70 px-2.5 py-1 text-[10.5px] font-semibold tracking-[0.16em] uppercase text-[hsl(var(--brand-ink))]">
-                  <Sparkles className="h-3 w-3" /> Planification IA
-                </span>
-                <h3 className="mt-3 font-display text-[24px] font-semibold tracking-tight leading-tight">
-                  Du brief à la roadmap en 90 secondes.
-                </h3>
-                <p className="mt-1.5 max-w-md text-[13.5px] text-[hsl(var(--ink-2))]">
-                  Décrivez votre projet, l&apos;IA structure les epics, stories et tâches.
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button variant="brand" size="lg" onClick={() => routerService.toAiNew()}>
-                  <Sparkles className="h-4 w-4" />
-                  Lancer un plan IA
-                </Button>
+        {isAdmin && (
+          <section className="mt-7">
+            <div className="relative overflow-hidden rounded-[var(--radius-lg)] border border-[hsl(var(--brand)/0.18)] bg-[hsl(var(--bg-elevated))] shadow-[var(--shadow-1)] grain">
+              <div className="absolute inset-0 -z-0 bg-aurora opacity-90" />
+              <div className="relative grid items-center gap-6 px-7 py-7 md:grid-cols-[1.4fr_auto]">
+                <div>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/70 px-2.5 py-1 text-[10.5px] font-semibold tracking-[0.16em] uppercase text-[hsl(var(--brand-ink))]">
+                    <Sparkles className="h-3 w-3" /> Planification IA
+                  </span>
+                  <h3 className="mt-3 font-display text-[24px] font-semibold tracking-tight leading-tight">
+                    Du brief à la roadmap en 90 secondes.
+                  </h3>
+                  <p className="mt-1.5 max-w-md text-[13.5px] text-[hsl(var(--ink-2))]">
+                    Décrivez votre projet, l&apos;IA structure les epics, stories et tâches.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button variant="brand" size="lg" onClick={() => routerService.toAiNew()}>
+                    <Sparkles className="h-4 w-4" />
+                    Lancer un plan IA
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
       </main>
     </>
   );

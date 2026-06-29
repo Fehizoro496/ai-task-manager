@@ -11,10 +11,10 @@ export default function BoardPage({
 }) {
   const { id } = use(params);
   const { project } = useProject(id);
-  const { user, isAdmin } = useAuth();
+  const { isAdmin } = useAuth();
   const prefix = projectPrefix(project);
-  const canDistribute =
-    isAdmin || (!!project?.ownerId && project.ownerId === user?.id);
+  // Répartition automatique : réservée à l'admin.
+  const canDistribute = isAdmin;
 
   return (
     <div className="flex min-h-[calc(100dvh-180px)] flex-col">

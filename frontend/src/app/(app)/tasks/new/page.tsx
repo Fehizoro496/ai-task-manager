@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { X, Sparkles, Loader2 } from "lucide-react";
 import { Input, Textarea, Field } from "@/components/ui/input";
@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Topbar } from "@/components/shell/topbar";
 import { Breadcrumb } from "@/components/shell/breadcrumb";
-import { projectsApi, routerService, toast, useProjects } from "@/services";
+import { projectsApi, routerService, toast, useAuth, useProjects } from "@/services";
 import type { TaskPriority } from "@/services";
 
 const PRIORITY: { v: TaskPriority; l: string }[] = [
@@ -20,6 +20,13 @@ const PRIORITY: { v: TaskPriority; l: string }[] = [
 export default function NewTaskPage() {
   const router = useRouter();
   const { projects } = useProjects();
+  const { isAdmin, status: authStatus } = useAuth();
+
+  // Création de tâche réservée à l'admin.
+  useEffect(() => {
+    if (authStatus === "authenticated" && !isAdmin) router.replace("/my-tasks");
+  }, [authStatus, isAdmin, router]);
+
   const [projectId, setProjectId] = useState<string>("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");

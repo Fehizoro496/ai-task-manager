@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { PriorityPill } from "@/components/ui/pill";
 import { Select } from "@/components/ui/select";
 import { WizardStepper } from "@/components/ai/wizard-stepper";
-import { aiApi, toast, useAiGenerationStore, useProjects } from "@/services";
+import { aiApi, toast, useAiGenerationStore, useAuth, useProjects } from "@/services";
 import type { AiDraft } from "@/services";
 import { normalizeApiPriority, projectPrefix } from "@/lib/mappers";
 import { cn } from "@/lib/utils";
@@ -56,6 +56,12 @@ function readPlan(draft: AiDraft | null): PlanEpicShape[] {
 export function PlanWizard() {
   const router = useRouter();
   const { projects } = useProjects();
+  const { isAdmin, status: authStatus } = useAuth();
+
+  // Planification réservée à l'admin : un utilisateur simple est redirigé.
+  useEffect(() => {
+    if (authStatus === "authenticated" && !isAdmin) router.replace("/dashboard");
+  }, [authStatus, isAdmin, router]);
   // Génération pilotée par un store global : survit à la navigation in-app,
   // notifie à la fin, et restitue le brouillon au retour sur la page.
   const {

@@ -19,7 +19,7 @@ export default function ProjectLayout({
 }) {
   const { id } = use(params);
   const { project, loading, error } = useProject(id);
-  const { user, isAdmin } = useAuth();
+  const { isAdmin } = useAuth();
 
   if (loading) {
     return (
@@ -44,7 +44,8 @@ export default function ProjectLayout({
 
   const color = colorForProject(project.id);
   const prefix = projectPrefix(project);
-  const canManage = isAdmin || (!!project.ownerId && project.ownerId === user?.id);
+  // Gestion projet (Membres, Paramètres) réservée à l'admin.
+  const canManage = isAdmin;
 
   return (
     <>

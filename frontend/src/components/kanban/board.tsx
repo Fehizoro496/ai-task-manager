@@ -45,7 +45,7 @@ import { TaskDetailDialog } from "@/components/tasks/task-detail-dialog";
 import { NewTaskDialog } from "@/components/tasks/new-task-dialog";
 import { DistributeDialog } from "@/components/kanban/distribute-dialog";
 import { FilterPopover } from "@/components/ui/filter-popover";
-import { projectsApi, toast, useProjectTasks } from "@/services";
+import { projectsApi, toast, useAuth, useProjectTasks } from "@/services";
 import type { TaskPriority, TaskStatus } from "@/services";
 import type { Task as ApiTask } from "@/services";
 import type { Status } from "@/lib/types";
@@ -98,6 +98,7 @@ export function KanbanBoard({
   canDistribute = false,
 }: KanbanBoardProps) {
   const { tasks, loading, refetch, applyUpdate } = useProjectTasks(projectId);
+  const { isAdmin } = useAuth();
   // Liste locale pour les rearrangements optimistes inter-colonnes pendant
   // le drag, avant la confirmation API au drop.
   const [localTasks, setLocalTasks] = useState<ApiTask[] | null>(null);
@@ -436,7 +437,7 @@ export function KanbanBoard({
                 accent={COLUMN_DOT[col]}
                 bg={COLUMN_BG[col]}
                 onOpenTask={setOpenTaskId}
-                onAddTask={() => setCreateForStatus(col)}
+                onAddTask={isAdmin ? () => setCreateForStatus(col) : undefined}
               />
             ))}
           </div>
@@ -490,7 +491,7 @@ function Column({
   accent: string;
   bg: string;
   onOpenTask: (id: string) => void;
-  onAddTask: () => void;
+  onAddTask?: () => void;
 }) {
   const { isOver, setNodeRef } = useDroppable({ id: status });
   return (
@@ -513,6 +514,7 @@ function Column({
             {tasks.length}
           </span>
         </div>
+        {onAddTask && (
         <button
           onClick={onAddTask}
           title="Ajouter une tâche"
@@ -520,6 +522,7 @@ function Column({
         >
           <Plus className="h-3 w-3" />
         </button>
+        )}
       </header>
       <SortableContext
         items={tasks.map((t) => t.id)}
