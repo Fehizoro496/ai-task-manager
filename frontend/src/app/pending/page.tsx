@@ -152,30 +152,37 @@ export default function PendingPage() {
             </ul>
           </div>
 
-          <div className="relative overflow-hidden rounded-[var(--radius-lg)] border border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))] grain">
-            <div className="absolute inset-0 bg-aurora opacity-80" />
-            <div className="relative h-full p-6 flex flex-col">
-              <div className="text-[10.5px] font-semibold tracking-[0.18em] uppercase text-[hsl(var(--brand-ink))]">
+          <div
+            className="grain relative overflow-hidden rounded-[var(--radius-lg)] text-white shadow-[var(--shadow-3)]"
+            style={{
+              background:
+                "radial-gradient(70% 60% at 100% 0%, hsl(23 92% 60% / 0.28), transparent 60%)," +
+                "radial-gradient(70% 60% at 0% 100%, hsl(239 84% 67% / 0.22), transparent 60%)," +
+                "linear-gradient(160deg, hsl(238 46% 11%), hsl(240 50% 6%))",
+            }}
+          >
+            <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full border border-dashed border-white/10 animate-[spin_30s_linear_infinite]" />
+            <div className="relative flex h-full flex-col p-6">
+              <div className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-white/55">
                 Statut
               </div>
-              <div className="mt-1.5 text-[28px] leading-tight tracking-tight">
+              <div className="mt-1.5 text-[26px] font-semibold leading-tight tracking-tight">
                 Patience,
                 <br />
-                <span className="font-display not-italic font-semibold">
-                  approbation imminente.
-                </span>
+                <span className="text-white/55">approbation imminente.</span>
               </div>
-              <div className="relative mt-auto pt-6 grid place-items-center">
+              <div className="relative mt-auto grid place-items-center pt-6">
                 <div className="relative h-32 w-32">
-                  <div className="absolute inset-0 rounded-full bg-[hsl(var(--accent-apricot)/0.15)] animate-[float_5s_ease-in-out_infinite]" />
-                  <div className="absolute inset-3 rounded-full bg-[hsl(var(--accent-apricot)/0.25)] animate-[float_4s_ease-in-out_infinite_0.4s]" />
+                  <div className="absolute inset-0 rounded-full bg-[hsl(var(--accent-apricot)/0.18)] animate-[float_5s_ease-in-out_infinite]" />
+                  <div className="absolute inset-3 rounded-full bg-[hsl(var(--accent-apricot)/0.28)] animate-[float_4s_ease-in-out_infinite_0.4s]" />
                   <div className="absolute inset-6 grid place-items-center rounded-full bg-gradient-to-br from-[hsl(var(--accent-apricot))] to-[hsl(23_92%_45%)] text-white shadow-[var(--shadow-2)]">
                     <Hourglass className="h-7 w-7" />
                   </div>
                 </div>
               </div>
               {user && (
-                <div className="mt-6 flex items-center justify-between text-[11px] text-[hsl(var(--ink-3))]">
+                <div className="mt-6 flex items-center gap-2 border-t border-white/10 pt-4 text-[11.5px] text-white/55">
+                  <Mail className="h-3.5 w-3.5 shrink-0" />
                   <span className="truncate">{user.email}</span>
                 </div>
               )}
