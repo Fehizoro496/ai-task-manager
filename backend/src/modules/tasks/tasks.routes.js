@@ -29,7 +29,7 @@ router.use(authenticate);
  *                 type: string
  *               description:
  *                 type: string
- *               storyId:
+ *               projectId:
  *                 type: string
  *                 format: uuid
  *               priority:
@@ -51,12 +51,12 @@ router.post("/", requireAdmin, validate(createTaskSchema), tasksController.creat
  * /tasks:
  *   get:
  *     tags: [Tasks]
- *     summary: List tasks by story
+ *     summary: List tasks by project
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: query
- *         name: storyId
+ *         name: projectId
  *         required: true
  *         schema:
  *           type: string
@@ -71,7 +71,7 @@ router.post("/", requireAdmin, validate(createTaskSchema), tasksController.creat
  *               items:
  *                 $ref: '#/components/schemas/Task'
  */
-router.get("/", tasksController.listByStory);
+router.get("/", tasksController.listByQuery);
 
 /**
  * @swagger

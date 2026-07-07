@@ -66,7 +66,7 @@ router.get("/", projectsController.list);
  * /projects/{id}:
  *   get:
  *     tags: [Projects]
- *     summary: Get project with full hierarchy (Epics > Stories > Tasks)
+ *     summary: Get project with its tasks
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -191,9 +191,6 @@ router.get("/:projectId/tasks", tasksController.listByProject);
  *                 type: string
  *               description:
  *                 type: string
- *               storyId:
- *                 type: string
- *                 format: uuid
  *     responses:
  *       201:
  *         description: Task created

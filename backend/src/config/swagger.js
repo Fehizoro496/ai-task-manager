@@ -45,30 +45,6 @@ const options = {
             updatedAt: { type: "string", format: "date-time" },
           },
         },
-        Epic: {
-          type: "object",
-          properties: {
-            id: { type: "string", format: "uuid" },
-            title: { type: "string" },
-            description: { type: "string", nullable: true },
-            position: { type: "integer" },
-            projectId: { type: "string", format: "uuid" },
-            createdAt: { type: "string", format: "date-time" },
-            updatedAt: { type: "string", format: "date-time" },
-          },
-        },
-        Story: {
-          type: "object",
-          properties: {
-            id: { type: "string", format: "uuid" },
-            title: { type: "string" },
-            description: { type: "string", nullable: true },
-            position: { type: "integer" },
-            epicId: { type: "string", format: "uuid" },
-            createdAt: { type: "string", format: "date-time" },
-            updatedAt: { type: "string", format: "date-time" },
-          },
-        },
         Task: {
           type: "object",
           properties: {
@@ -77,7 +53,7 @@ const options = {
             description: { type: "string", nullable: true },
             status: { type: "string", enum: ["TODO", "IN_PROGRESS", "IN_REVIEW", "DONE"] },
             position: { type: "integer" },
-            storyId: { type: "string", format: "uuid" },
+            projectId: { type: "string", format: "uuid" },
             createdAt: { type: "string", format: "date-time" },
             updatedAt: { type: "string", format: "date-time" },
           },

@@ -14,7 +14,7 @@ router.use(authenticate);
  *   post:
  *     tags: [AI]
  *     summary: Generate an AI plan from a feature document
- *     description: Sends a document to the LLM which breaks it into Epics, Stories and Tasks. Stores the result as a draft.
+ *     description: Sends a document to the LLM which breaks it into a list of Tasks. Stores the result as a draft.
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -105,8 +105,8 @@ router.get("/drafts/:id", aiController.getDraft);
  * /ai/drafts/{id}/approve:
  *   post:
  *     tags: [AI]
- *     summary: Approve a draft and convert to real Epics/Stories/Tasks
- *     description: Converts the AI-generated draft plan into actual project entities using a Prisma transaction.
+ *     summary: Approve a draft and convert to real Tasks
+ *     description: Converts the AI-generated draft plan into actual project tasks using a Prisma transaction.
  *     security:
  *       - bearerAuth: []
  *     parameters:

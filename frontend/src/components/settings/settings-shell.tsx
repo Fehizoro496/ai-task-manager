@@ -586,7 +586,7 @@ function IntegrationsSection() {
     },
     {
       name: "OpenAI",
-      desc: "Modèle utilisé pour la planification IA des epics/stories/tâches.",
+      desc: "Modèle utilisé pour la planification IA des tâches.",
       Icon: Sparkles,
       tone: "bg-gradient-to-br from-[hsl(var(--brand))] to-[#A78BFA] text-white",
       connected: true,

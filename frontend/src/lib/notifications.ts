@@ -60,7 +60,7 @@ export const notifications: Notif[] = [
     id: "n_4",
     kind: "ai",
     title: "Plan IA prêt",
-    body: "Votre plan « Application mobile » contient 2 epics et 16 tâches.",
+    body: "Votre plan « Application mobile » contient 16 tâches.",
     href: "/ai/new",
     createdAt: "2024-05-15T08:10:00",
     group: "today",

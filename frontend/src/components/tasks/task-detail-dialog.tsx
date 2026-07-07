@@ -7,7 +7,6 @@ import {
   Calendar as CalIcon,
   User,
   Tag,
-  Link as LinkIcon,
   Sparkles,
   Loader2,
   UserPlus,
@@ -642,13 +641,6 @@ function TaskDetailBody({
               ) : (
                 <span className="font-mono text-[12px]">{branchName}</span>
               )}
-            </Meta>
-          )}
-          {task.storyId && (
-            <Meta Icon={LinkIcon} label="Story liée">
-              <span className="font-mono text-[11px]">
-                {task.storyId.slice(0, 8)}…
-              </span>
             </Meta>
           )}
         </div>

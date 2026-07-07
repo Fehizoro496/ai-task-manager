@@ -161,7 +161,7 @@ export default function DashboardPage() {
                     Du brief à la roadmap en 90 secondes.
                   </h3>
                   <p className="mt-1.5 max-w-md text-[13.5px] text-[hsl(var(--ink-2))]">
-                    Décrivez votre projet, l&apos;IA structure les epics, stories et tâches.
+                    Décrivez votre projet, l&apos;IA le structure en tâches.
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">

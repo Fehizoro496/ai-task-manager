@@ -35,20 +35,12 @@ const ensureTaskAccess = async (taskId, userId, isAdmin) => {
     select: {
       id: true,
       assigneeId: true,
-      story: {
-        select: {
-          epic: {
-            select: {
-              project: { select: { id: true, ownerId: true } },
-            },
-          },
-        },
-      },
+      project: { select: { id: true, ownerId: true } },
     },
   });
   if (!task) throw new AppError("Task not found", 404);
   if (isAdmin) return task;
-  const project = task.story.epic.project;
+  const project = task.project;
   if (project.ownerId === userId) return task;
   if (task.assigneeId === userId) return task;
   const member = await isMember(project.id, userId);
@@ -85,7 +77,7 @@ const create = async (taskId, userId, isAdmin, data) => {
     });
     const author = comment.author?.name ?? "Un membre";
     const ident = taskInfo?.identifier ? `${taskInfo.identifier} ` : "";
-    const projectId = task.story.epic.project.id;
+    const projectId = task.project.id;
     const link = `/projects/${projectId}/board?task=${taskId}`;
     await createNotification({
       type: "TASK_COMMENT",

@@ -23,7 +23,6 @@ export interface UpdateProjectInput {
 export interface CreateProjectTaskInput {
   title: string;
   description?: string;
-  storyId?: string;
   priority?: string;
   status?: string;
 }

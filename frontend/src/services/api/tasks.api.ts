@@ -5,7 +5,7 @@ import type { Task, TaskPriority, TaskStatus } from "./types";
 export interface CreateTaskInput {
   title: string;
   description?: string;
-  storyId?: string;
+  projectId?: string;
   priority?: TaskPriority;
   position?: number;
 }
@@ -27,8 +27,8 @@ export interface MoveTaskInput {
 }
 
 export const tasksApi = {
-  listByStory: (storyId: string) =>
-    apiClient.get<Task[]>(endpoints.tasks.listByStory(storyId)),
+  listByProject: (projectId: string) =>
+    apiClient.get<Task[]>(endpoints.tasks.listByProject(projectId)),
 
   getById: (id: string) => apiClient.get<Task>(endpoints.tasks.byId(id)),
 

@@ -19,9 +19,9 @@ const buildLabelsDirective = async () => {
   )}.`;
 };
 
-const SYSTEM_PROMPT = `Tu es un assistant de planification de projet. À partir d'un document de fonctionnalités, décompose-le en un plan structuré d'Epics, contenant chacun des Stories, contenant chacune des Tâches.
+const SYSTEM_PROMPT = `Tu es un assistant de planification de projet. À partir d'un document de fonctionnalités, décompose-le en une liste de Tâches concrètes et actionnables.
 
-- Les Epics sont des thèmes de haut niveau ; les Stories des incréments orientés utilisateur ; les Tâches des unités de travail concrètes et actionnables.
+- Les Tâches sont des unités de travail concrètes et actionnables.
 - Rédige TOUT le contenu (titres et descriptions) en français.
 - Ton : TOUJOURS concis. Titres courts à l'impératif, une phrase courte maximum par description, sans remplissage.
 - Couvre le document de manière exhaustive sans inventer de périmètre non implicite.`;
@@ -43,24 +43,14 @@ const titleDescObject = (required, extraProps = {}) => ({
 const PLAN_JSON_SCHEMA = {
   type: "object",
   properties: {
-    epics: {
+    tasks: {
       type: "array",
-      items: titleDescObject(["title", "stories"], {
-        stories: {
-          type: "array",
-          items: titleDescObject(["title", "tasks"], {
-            tasks: {
-              type: "array",
-              items: titleDescObject(["title"], {
-                labels: { type: "array", items: { type: "string" } },
-              }),
-            },
-          }),
-        },
+      items: titleDescObject(["title"], {
+        labels: { type: "array", items: { type: "string" } },
       }),
     },
   },
-  required: ["epics"],
+  required: ["tasks"],
   additionalProperties: false,
 };
 
@@ -169,7 +159,7 @@ const getDraft = async (draftId, userId) => {
   return draft;
 };
 
-const REFINE_SYSTEM_PROMPT = `Tu raffines un plan de projet EXISTANT composé d'Epics → Stories → Tâches.
+const REFINE_SYSTEM_PROMPT = `Tu raffines un plan de projet EXISTANT composé d'une liste de Tâches.
 
 - Tu reçois le plan actuel (JSON), le brief initial et une instruction.
 - Applique l'instruction et renvoie le plan révisé COMPLET dans la même structure.
@@ -276,68 +266,36 @@ const approveDraft = async (draftId, userId) => {
   const knownLabels = await labelsService.knownNames();
 
   const result = await prisma.$transaction(async (tx) => {
-    const createdEpics = [];
+    const createdTasks = [];
 
-    for (let ei = 0; ei < plan.epics.length; ei++) {
-      const epicData = plan.epics[ei];
-      const epic = await tx.epic.create({
+    for (let ti = 0; ti < plan.tasks.length; ti++) {
+      const taskData = plan.tasks[ti];
+      // Génère un identifiant unique (ex. AM-001) en incrémentant le
+      // compteur du projet, comme le fait la création de tâche normale.
+      const counter = await tx.project.update({
+        where: { id: draft.projectId },
+        data: { taskCounter: { increment: 1 } },
+        select: { taskCounter: true, identifierPrefix: true },
+      });
+      const identifier = `${counter.identifierPrefix}-${String(
+        counter.taskCounter,
+      ).padStart(3, "0")}`;
+      const task = await tx.task.create({
         data: {
-          title: epicData.title,
-          description: epicData.description || null,
-          position: ei,
+          title: taskData.title,
+          description: taskData.description || null,
+          position: ti,
           projectId: draft.projectId,
+          identifier,
+          githubBranch: identifier,
+          labels: Array.isArray(taskData.labels)
+            ? taskData.labels
+                .map((l) => String(l).trim().toLowerCase())
+                .filter((l) => knownLabels.has(l))
+            : [],
         },
       });
-
-      const createdStories = [];
-
-      for (let si = 0; si < epicData.stories.length; si++) {
-        const storyData = epicData.stories[si];
-        const story = await tx.story.create({
-          data: {
-            title: storyData.title,
-            description: storyData.description || null,
-            position: si,
-            epicId: epic.id,
-          },
-        });
-
-        const createdTasks = [];
-
-        for (let ti = 0; ti < storyData.tasks.length; ti++) {
-          const taskData = storyData.tasks[ti];
-          // Génère un identifiant unique (ex. AM-001) en incrémentant le
-          // compteur du projet, comme le fait la création de tâche normale.
-          const counter = await tx.project.update({
-            where: { id: draft.projectId },
-            data: { taskCounter: { increment: 1 } },
-            select: { taskCounter: true, identifierPrefix: true },
-          });
-          const identifier = `${counter.identifierPrefix}-${String(
-            counter.taskCounter,
-          ).padStart(3, "0")}`;
-          const task = await tx.task.create({
-            data: {
-              title: taskData.title,
-              description: taskData.description || null,
-              position: ti,
-              storyId: story.id,
-              identifier,
-              githubBranch: identifier,
-              labels: Array.isArray(taskData.labels)
-                ? taskData.labels
-                    .map((l) => String(l).trim().toLowerCase())
-                    .filter((l) => knownLabels.has(l))
-                : [],
-            },
-          });
-          createdTasks.push(task);
-        }
-
-        createdStories.push({ ...story, tasks: createdTasks });
-      }
-
-      createdEpics.push({ ...epic, stories: createdStories });
+      createdTasks.push(task);
     }
 
     await tx.aiDraft.update({
@@ -345,7 +303,7 @@ const approveDraft = async (draftId, userId) => {
       data: { approved: true },
     });
 
-    return createdEpics;
+    return createdTasks;
   });
 
   return result;

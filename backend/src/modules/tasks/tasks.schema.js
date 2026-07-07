@@ -17,36 +17,34 @@ const statusEnum = z
   .enum(["TODO", "IN_PROGRESS", "IN_REVIEW", "DONE", "todo", "in_progress", "in_review", "done"])
   .transform(normalizeStatus);
 
-// Used for POST /tasks (requires storyId)
+// Used for POST /tasks (requires projectId)
 const createTaskSchema = z
   .object({
     title: z.string().min(1),
     description: z.string().nullish(),
-    storyId: z.string().uuid().nullish(),
-    story_id: z.string().uuid().nullish(),
+    projectId: z.string().uuid().nullish(),
+    project_id: z.string().uuid().nullish(),
     position: z.number().int().nullish(),
     priority: z.string().nullish(),
     status: statusEnum.nullish(),
   })
-  .refine((data) => data.storyId || data.story_id, {
-    message: "storyId or story_id is required",
+  .refine((data) => data.projectId || data.project_id, {
+    message: "projectId or project_id is required",
   })
   .transform((data) => ({
     title: data.title,
     description: data.description || undefined,
-    storyId: data.storyId || data.story_id,
+    projectId: data.projectId || data.project_id,
     position: data.position ?? undefined,
     priority: data.priority || undefined,
     status: data.status || undefined,
   }));
 
-// Used for POST /projects/:projectId/tasks (storyId optional)
+// Used for POST /projects/:projectId/tasks (projectId vient de l'URL)
 const createTaskForProjectSchema = z
   .object({
     title: z.string().min(1),
     description: z.string().nullish(),
-    storyId: z.string().uuid().nullish(),
-    story_id: z.string().uuid().nullish(),
     position: z.number().int().nullish(),
     priority: z.string().nullish(),
     status: statusEnum.nullish(),
@@ -54,7 +52,6 @@ const createTaskForProjectSchema = z
   .transform((data) => ({
     title: data.title,
     description: data.description || undefined,
-    storyId: data.storyId || data.story_id || undefined,
     position: data.position ?? undefined,
     priority: data.priority || undefined,
     status: data.status || undefined,

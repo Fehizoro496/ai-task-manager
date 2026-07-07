@@ -154,10 +154,10 @@ const memberSummary = (m) => ({
 const suggestForTask = async (taskId) => {
   const task = await prisma.task.findUnique({
     where: { id: taskId },
-    include: { story: { include: { epic: { include: { project: true } } } } },
+    include: { project: true },
   });
   if (!task) throw new AppError("Task not found", 404);
-  const projectId = task.story?.epic?.project?.id;
+  const projectId = task.project?.id;
   if (!projectId) throw new AppError("Project not found for task", 404);
 
   const members = await buildContext(projectId);
@@ -191,7 +191,7 @@ const distributeProject = async (projectId, taskIds = null) => {
 
   // Tâches cibles : celles fournies, sinon le backlog non assigné non terminé.
   const where = {
-    story: { epic: { projectId } },
+    projectId,
     status: { not: "DONE" },
     ...(Array.isArray(taskIds) && taskIds.length
       ? { id: { in: taskIds } }

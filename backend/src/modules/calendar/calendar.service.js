@@ -16,7 +16,7 @@ const serializeUser = (u) =>
 const toDateOnly = (d) => (d ? d.toISOString().slice(0, 10) : null);
 
 const serializeTaskEvent = (t) => {
-  const project = t.story?.epic?.project ?? null;
+  const project = t.project ?? null;
   return {
     id: `task:${t.id}`,
     type: "task_due",
@@ -63,8 +63,8 @@ const listTaskEvents = async (userId, isAdmin, fromDate, toDate) => {
   if (!isAdmin) {
     where.OR = [
       { assigneeId: userId },
-      { story: { epic: { project: { members: { some: { userId } } } } } },
-      { story: { epic: { project: { ownerId: userId } } } },
+      { project: { members: { some: { userId } } } },
+      { project: { ownerId: userId } },
     ];
   }
 
@@ -72,15 +72,7 @@ const listTaskEvents = async (userId, isAdmin, fromDate, toDate) => {
     where,
     include: {
       assignee: { select: userSelect },
-      story: {
-        include: {
-          epic: {
-            include: {
-              project: { select: { id: true, name: true, color: true } },
-            },
-          },
-        },
-      },
+      project: { select: { id: true, name: true, color: true } },
     },
     orderBy: { dueDate: "asc" },
   });

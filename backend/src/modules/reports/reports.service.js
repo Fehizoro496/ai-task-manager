@@ -10,20 +10,8 @@ const tasksWhere = (userId, isAdmin) => {
   return {
     OR: [
       { assigneeId: userId },
-      {
-        story: {
-          epic: {
-            project: { members: { some: { userId } } },
-          },
-        },
-      },
-      {
-        story: {
-          epic: {
-            project: { ownerId: userId },
-          },
-        },
-      },
+      { project: { members: { some: { userId } } } },
+      { project: { ownerId: userId } },
     ],
   };
 };
@@ -54,16 +42,8 @@ const overview = async (userId, isAdmin) => {
       assigneeId: true,
       updatedAt: true,
       createdAt: true,
-      story: {
-        select: {
-          epic: {
-            select: {
-              project: {
-                select: { id: true, name: true, color: true },
-              },
-            },
-          },
-        },
+      project: {
+        select: { id: true, name: true, color: true },
       },
       assignee: {
         select: { id: true, name: true, avatarUrl: true },
@@ -108,7 +88,7 @@ const overview = async (userId, isAdmin) => {
   // Distribution par projet
   const projectMap = new Map();
   for (const t of tasks) {
-    const proj = t.story?.epic?.project;
+    const proj = t.project;
     if (!proj) continue;
     if (!projectMap.has(proj.id)) {
       projectMap.set(proj.id, {

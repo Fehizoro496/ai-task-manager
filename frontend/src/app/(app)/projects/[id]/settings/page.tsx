@@ -337,8 +337,7 @@ export default function ProjectSettingsPage({
                   Supprimer ce projet
                 </div>
                 <div className="mt-0.5 text-[12px] text-[hsl(var(--ink-3))]">
-                  Le projet, ses epics, stories et tâches seront définitivement
-                  retirés.
+                  Le projet et ses tâches seront définitivement retirés.
                 </div>
               </div>
               <button
@@ -362,8 +361,8 @@ export default function ProjectSettingsPage({
               Supprimer « {project.name} » ?
             </Dialog.Title>
             <Dialog.Description className="mt-2 text-[13px] leading-relaxed text-[hsl(var(--ink-2))]">
-              Cette action est <strong>irréversible</strong>. Tous les epics,
-              stories et tâches du projet seront perdus définitivement.
+              Cette action est <strong>irréversible</strong>. Toutes les tâches
+              du projet seront perdues définitivement.
             </Dialog.Description>
             <div className="mt-5 flex items-center justify-end gap-2">
               <Button

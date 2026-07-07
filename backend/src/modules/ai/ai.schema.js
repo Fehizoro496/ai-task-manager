@@ -17,20 +17,8 @@ const aiTaskSchema = z.object({
   labels: z.array(z.string()).optional(),
 });
 
-const aiStorySchema = z.object({
-  title: z.string(),
-  description: z.string().optional(),
-  tasks: z.array(aiTaskSchema),
-});
-
-const aiEpicSchema = z.object({
-  title: z.string(),
-  description: z.string().optional(),
-  stories: z.array(aiStorySchema),
-});
-
 const aiPlanSchema = z.object({
-  epics: z.array(aiEpicSchema),
+  tasks: z.array(aiTaskSchema),
 });
 
 module.exports = { planRequestSchema, aiPlanSchema };

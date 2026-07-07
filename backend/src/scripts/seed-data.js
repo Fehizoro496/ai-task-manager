@@ -21,8 +21,6 @@ async function wipe() {
   await prisma.taskComment.deleteMany();
   await prisma.userSkill.deleteMany();
   await prisma.task.deleteMany();
-  await prisma.story.deleteMany();
-  await prisma.epic.deleteMany();
   await prisma.aiDraft.deleteMany();
   await prisma.projectMember.deleteMany();
   await prisma.project.deleteMany();
@@ -148,59 +146,19 @@ async function main() {
       identifierPrefix: "AM",
       taskCounter: 8,
       ownerId: admin.id,
-      epics: {
+      tasks: {
         create: [
-          {
-            title: "Sprint 1 — Foundation",
-            position: 0,
-            stories: {
-              create: [
-                {
-                  title: "Authentification",
-                  position: 0,
-                  tasks: {
-                    create: [
-                      // Historique → compétences dérivées + performance
-                      { identifier: "AM-001", title: "Implémenter login GitHub", status: "DONE", priority: "high", position: 0, labels: ["auth", "api"], assigneeId: bob.id },
-                      { identifier: "AM-002", title: "Page d'inscription", status: "DONE", priority: "medium", position: 1, labels: ["ui", "auth"], assigneeId: alice.id },
-                      // Charge active
-                      { identifier: "AM-003", title: "Middleware JWT", status: "IN_PROGRESS", priority: "high", position: 2, labels: ["auth", "api"], assigneeId: bob.id },
-                    ],
-                  },
-                },
-                {
-                  title: "Navigation",
-                  position: 1,
-                  tasks: {
-                    create: [
-                      // Non assignée → à répartir (profil UI → Alice)
-                      { identifier: "AM-004", title: "Sidebar responsive", status: "TODO", priority: "medium", position: 0, labels: ["ui", "css"] },
-                      { identifier: "AM-005", title: "Router principal", status: "DONE", priority: "low", position: 1, labels: ["navigation"], assigneeId: chloe.id },
-                    ],
-                  },
-                },
-              ],
-            },
-          },
-          {
-            title: "Sprint 2 — Features",
-            position: 1,
-            stories: {
-              create: [
-                {
-                  title: "Gestion de profil",
-                  position: 0,
-                  tasks: {
-                    create: [
-                      { identifier: "AM-006", title: "Formulaire de profil", status: "TODO", priority: "medium", position: 0, labels: ["ui", "react"] },
-                      { identifier: "AM-007", title: "Upload avatar Flutter", status: "TODO", priority: "low", position: 1, labels: ["flutter", "mobile"] },
-                      { identifier: "AM-008", title: "Écran paramètres", status: "TODO", priority: "medium", position: 2, labels: ["flutter", "dart"] },
-                    ],
-                  },
-                },
-              ],
-            },
-          },
+          // Historique → compétences dérivées + performance
+          { identifier: "AM-001", title: "Implémenter login GitHub", status: "DONE", priority: "high", position: 0, labels: ["auth", "api"], assigneeId: bob.id },
+          { identifier: "AM-002", title: "Page d'inscription", status: "DONE", priority: "medium", position: 1, labels: ["ui", "auth"], assigneeId: alice.id },
+          // Charge active
+          { identifier: "AM-003", title: "Middleware JWT", status: "IN_PROGRESS", priority: "high", position: 2, labels: ["auth", "api"], assigneeId: bob.id },
+          // Non assignée → à répartir (profil UI → Alice)
+          { identifier: "AM-004", title: "Sidebar responsive", status: "TODO", priority: "medium", position: 3, labels: ["ui", "css"] },
+          { identifier: "AM-005", title: "Router principal", status: "DONE", priority: "low", position: 4, labels: ["navigation"], assigneeId: chloe.id },
+          { identifier: "AM-006", title: "Formulaire de profil", status: "TODO", priority: "medium", position: 5, labels: ["ui", "react"] },
+          { identifier: "AM-007", title: "Upload avatar Flutter", status: "TODO", priority: "low", position: 6, labels: ["flutter", "mobile"] },
+          { identifier: "AM-008", title: "Écran paramètres", status: "TODO", priority: "medium", position: 7, labels: ["flutter", "dart"] },
         ],
       },
     },
@@ -217,39 +175,15 @@ async function main() {
       identifierPrefix: "DA",
       taskCounter: 7,
       ownerId: admin.id,
-      epics: {
+      tasks: {
         create: [
-          {
-            title: "Data Visualisation",
-            position: 0,
-            stories: {
-              create: [
-                {
-                  title: "Graphiques",
-                  position: 0,
-                  tasks: {
-                    create: [
-                      { identifier: "DA-001", title: "Intégrer la librairie de charts", status: "TODO", priority: "high", position: 0, labels: ["react", "ui"] },
-                      { identifier: "DA-002", title: "Widget KPI", status: "IN_PROGRESS", priority: "high", position: 1, labels: ["react"], assigneeId: emma.id },
-                      { identifier: "DA-003", title: "Filtre par date", status: "TODO", priority: "medium", position: 2, labels: ["react"] },
-                    ],
-                  },
-                },
-                {
-                  title: "Export & Infra",
-                  position: 1,
-                  tasks: {
-                    create: [
-                      { identifier: "DA-004", title: "Export CSV", status: "DONE", priority: "medium", position: 0, labels: ["node", "api"], assigneeId: bob.id },
-                      { identifier: "DA-005", title: "Export PDF", status: "TODO", priority: "low", position: 1, labels: ["node"] },
-                      { identifier: "DA-006", title: "Pipeline CI", status: "TODO", priority: "medium", position: 2, labels: ["ci", "docker"] },
-                      { identifier: "DA-007", title: "Tests end-to-end", status: "TODO", priority: "high", position: 3, labels: ["testing"] },
-                    ],
-                  },
-                },
-              ],
-            },
-          },
+          { identifier: "DA-001", title: "Intégrer la librairie de charts", status: "TODO", priority: "high", position: 0, labels: ["react", "ui"] },
+          { identifier: "DA-002", title: "Widget KPI", status: "IN_PROGRESS", priority: "high", position: 1, labels: ["react"], assigneeId: emma.id },
+          { identifier: "DA-003", title: "Filtre par date", status: "TODO", priority: "medium", position: 2, labels: ["react"] },
+          { identifier: "DA-004", title: "Export CSV", status: "DONE", priority: "medium", position: 3, labels: ["node", "api"], assigneeId: bob.id },
+          { identifier: "DA-005", title: "Export PDF", status: "TODO", priority: "low", position: 4, labels: ["node"] },
+          { identifier: "DA-006", title: "Pipeline CI", status: "TODO", priority: "medium", position: 5, labels: ["ci", "docker"] },
+          { identifier: "DA-007", title: "Tests end-to-end", status: "TODO", priority: "high", position: 6, labels: ["testing"] },
         ],
       },
     },
@@ -266,29 +200,13 @@ async function main() {
       identifierPrefix: "API",
       taskCounter: 5,
       ownerId: admin.id,
-      epics: {
+      tasks: {
         create: [
-          {
-            title: "Refactoring",
-            position: 0,
-            stories: {
-              create: [
-                {
-                  title: "Architecture",
-                  position: 0,
-                  tasks: {
-                    create: [
-                      { identifier: "API-001", title: "Migration vers TypeScript", status: "TODO", priority: "high", position: 0, labels: ["node", "api"] },
-                      { identifier: "API-002", title: "Tests unitaires", status: "TODO", priority: "high", position: 1, labels: ["testing"] },
-                      { identifier: "API-003", title: "Documentation Swagger", status: "IN_REVIEW", priority: "medium", position: 2, labels: ["api"], assigneeId: bob.id },
-                      { identifier: "API-004", title: "Conteneurisation Docker", status: "TODO", priority: "medium", position: 3, labels: ["docker", "devops"] },
-                      { identifier: "API-005", title: "Refactor service auth", status: "DONE", priority: "high", position: 4, labels: ["node", "auth"], assigneeId: bob.id },
-                    ],
-                  },
-                },
-              ],
-            },
-          },
+          { identifier: "API-001", title: "Migration vers TypeScript", status: "TODO", priority: "high", position: 0, labels: ["node", "api"] },
+          { identifier: "API-002", title: "Tests unitaires", status: "TODO", priority: "high", position: 1, labels: ["testing"] },
+          { identifier: "API-003", title: "Documentation Swagger", status: "IN_REVIEW", priority: "medium", position: 2, labels: ["api"], assigneeId: bob.id },
+          { identifier: "API-004", title: "Conteneurisation Docker", status: "TODO", priority: "medium", position: 3, labels: ["docker", "devops"] },
+          { identifier: "API-005", title: "Refactor service auth", status: "DONE", priority: "high", position: 4, labels: ["node", "auth"], assigneeId: bob.id },
         ],
       },
     },

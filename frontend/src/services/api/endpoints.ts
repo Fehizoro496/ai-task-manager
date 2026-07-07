@@ -16,25 +16,11 @@ export const endpoints = {
       `/api/projects/${projectId}/tasks/reorder`,
   },
 
-  epics: {
-    root: () => "/api/epics",
-    byId: (id: string) => `/api/epics/${id}`,
-    listByProject: (projectId: string) =>
-      `/api/epics?projectId=${encodeURIComponent(projectId)}`,
-  },
-
-  stories: {
-    root: () => "/api/stories",
-    byId: (id: string) => `/api/stories/${id}`,
-    listByEpic: (epicId: string) =>
-      `/api/stories?epicId=${encodeURIComponent(epicId)}`,
-  },
-
   tasks: {
     root: () => "/api/tasks",
     byId: (id: string) => `/api/tasks/${id}`,
-    listByStory: (storyId: string) =>
-      `/api/tasks?storyId=${encodeURIComponent(storyId)}`,
+    listByProject: (projectId: string) =>
+      `/api/tasks?projectId=${encodeURIComponent(projectId)}`,
     move: (id: string) => `/api/tasks/${id}/move`,
     assign: (id: string) => `/api/tasks/${id}/assign`,
   },

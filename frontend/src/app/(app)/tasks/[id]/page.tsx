@@ -1,6 +1,6 @@
 "use client";
 import { use } from "react";
-import { X, GitBranch, Calendar as CalIcon, User, Tag, Link as LinkIcon, Sparkles, Loader2 } from "lucide-react";
+import { X, GitBranch, Calendar as CalIcon, User, Tag, Sparkles, Loader2 } from "lucide-react";
 import { Topbar } from "@/components/shell/topbar";
 import { Breadcrumb } from "@/components/shell/breadcrumb";
 import { Avatar } from "@/components/ui/avatar";
@@ -159,11 +159,6 @@ export default function TaskPage({
                     ) : (
                       <span className="font-mono text-[12px]">{branchName}</span>
                     )}
-                  </Meta>
-                )}
-                {task.storyId && (
-                  <Meta Icon={LinkIcon} label="Story liée">
-                    <span className="font-mono text-[11px]">{task.storyId.slice(0, 8)}…</span>
                   </Meta>
                 )}
               </div>

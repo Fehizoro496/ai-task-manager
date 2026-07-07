@@ -7,16 +7,16 @@ const create = asyncHandler(async (req, res) => {
   res.status(201).json(tasksService.serializeTask(task));
 });
 
-const listByStory = asyncHandler(async (req, res) => {
+const listByQuery = asyncHandler(async (req, res) => {
   const isAdmin = req.user.role === "ADMIN";
-  const tasks = await tasksService.listByStory(req.query.storyId, req.user.id, isAdmin);
-  res.json(tasks.map((t) => tasksService.serializeTask(t)));
+  const tasks = await tasksService.listByProject(req.query.projectId, req.user.id, isAdmin);
+  res.json(tasks.map((t) => tasksService.serializeTask(t, req.query.projectId)));
 });
 
 const getById = asyncHandler(async (req, res) => {
   const isAdmin = req.user.role === "ADMIN";
   const task = await tasksService.getById(req.params.id, req.user.id, isAdmin);
-  const projectId = task.story?.epic?.project?.id || null;
+  const projectId = task.project?.id || null;
   res.json(tasksService.serializeTask(task, projectId));
 });
 
@@ -67,4 +67,4 @@ const reorderForProject = asyncHandler(async (req, res) => {
   res.json(result);
 });
 
-module.exports = { create, listByStory, getById, update, remove, move, listByProject, createForProject, assign, reorderForProject };
+module.exports = { create, listByQuery, getById, update, remove, move, listByProject, createForProject, assign, reorderForProject };

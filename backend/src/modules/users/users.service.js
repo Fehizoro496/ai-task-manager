@@ -49,13 +49,13 @@ const getDetail = async (id) => {
       orderBy: { updatedAt: "desc" },
       take: 8,
       include: {
-        story: { include: { epic: { include: { project: true } } } },
+        project: true,
       },
     }),
   ]);
 
   const recent = recentTasks.map((t) => {
-    const project = t.story?.epic?.project ?? null;
+    const project = t.project ?? null;
     return {
       id: t.id,
       identifier: t.identifier ?? null,

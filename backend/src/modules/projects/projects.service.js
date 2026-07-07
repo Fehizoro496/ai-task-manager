@@ -98,17 +98,7 @@ const getById = async (id, userId, isAdmin) => {
   const project = await prisma.project.findFirst({
     where,
     include: {
-      epics: {
-        orderBy: { position: "asc" },
-        include: {
-          stories: {
-            orderBy: { position: "asc" },
-            include: {
-              tasks: { orderBy: { position: "asc" } },
-            },
-          },
-        },
-      },
+      tasks: { orderBy: { position: "asc" } },
     },
   });
 

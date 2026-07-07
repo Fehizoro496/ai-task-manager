@@ -6,8 +6,6 @@ const errorHandler = require("./middleware/errorHandler");
 
 const authRoutes = require("./modules/auth/auth.routes");
 const projectsRoutes = require("./modules/projects/projects.routes");
-const epicsRoutes = require("./modules/epics/epics.routes");
-const storiesRoutes = require("./modules/stories/stories.routes");
 const tasksRoutes = require("./modules/tasks/tasks.routes");
 const aiRoutes = require("./modules/ai/ai.routes");
 const adminRoutes = require("./modules/admin/admin.routes");
@@ -33,8 +31,6 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/projects", projectsRoutes);
-app.use("/api/epics", epicsRoutes);
-app.use("/api/stories", storiesRoutes);
 app.use("/api/tasks", tasksRoutes);
 app.use("/api/tasks", tasksCommentsRouter);
 app.use("/api/ai", aiRoutes);

@@ -66,22 +66,6 @@ export interface Project {
   githubRepo?: string | null;
 }
 
-export interface Epic {
-  id: UUID;
-  title: string;
-  description: string | null;
-  projectId: UUID;
-  position: number;
-}
-
-export interface Story {
-  id: UUID;
-  title: string;
-  description: string | null;
-  epicId: UUID;
-  position: number;
-}
-
 export type TaskStatus = "todo" | "in_progress" | "in_review" | "done";
 export type TaskPriority = "low" | "medium" | "high" | "urgent";
 
@@ -93,8 +77,7 @@ export interface Task {
   status: TaskStatus;
   priority: TaskPriority | null;
   position: number;
-  storyId: UUID | null;
-  projectId?: UUID;
+  projectId: UUID | null;
   assigneeId: UUID | null;
   assignee?: {
     id: UUID;
@@ -115,7 +98,7 @@ export interface AiDraft {
   project_id?: UUID;
   document?: string;
   input_document?: string;
-  /** Plan généré (structure { epics: [...] }). `generated_plan` en est l'alias. */
+  /** Plan généré (structure { tasks: [...] }). `generated_plan` en est l'alias. */
   plan?: unknown;
   generated_plan?: unknown;
   approved?: boolean;

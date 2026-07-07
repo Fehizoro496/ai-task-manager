@@ -107,7 +107,7 @@ export function useProjectTasks(projectId: string | null | undefined) {
   }, []);
 
   const create = useCallback(
-    async (input: { title: string; description?: string; storyId?: string }) => {
+    async (input: { title: string; description?: string }) => {
       if (!projectId) throw new Error("Pas de projectId");
       const task = await projectsApi.createTask(projectId, input);
       setTasks((curr) => [...curr, task]);

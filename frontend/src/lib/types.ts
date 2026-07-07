@@ -43,7 +43,6 @@ export interface Task {
   dueDate?: string;
   labels: string[];
   branch?: string;
-  storyId?: string;
   points?: number;
   createdAt: string;
 }
@@ -81,16 +80,6 @@ export interface AiConversation {
   preview: string;
 }
 
-export interface PlanEpic {
-  id: string;
-  title: string;
-  stories: PlanStory[];
-}
-export interface PlanStory {
-  id: string;
-  title: string;
-  tasks: PlanTask[];
-}
 export interface PlanTask {
   id: string;
   title: string;

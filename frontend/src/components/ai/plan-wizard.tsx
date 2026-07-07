@@ -6,9 +6,7 @@ import {
   Loader2,
   RefreshCw,
   Check,
-  Layers,
   ListTree,
-  BookCheck,
   FolderKanban,
   Send,
   MessageSquare,
@@ -34,23 +32,15 @@ interface PlanTaskShape {
   priority?: string;
   labels?: string[];
 }
-interface PlanStoryShape {
-  title: string;
-  tasks?: PlanTaskShape[];
-}
-interface PlanEpicShape {
-  title: string;
-  stories?: PlanStoryShape[];
-}
 
-function readPlan(draft: AiDraft | null): PlanEpicShape[] {
+function readPlan(draft: AiDraft | null): PlanTaskShape[] {
   if (!draft) return [];
-  // L'API renvoie le plan sous `generated_plan` / `plan` (forme { epics: [...] }).
+  // L'API renvoie le plan sous `generated_plan` / `plan` (forme { tasks: [...] }).
   const payload = (draft.generated_plan ?? draft.plan) as unknown;
   if (!payload || typeof payload !== "object") return [];
   const obj = payload as Record<string, unknown>;
-  const epics = (obj.epics ?? obj) as unknown;
-  return Array.isArray(epics) ? (epics as PlanEpicShape[]) : [];
+  const tasks = (obj.tasks ?? obj) as unknown;
+  return Array.isArray(tasks) ? (tasks as PlanTaskShape[]) : [];
 }
 
 export function PlanWizard() {
@@ -89,13 +79,8 @@ export function PlanWizard() {
     if (status === "done" && draft) setStep(2);
   }, [status, draft]);
 
-  const epics = useMemo(() => readPlan(draft), [draft]);
-  const storiesTotal = epics.reduce((acc, e) => acc + (e.stories?.length ?? 0), 0);
-  const tasksTotal = epics.reduce(
-    (acc, e) =>
-      acc + (e.stories ?? []).reduce((a, s) => a + (s.tasks?.length ?? 0), 0),
-    0,
-  );
+  const tasks = useMemo(() => readPlan(draft), [draft]);
+  const tasksTotal = tasks.length;
 
   async function generate() {
     if (brief.trim().length < 10) return;
@@ -133,7 +118,7 @@ export function PlanWizard() {
     setError(null);
     try {
       await aiApi.approveDraft(draft.id);
-      toast.success("Le plan a été converti en epics, stories et tâches.", "Plan approuvé");
+      toast.success("Le plan a été converti en tâches.", "Plan approuvé");
       const targetProject = genProjectId ?? projectId;
       resetGeneration();
       if (targetProject) router.push(`/projects/${targetProject}/board`);
@@ -250,9 +235,7 @@ export function PlanWizard() {
           </header>
 
           <ul className="space-y-1 p-2">
-            {epics
-              .flatMap((e) => e.stories ?? [])
-              .flatMap((s) => s.tasks ?? [])
+            {tasks
               .map((task, ti) => (
                 <li
                   key={ti}
@@ -327,7 +310,7 @@ export function PlanWizard() {
                     refine();
                   }
                 }}
-                placeholder="Ex. : ajoute un epic sécurité · regroupe les tâches de paiement · simplifie le suivi de progression…"
+                placeholder="Ex. : ajoute une tâche de sécurité · regroupe les tâches de paiement · simplifie le suivi de progression…"
                 rows={2}
                 disabled={refining}
                 className="block w-full resize-none bg-transparent px-3 py-2.5 text-[13px] placeholder:text-[hsl(var(--ink-4))] focus:outline-none disabled:opacity-60"
@@ -384,9 +367,7 @@ export function PlanWizard() {
             </p>
           </header>
 
-          <div className="grid gap-3 p-5 sm:grid-cols-3">
-            <Summary Icon={Layers} label="Epics" value={epics.length} tone="brand" />
-            <Summary Icon={BookCheck} label="Stories" value={storiesTotal} tone="apricot" />
+          <div className="grid gap-3 p-5">
             <Summary Icon={ListTree} label="Tâches" value={tasksTotal} tone="sage" />
           </div>
 
@@ -396,7 +377,7 @@ export function PlanWizard() {
                 Approuver et créer les entités ?
               </div>
               <p className="mt-1 text-[12.5px] text-[hsl(var(--ink-3))]">
-                Le plan sera converti en epics, stories et tâches dans le projet associé.
+                Le plan sera converti en tâches dans le projet associé.
               </p>
               {projectId && (
                 <div className="mt-3 flex flex-wrap items-center gap-2">

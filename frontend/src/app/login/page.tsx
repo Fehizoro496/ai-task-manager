@@ -129,7 +129,7 @@ export default function LoginPage() {
             <span className="text-white/55">en quelques minutes.</span>
           </h2>
           <p className="mt-4 max-w-[400px] text-[14px] leading-relaxed text-white/65 animate-[fadeup_0.6s_ease-out_0.18s_both]">
-            Décrivez un projet, l&apos;IA structure les epics, stories et tâches —
+            Décrivez un projet, l&apos;IA le structure en tâches —
             puis les répartit aux bonnes personnes. Le tout en temps réel.
           </p>
         </div>
@@ -137,7 +137,7 @@ export default function LoginPage() {
         {/* Spec sheet — features */}
         <ul className="relative mt-10 space-y-px animate-[fadeup_0.6s_ease-out_0.26s_both]">
           {[
-            { Icon: Sparkles, title: "Planification IA", sub: "Epics · stories · tâches générés" },
+            { Icon: Sparkles, title: "Planification IA", sub: "Tâches générées automatiquement" },
             { Icon: Users, title: "Répartition intelligente", sub: "Algorithme hongrois par compétences" },
             { Icon: Radio, title: "Temps réel", sub: "Kanban, messages & notifications" },
           ].map(({ Icon, title, sub }) => (
