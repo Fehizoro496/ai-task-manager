@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Wordmark } from "@/components/brand/logo";
 import { UserMenu } from "@/components/shell/user-menu";
+import { GenerationIndicator } from "@/components/shell/generation-indicator";
 import {
   routerService,
   useAuth,
@@ -154,6 +155,8 @@ export function Sidebar() {
           </div>
         )}
       </nav>
+
+      <GenerationIndicator />
 
       <div className="m-3">
         <UserMenu variant="card" />

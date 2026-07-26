@@ -140,7 +140,7 @@ export function PlanWizard() {
             <Sparkles className="h-3 w-3" /> Planification IA
           </span>
           <h1 className="mt-3 font-display text-[28px] font-semibold tracking-tight leading-tight">
-            {step === 1 && (
+            {step === 1 && !loading && (
               <>
                 Décrivez votre projet —{" "}
                 <span className="font-normal text-[hsl(var(--ink-2))]">
@@ -148,6 +148,7 @@ export function PlanWizard() {
                 </span>
               </>
             )}
+            {step === 1 && loading && "Génération du plan en cours…"}
             {step === 2 && "Aperçu du plan généré"}
             {step === 3 && "Confirmation et création"}
           </h1>
@@ -161,7 +162,25 @@ export function PlanWizard() {
         </div>
       )}
 
-      {step === 1 && (
+      {step === 1 && loading && (
+        <section className="mt-6 rounded-[var(--radius-lg)] border border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))] shadow-[var(--shadow-1)]">
+          <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+            <span className="grid h-14 w-14 place-items-center rounded-full bg-[hsl(var(--brand-soft))]">
+              <Loader2 className="h-7 w-7 animate-spin text-[hsl(var(--brand))]" />
+            </span>
+            <h2 className="mt-5 font-display text-[17px] font-semibold tracking-tight">
+              L&apos;IA décompose votre projet en tâches
+            </h2>
+            <p className="mt-2 max-w-[420px] text-[13px] leading-relaxed text-[hsl(var(--ink-3))]">
+              Cela prend généralement quelques secondes. Vous pouvez quitter cette
+              page : la génération continue et nous vous préviendrons dès qu&apos;elle
+              est prête.
+            </p>
+          </div>
+        </section>
+      )}
+
+      {step === 1 && !loading && (
         <section className="mt-6 rounded-[var(--radius-lg)] border border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))] shadow-[var(--shadow-1)]">
           <div className="p-5">
             <p className="text-[13px] text-[hsl(var(--ink-3))]">
