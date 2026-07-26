@@ -225,6 +225,21 @@ async function main() {
   });
   console.log(`✓ Canal général créé (${everyone.length} membres)`);
 
+  // ─── DM : une discussion par paire d'utilisateurs ─────────────────────────
+  let dmCount = 0;
+  for (let i = 0; i < everyone.length; i++) {
+    for (let j = i + 1; j < everyone.length; j++) {
+      await prisma.conversation.create({
+        data: {
+          isGroup: false,
+          members: { create: [{ userId: everyone[i].id }, { userId: everyone[j].id }] },
+        },
+      });
+      dmCount++;
+    }
+  }
+  console.log(`✓ Discussions privées créées (${dmCount} paires)`);
+
   console.log(
     "\n✅ Seed terminé : 1 admin + 5 membres + 3 projets + tâches (terminées / en cours / à répartir).",
   );
