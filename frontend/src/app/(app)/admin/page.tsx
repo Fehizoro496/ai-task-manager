@@ -58,7 +58,9 @@ export default function AdminPage() {
         target ? `${target.name} a accès à l'application.` : "Utilisateur approuvé.",
         "Compte approuvé",
       );
-      await Promise.all([refetch(), refreshPending()]);
+      await refreshPending();
+      // Redirige vers la fiche du nouvel utilisateur pour lui attribuer ses compétences.
+      routerService.toUser(id);
     } catch (err) {
       console.error("Approve failed", err);
       toast.error(

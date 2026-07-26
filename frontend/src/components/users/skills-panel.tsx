@@ -8,8 +8,9 @@ import { cn } from "@/lib/utils";
 const LEVEL_LABEL = ["", "Novice", "Débutant", "Confirmé", "Avancé", "Expert"];
 
 export function SkillsPanel({ userId }: { userId: string }) {
-  const { user: currentUser, isAdmin } = useAuth();
-  const canEdit = currentUser?.id === userId || isAdmin;
+  const { isAdmin } = useAuth();
+  // Seul l'admin peut attribuer/retirer des compétences.
+  const canEdit = isAdmin;
 
   const [skills, setSkills] = useState<UserSkill[]>([]);
   const [catalog, setCatalog] = useState<Skill[]>([]);
@@ -36,13 +37,11 @@ export function SkillsPanel({ userId }: { userId: string }) {
       .catch(() => setCatalog([]));
   }, [canEdit]);
 
-  const suggestions = useMemo(() => {
-    const q = name.trim().toLowerCase();
+  // Catalogue restreint aux libellés existants non encore attribués.
+  const available = useMemo(() => {
     const owned = new Set(skills.map((s) => s.name));
-    return catalog
-      .filter((c) => !owned.has(c.name) && (!q || c.name.includes(q)))
-      .slice(0, 6);
-  }, [catalog, name, skills]);
+    return catalog.filter((c) => !owned.has(c.name));
+  }, [catalog, skills]);
 
   const add = async (skillName?: string) => {
     const value = (skillName ?? name).trim();
@@ -150,70 +149,70 @@ export function SkillsPanel({ userId }: { userId: string }) {
 
         {canEdit && (
           <div className="mt-4 border-t border-dashed border-[hsl(var(--line-strong))] pt-4">
-            <div className="flex flex-wrap items-end gap-2">
-              <label className="flex flex-col gap-1">
-                <span className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[hsl(var(--ink-3))]">
-                  Compétence
-                </span>
-                <input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      add();
-                    }
-                  }}
-                  placeholder="ex. react, design…"
-                  disabled={saving}
-                  className="h-9 w-48 rounded-[var(--radius-sm)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg))] px-2.5 text-[12.5px] focus:border-[hsl(var(--brand)/0.6)] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand)/0.3)]"
-                />
-              </label>
-              <label className="flex flex-col gap-1">
-                <span className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[hsl(var(--ink-3))]">
-                  Niveau · {LEVEL_LABEL[level]}
-                </span>
-                <input
-                  type="range"
-                  min={1}
-                  max={5}
-                  value={level}
-                  onChange={(e) => setLevel(Number(e.target.value))}
-                  disabled={saving}
-                  className="h-9 w-40 accent-[hsl(var(--brand))]"
-                />
-              </label>
-              <button
-                type="button"
-                onClick={() => add()}
-                disabled={saving || !name.trim()}
-                className="inline-flex h-9 items-center gap-1.5 rounded-[var(--radius-sm)] bg-[hsl(var(--brand))] px-3 text-[12px] font-semibold text-white shadow-[var(--shadow-brand)] hover:bg-[hsl(var(--brand-ink))] disabled:opacity-50"
-              >
-                {saving ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Plus className="h-3.5 w-3.5" />
-                )}
-                Ajouter
-              </button>
-            </div>
-
-            {suggestions.length > 0 && (
-              <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-                <span className="text-[11px] text-[hsl(var(--ink-3))]">
-                  Suggestions :
-                </span>
-                {suggestions.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => add(c.name)}
+            {available.length === 0 ? (
+              <p className="text-[12px] text-[hsl(var(--ink-3))]">
+                Toutes les compétences du catalogue sont déjà attribuées.
+              </p>
+            ) : (
+              <div className="flex flex-wrap items-end gap-3">
+                <label className="flex flex-col gap-1">
+                  <span className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[hsl(var(--ink-3))]">
+                    Compétence
+                  </span>
+                  <select
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
                     disabled={saving}
-                    className="rounded-full border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg))] px-2 py-0.5 text-[11px] text-[hsl(var(--ink-2))] hover:border-[hsl(var(--brand)/0.5)] hover:bg-[hsl(var(--brand-soft)/0.5)] disabled:opacity-50"
+                    className="h-9 w-48 rounded-[var(--radius-sm)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg))] px-2.5 text-[12.5px] focus:border-[hsl(var(--brand)/0.6)] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand)/0.3)]"
                   >
-                    + {c.name}
-                  </button>
-                ))}
+                    <option value="">Sélectionner…</option>
+                    {available.map((c) => (
+                      <option key={c.id} value={c.name}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[hsl(var(--ink-3))]">
+                    Niveau · {LEVEL_LABEL[level]}
+                  </span>
+                  <div className="flex h-9 items-center gap-1.5">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => setLevel(i + 1)}
+                        disabled={saving}
+                        aria-label={`${LEVEL_LABEL[i + 1]} (${i + 1}/5)`}
+                        title={LEVEL_LABEL[i + 1]}
+                        className="p-0.5 disabled:opacity-50"
+                      >
+                        <span
+                          className={cn(
+                            "block h-3.5 w-3.5 rounded-full border transition-colors",
+                            i < level
+                              ? "border-[hsl(var(--brand))] bg-[hsl(var(--brand))]"
+                              : "border-[hsl(var(--line-strong))] bg-[hsl(var(--bg))] hover:border-[hsl(var(--brand)/0.5)]",
+                          )}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => add()}
+                  disabled={saving || !name}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-[var(--radius-sm)] bg-[hsl(var(--brand))] px-3 text-[12px] font-semibold text-white shadow-[var(--shadow-brand)] hover:bg-[hsl(var(--brand-ink))] disabled:opacity-50"
+                >
+                  {saving ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Plus className="h-3.5 w-3.5" />
+                  )}
+                  Ajouter
+                </button>
               </div>
             )}
           </div>

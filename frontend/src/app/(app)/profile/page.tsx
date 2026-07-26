@@ -7,6 +7,7 @@ import { Breadcrumb } from "@/components/shell/breadcrumb";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SkillsPanel } from "@/components/users/skills-panel";
 import { useAuth } from "@/services";
 import { shortDate } from "@/lib/utils";
 
@@ -108,6 +109,10 @@ export default function ProfilePage() {
                 </Button>
               </div>
             </div>
+          </div>
+
+          <div className="mt-5">
+            <SkillsPanel userId={user.id} />
           </div>
         </div>
       </main>

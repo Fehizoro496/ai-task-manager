@@ -9,7 +9,7 @@ router.use(authenticate);
 router.get("/", skillsController.listAll);
 router.post("/bootstrap", requireAdmin, skillsController.bootstrap);
 router.get("/users/:userId", skillsController.listForUser);
-router.post("/users/:userId", skillsController.addOrUpdate);
-router.delete("/users/:userId/:skillId", skillsController.remove);
+router.post("/users/:userId", requireAdmin, skillsController.addOrUpdate);
+router.delete("/users/:userId/:skillId", requireAdmin, skillsController.remove);
 
 module.exports = router;
