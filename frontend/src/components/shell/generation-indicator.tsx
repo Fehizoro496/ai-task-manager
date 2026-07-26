@@ -15,13 +15,22 @@ import { cn } from "@/lib/utils";
 export function GenerationIndicator() {
   const pathname = usePathname();
   const status = useAiGenerationStore((s) => s.status);
+  const refining = useAiGenerationStore((s) => s.refining);
 
   // Sur la page de génération, le wizard porte déjà tout le feedback.
   const onGenerationPage = pathname?.startsWith("/ai/new") ?? false;
-  const visible = !onGenerationPage && (status === "generating" || status === "done");
+  const busy = status === "generating" || refining;
+  const visible = !onGenerationPage && (busy || status === "done");
   if (!visible) return null;
 
-  const generating = status === "generating";
+  // État "occupé" (spinner) pour la génération comme pour l'affinage ; sinon
+  // l'aperçu est prêt.
+  const generating = busy;
+  const label = refining
+    ? "Affinage IA en cours…"
+    : status === "generating"
+      ? "Génération IA en cours…"
+      : "Plan IA prêt";
 
   return (
     <div className="mx-3 mt-3">
@@ -40,9 +49,7 @@ export function GenerationIndicator() {
         ) : (
           <Sparkles className="h-4 w-4 shrink-0" />
         )}
-        <span className="min-w-0 flex-1 truncate">
-          {generating ? "Génération IA en cours…" : "Plan IA prêt"}
-        </span>
+        <span className="min-w-0 flex-1 truncate">{label}</span>
         {generating && (
           <span className="flex shrink-0 gap-0.5" aria-hidden>
             <Dot className="[animation-delay:0ms]" />

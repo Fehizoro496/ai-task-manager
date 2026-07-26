@@ -59,8 +59,9 @@ export function PlanWizard() {
     draft,
     projectId: genProjectId,
     error: genError,
+    refining,
     start,
-    setDraft,
+    refine: refineDraft,
     reset: resetGeneration,
   } = useAiGenerationStore();
   const loading = status === "generating";
@@ -71,7 +72,6 @@ export function PlanWizard() {
   const [approving, setApproving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refineInput, setRefineInput] = useState("");
-  const [refining, setRefining] = useState(false);
 
   // Si la génération est terminée (y compris pendant qu'on était sur une
   // autre page), on affiche l'aperçu au montage / à la transition.
@@ -97,19 +97,12 @@ export function PlanWizard() {
   async function refine() {
     const instruction = refineInput.trim();
     if (!draft || instruction.length < 3 || refining) return;
-    setRefining(true);
     setError(null);
-    try {
-      const updated = await aiApi.refineDraft(draft.id, instruction);
-      setDraft(updated);
-      setRefineInput("");
-    } catch (e) {
-      const message = e instanceof Error ? e.message : "Le raffinement a échoué.";
-      setError(message);
-      toast.error(message, "Affinage du plan");
-    } finally {
-      setRefining(false);
-    }
+    // Vidé aussitôt (façon chat) : l'instruction est persistée côté draft et
+    // réapparaît dans le fil de messages. L'affinage vit dans le store → survit
+    // à la navigation in-app.
+    setRefineInput("");
+    await refineDraft(instruction);
   }
 
   async function approve() {
@@ -251,6 +244,12 @@ export function PlanWizard() {
                 {tasksTotal} tâche{tasksTotal > 1 ? "s" : ""}
               </div>
             </div>
+            {refining && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[hsl(var(--brand)/0.3)] bg-[hsl(var(--brand-soft))] px-2.5 py-1 text-[11px] font-semibold text-[hsl(var(--brand-ink))]">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Affinage en cours…
+              </span>
+            )}
           </header>
 
           <ul className="space-y-1 p-2">
