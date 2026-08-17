@@ -75,6 +75,33 @@ router.get("/", tasksController.listByQuery);
 
 /**
  * @swagger
+ * /tasks/search:
+ *   get:
+ *     tags: [Tasks]
+ *     summary: Search visible tasks by identifier or title
+ *     description: Alimente l'autocomplétion des mentions `#` dans la messagerie.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 8
+ *           maximum: 20
+ *     responses:
+ *       200:
+ *         description: Matching tasks
+ */
+// Déclarée avant `/:id` pour que "search" ne soit pas capturé comme un id.
+router.get("/search", tasksController.search);
+
+/**
+ * @swagger
  * /tasks/{id}:
  *   get:
  *     tags: [Tasks]

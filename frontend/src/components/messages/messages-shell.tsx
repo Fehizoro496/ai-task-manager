@@ -11,6 +11,8 @@ import {
   useUnreadMessagesStore,
 } from "@/services";
 import type { Conversation, Message } from "@/services";
+import { MessageContent } from "./task-mention";
+import { TaskMentionTextarea } from "./task-mention-textarea";
 import { cn } from "@/lib/utils";
 
 function fmtTime(iso: string) {
@@ -341,9 +343,11 @@ export function MessagesShell() {
                               </span>
                             </div>
                           )}
-                          <div className="mt-0.5 max-w-[68ch] whitespace-pre-wrap text-[13.5px] leading-relaxed text-[hsl(var(--ink-2))]">
-                            {m.content}
-                          </div>
+                          <MessageContent
+                            content={m.content}
+                            mentionedTasks={m.mentionedTasks}
+                            className="mt-0.5 max-w-[68ch] text-[13.5px] leading-relaxed text-[hsl(var(--ink-2))]"
+                          />
                         </div>
                       </li>
                     );
@@ -354,15 +358,10 @@ export function MessagesShell() {
 
             <div className="border-t border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))] p-3">
               <div className="rounded-[var(--radius-md)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg))] focus-within:border-[hsl(var(--brand)/0.5)] focus-within:ring-2 focus-within:ring-[hsl(var(--brand)/0.3)]">
-                <textarea
+                <TaskMentionTextarea
                   value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      send();
-                    }
-                  }}
+                  onChange={setDraft}
+                  onSubmit={send}
                   placeholder="Écrivez votre message…"
                   rows={2}
                   disabled={sending}
@@ -371,7 +370,8 @@ export function MessagesShell() {
                 <div className="flex items-center justify-between px-2 pb-2">
                   <span className="text-[10.5px] text-[hsl(var(--ink-3))]">
                     <kbd className="font-mono">↵</kbd> envoyer ·{" "}
-                    <kbd className="font-mono">⇧↵</kbd> ligne
+                    <kbd className="font-mono">⇧↵</kbd> ligne ·{" "}
+                    <kbd className="font-mono">#</kbd> lier une tâche
                   </span>
                   <Button
                     variant="brand"

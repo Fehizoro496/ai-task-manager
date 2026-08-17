@@ -107,11 +107,6 @@ export function Sidebar() {
                       )}
                     />
                     {it.label}
-                    {it.accent && !active && (
-                      <span className="ml-auto rounded-full bg-[hsl(var(--accent-apricot)/0.16)] px-1.5 py-px text-[9.5px] font-bold tracking-wider text-[hsl(22_78%_42%)]">
-                        NEW
-                      </span>
-                    )}
                     {it.unread != null && it.unread > 0 && !it.accent && (
                       <span className="ml-auto grid h-4 min-w-4 place-items-center rounded-full bg-[hsl(var(--accent-rose))] px-1 text-[9.5px] font-bold text-white tabular">
                         {it.unread}

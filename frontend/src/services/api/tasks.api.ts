@@ -32,6 +32,10 @@ export const tasksApi = {
 
   getById: (id: string) => apiClient.get<Task>(endpoints.tasks.byId(id)),
 
+  /** Recherche par identifiant ou titre, restreinte aux tâches visibles. */
+  search: (q: string, limit = 8) =>
+    apiClient.get<{ tasks: Task[] }>(endpoints.tasks.search(q, limit)),
+
   create: (input: CreateTaskInput) =>
     apiClient.post<Task>(endpoints.tasks.root(), input),
 

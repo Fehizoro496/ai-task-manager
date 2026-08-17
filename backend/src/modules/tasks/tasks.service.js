@@ -407,6 +407,70 @@ const assignSelf = async (id, userId, isAdmin) => {
   return updated;
 };
 
+/**
+ * Filtre Prisma restreignant les tâches à celles visibles par `userId` :
+ * tâche assignée, projet possédé, ou projet dont il est membre. Un admin voit
+ * tout, d'où le filtre vide.
+ */
+const visibleTaskFilter = (userId, isAdmin) =>
+  isAdmin
+    ? {}
+    : {
+        OR: [
+          { assigneeId: userId },
+          { project: { ownerId: userId } },
+          { project: { members: { some: { userId } } } },
+        ],
+      };
+
+/**
+ * Recherche les tâches visibles dont l'identifiant ou le titre correspond à
+ * `query`. Alimente l'autocomplétion `#` de la messagerie.
+ */
+const searchVisible = async (userId, isAdmin, query, limit = 8) => {
+  const q = (query || "").trim();
+
+  return prisma.task.findMany({
+    where: {
+      ...visibleTaskFilter(userId, isAdmin),
+      ...(q
+        ? {
+            AND: [
+              {
+                OR: [
+                  { identifier: { contains: q, mode: "insensitive" } },
+                  { title: { contains: q, mode: "insensitive" } },
+                ],
+              },
+            ],
+          }
+        : {}),
+    },
+    orderBy: { updatedAt: "desc" },
+    take: limit,
+    include: { ...assigneeInclude, project: true },
+  });
+};
+
+/**
+ * Résout une liste d'identifiants (`AM-001`, …) en tâches visibles par
+ * l'utilisateur. La comparaison est insensible à la casse car un identifiant
+ * mentionné dans un message est saisi à la main.
+ */
+const findVisibleByIdentifiers = async (identifiers, userId, isAdmin) => {
+  if (!identifiers.length) return [];
+
+  return prisma.task.findMany({
+    where: {
+      AND: [
+        { OR: identifiers.map((identifier) => ({ identifier: { equals: identifier, mode: "insensitive" } })) },
+        visibleTaskFilter(userId, isAdmin),
+      ],
+    },
+    include: { ...assigneeInclude, project: true },
+  });
+};
+
 module.exports = {
   create,
   getById,
@@ -418,4 +482,6 @@ module.exports = {
   reorderForProject,
   assignSelf,
   serializeTask,
+  searchVisible,
+  findVisibleByIdentifiers,
 };

@@ -1,16 +1,22 @@
 const prisma = require('../../prisma/client');
 const AppError = require('../../utils/AppError');
 const { getIo } = require('../../socket');
+const {
+  extractIdentifiers,
+  resolveMentionsForMessages,
+  pickMentionsFor,
+} = require('./task-mentions');
 
 const memberSelect = { id: true, name: true, avatarUrl: true };
 
-const serializeMessage = (msg) => ({
+const serializeMessage = (msg, mentionedTasks = []) => ({
   id: msg.id,
   conversationId: msg.conversationId,
   content: msg.content,
   senderId: msg.senderId,
   senderName: msg.sender.name,
   sender_avatar_url: msg.sender.avatarUrl ?? null,
+  mentionedTasks,
   createdAt: msg.createdAt.toISOString(),
 });
 
@@ -127,7 +133,7 @@ const getOrCreateDM = async (userId, otherId) => {
   return serializeConversation(conv, null, 0);
 };
 
-const getMessages = async (convId, userId) => {
+const getMessages = async (convId, userId, isAdmin = false) => {
   const member = await prisma.conversationMember.findUnique({
     where: { conversationId_userId: { conversationId: convId, userId } },
   });
@@ -140,7 +146,10 @@ const getMessages = async (convId, userId) => {
     take: 50,
   });
 
-  return messages.map(serializeMessage);
+  // Les tâches mentionnées sont résolues pour le lecteur : celles hors de sa
+  // portée restent du texte brut côté client.
+  const resolved = await resolveMentionsForMessages(messages, userId, isAdmin);
+  return messages.map((m) => serializeMessage(m, pickMentionsFor(m.content, resolved)));
 };
 
 /**
@@ -181,7 +190,7 @@ const createDmsForNewUser = async (userId) => {
   return created;
 };
 
-const sendMessage = async (convId, senderId, content) => {
+const sendMessage = async (convId, senderId, content, isAdmin = false) => {
   const member = await prisma.conversationMember.findUnique({
     where: { conversationId_userId: { conversationId: convId, userId: senderId } },
   });
@@ -203,7 +212,11 @@ const sendMessage = async (convId, senderId, content) => {
     data: { lastReadAt: message.createdAt },
   });
 
-  const serialized = serializeMessage(message);
+  const hasMentions = extractIdentifiers(content).length > 0;
+  const senderMentions = hasMentions
+    ? pickMentionsFor(content, await resolveMentionsForMessages([message], senderId, isAdmin))
+    : [];
+  const serialized = serializeMessage(message, senderMentions);
 
   const io = getIo();
   if (io) {
@@ -213,10 +226,21 @@ const sendMessage = async (convId, senderId, content) => {
     // fenêtre d'auto-join est perdu côté client.
     const members = await prisma.conversationMember.findMany({
       where: { conversationId: convId },
-      select: { userId: true },
+      select: { userId: true, user: { select: { role: true } } },
     });
     for (const m of members) {
-      io.to(`user:${m.userId}`).emit('new_message', serialized);
+      // Sans mention, la charge utile est identique pour tout le monde ; avec
+      // mentions, chaque destinataire ne reçoit que les tâches qu'il peut voir.
+      let payload = serialized;
+      if (hasMentions && m.userId !== senderId) {
+        const resolved = await resolveMentionsForMessages(
+          [message],
+          m.userId,
+          m.user.role === 'ADMIN',
+        );
+        payload = serializeMessage(message, pickMentionsFor(content, resolved));
+      }
+      io.to(`user:${m.userId}`).emit('new_message', payload);
     }
     console.log(`[socket] → new_message  conv=${convId}  sender=${serialized.senderName}  recipients=${members.length}`);
   } else {

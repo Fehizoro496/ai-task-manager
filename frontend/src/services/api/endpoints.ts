@@ -23,6 +23,8 @@ export const endpoints = {
       `/api/tasks?projectId=${encodeURIComponent(projectId)}`,
     move: (id: string) => `/api/tasks/${id}/move`,
     assign: (id: string) => `/api/tasks/${id}/assign`,
+    search: (q: string, limit = 8) =>
+      `/api/tasks/search?q=${encodeURIComponent(q)}&limit=${limit}`,
   },
 
   ai: {

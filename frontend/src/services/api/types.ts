@@ -151,6 +151,22 @@ export interface Conversation {
   } | null;
 }
 
+/** Tâche citée via une mention `#AM-001` dans un message. */
+export interface MentionedTask {
+  id: UUID;
+  identifier: string;
+  title: string;
+  status: TaskStatus | Uppercase<TaskStatus>;
+  priority: TaskPriority;
+  projectId: UUID | null;
+  projectName: string | null;
+  assignee: {
+    id: UUID;
+    name: string;
+    avatar_url: string | null;
+  } | null;
+}
+
 export interface Message {
   id: UUID;
   conversationId: UUID;
@@ -158,5 +174,7 @@ export interface Message {
   senderId: UUID;
   senderName: string;
   sender_avatar_url: string | null;
+  /** Tâches mentionnées résolues pour le lecteur : celles hors de sa portée en sont absentes. */
+  mentionedTasks?: MentionedTask[];
   createdAt: string;
 }

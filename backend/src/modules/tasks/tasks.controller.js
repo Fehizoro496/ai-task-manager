@@ -13,6 +13,13 @@ const listByQuery = asyncHandler(async (req, res) => {
   res.json(tasks.map((t) => tasksService.serializeTask(t, req.query.projectId)));
 });
 
+const search = asyncHandler(async (req, res) => {
+  const isAdmin = req.user.role === "ADMIN";
+  const limit = Math.min(Number(req.query.limit) || 8, 20);
+  const tasks = await tasksService.searchVisible(req.user.id, isAdmin, req.query.q, limit);
+  res.json({ tasks: tasks.map((t) => tasksService.serializeTask(t)) });
+});
+
 const getById = asyncHandler(async (req, res) => {
   const isAdmin = req.user.role === "ADMIN";
   const task = await tasksService.getById(req.params.id, req.user.id, isAdmin);
@@ -67,4 +74,4 @@ const reorderForProject = asyncHandler(async (req, res) => {
   res.json(result);
 });
 
-module.exports = { create, listByQuery, getById, update, remove, move, listByProject, createForProject, assign, reorderForProject };
+module.exports = { create, listByQuery, search, getById, update, remove, move, listByProject, createForProject, assign, reorderForProject };

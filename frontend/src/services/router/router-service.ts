@@ -84,6 +84,9 @@ export const routerService = {
     projects: () => "/projects",
     project: (id: string) => `/projects/${id}`,
     projectBoard: (id: string) => `/projects/${id}/board`,
+    /** Onglet Tâches du projet avec le dialog de la tâche ouvert (deep-link). */
+    projectBoardTask: (projectId: string, taskId: string) =>
+      `/projects/${projectId}/board?task=${encodeURIComponent(taskId)}`,
     projectMembers: (id: string) => `/projects/${id}/members`,
     projectSettings: (id: string) => `/projects/${id}/settings`,
     tasks: () => "/my-tasks",
@@ -109,6 +112,8 @@ export const routerService = {
     routerService.push(routerService.paths.project(id)),
   toProjectBoard: (id: string) =>
     routerService.push(routerService.paths.projectBoard(id)),
+  toProjectBoardTask: (projectId: string, taskId: string) =>
+    routerService.push(routerService.paths.projectBoardTask(projectId, taskId)),
   toProjectMembers: (id: string) =>
     routerService.push(routerService.paths.projectMembers(id)),
   toProjectSettings: (id: string) =>

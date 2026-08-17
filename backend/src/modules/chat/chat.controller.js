@@ -25,6 +25,7 @@ const getMessages = async (req, res, next) => {
     const messages = await chatService.getMessages(
       req.params.id,
       req.user.id,
+      req.user.role === 'ADMIN',
     );
     res.json({ messages });
   } catch (err) {
@@ -39,6 +40,7 @@ const sendMessage = async (req, res, next) => {
       req.params.id,
       req.user.id,
       content,
+      req.user.role === 'ADMIN',
     );
     res.status(201).json({ message });
   } catch (err) {
