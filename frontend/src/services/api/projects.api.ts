@@ -10,7 +10,15 @@ export interface CreateProjectInput {
   color?: string;
   githubRepoUrl?: string;
   identifierPrefix?: string;
+  /** Crée un dépôt GitHub pour le projet (ignoré si githubRepoUrl est fourni). */
+  createGithubRepo?: boolean;
 }
+
+/**
+ * Réponse de création : `githubRepoWarning` est présent quand le dépôt
+ * demandé n'a pas pu être créé — le projet, lui, existe bien.
+ */
+export type CreatedProject = Project & { githubRepoWarning?: string };
 
 export interface UpdateProjectInput {
   name?: string;
@@ -34,7 +42,7 @@ export const projectsApi = {
     apiClient.get<Project>(endpoints.projects.byId(id)),
 
   create: (input: CreateProjectInput) =>
-    apiClient.post<Project>(endpoints.projects.root(), input),
+    apiClient.post<CreatedProject>(endpoints.projects.root(), input),
 
   update: (id: string, input: UpdateProjectInput) =>
     apiClient.put<Project>(endpoints.projects.byId(id), input),

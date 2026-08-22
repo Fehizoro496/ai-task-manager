@@ -83,9 +83,10 @@ export function useProjects() {
 
   const create = useCallback(
     async (input: CreateProjectInput) => {
-      const project = await projectsApi.create(input);
+      // githubRepoWarning n'appartient pas au projet : il n'entre pas dans le cache.
+      const { githubRepoWarning, ...project } = await projectsApi.create(input);
       upsert(project);
-      return project;
+      return { ...project, githubRepoWarning };
     },
     [upsert],
   );

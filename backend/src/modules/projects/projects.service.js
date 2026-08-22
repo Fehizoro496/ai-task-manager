@@ -42,21 +42,28 @@ const create = async (ownerId, data) => {
   let githubRepoUrl = data.githubRepoUrl || null;
   let githubOwner = null;
   let githubRepo = null;
+  let githubRepoWarning = null;
+
+  // Le dépôt n'est créé que si l'appelant le demande explicitement
+  // (createGithubRepo absent = pas de création, cf. modale de création).
+  const wantsRepo = data.createGithubRepo === true;
 
   if (githubRepoUrl) {
     // URL fournie manuellement : extraire owner/repo
     ({ owner: githubOwner, repo: githubRepo } = parseGithubUrl(githubRepoUrl));
-  } else {
-    // Pas d'URL : créer le repo GitHub automatiquement
+  } else if (wantsRepo) {
     try {
       const ghRepo = await createRepo(ownerId, data.name, data.description);
       if (ghRepo) {
         githubRepoUrl = ghRepo.repoUrl;
         githubOwner = ghRepo.owner;
         githubRepo = ghRepo.repo;
+      } else {
+        githubRepoWarning = "Aucun compte GitHub lié : le dépôt n'a pas été créé.";
       }
-    } catch (_) {
-      // Échec silencieux : le projet est créé sans lien GitHub
+    } catch (e) {
+      // Le projet reste créé : seul le lien GitHub manque.
+      githubRepoWarning = e.message || "La création du dépôt GitHub a échoué.";
     }
   }
 
@@ -77,7 +84,8 @@ const create = async (ownerId, data) => {
     data: { projectId: project.id, userId: ownerId },
   });
 
-  return project;
+  // githubRepoWarning n'est pas persisté : il informe l'appelant de l'échec.
+  return githubRepoWarning ? { ...project, githubRepoWarning } : project;
 };
 
 const listByUser = async (userId, isAdmin) => {

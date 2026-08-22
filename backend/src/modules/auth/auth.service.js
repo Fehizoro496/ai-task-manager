@@ -19,15 +19,20 @@ const meSelect = {
   role: true,
   status: true,
   preferences: true,
+  provider: true,
+  githubLogin: true,
+  githubAccessToken: true,
   createdAt: true,
 };
 
 const serializeMe = (user) => {
-  const { avatarUrl, preferences, ...rest } = user;
+  const { avatarUrl, preferences, githubAccessToken, ...rest } = user;
   return {
     ...rest,
     avatar_url: avatarUrl ?? null,
     preferences: withDefaults(preferences),
+    // Le token n'est jamais exposé : seul l'état de connexion l'est.
+    githubConnected: Boolean(githubAccessToken),
   };
 };
 

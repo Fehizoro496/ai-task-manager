@@ -32,6 +32,9 @@ export interface User {
   role: UserRole;
   status: UserStatus;
   provider?: string;
+  githubLogin?: string | null;
+  /** Vrai si un token GitHub est enregistré côté serveur (jamais exposé). */
+  githubConnected?: boolean;
   preferences?: UserPreferences;
   createdAt?: string;
 }
