@@ -189,7 +189,7 @@ export default function ProjectSettingsPage({
         </section>
 
         {/* Apparence */}
-        <section className="rounded-[var(--radius-lg)] border border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))] shadow-[var(--shadow-1)]">
+        {/* <section className="rounded-[var(--radius-lg)] border border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))] shadow-[var(--shadow-1)]">
           <header className="border-b border-[hsl(var(--line))] px-5 py-4">
             <h2 className="font-display text-[16px] font-semibold tracking-tight">
               Apparence
@@ -236,7 +236,7 @@ export default function ProjectSettingsPage({
               </div>
             </Field>
           </div>
-        </section>
+        </section> */}
 
         {/* Intégration GitHub */}
         <section className="rounded-[var(--radius-lg)] border border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))] shadow-[var(--shadow-1)]">
