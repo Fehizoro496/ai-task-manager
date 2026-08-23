@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Loader2, Plus, Sparkles, Wand2, X } from "lucide-react";
 import { skillsApi, useAuth } from "@/services";
 import type { Skill, UserSkill } from "@/services";
+import { Combobox } from "@/components/ui/combobox";
 import { cn } from "@/lib/utils";
 
 const LEVEL_LABEL = ["", "Novice", "Débutant", "Confirmé", "Avancé", "Expert"];
@@ -155,24 +156,23 @@ export function SkillsPanel({ userId }: { userId: string }) {
               </p>
             ) : (
               <div className="flex flex-wrap items-end gap-3">
-                <label className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1">
                   <span className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[hsl(var(--ink-3))]">
                     Compétence
                   </span>
-                  <select
+                  <Combobox
                     value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    onChange={setName}
                     disabled={saving}
-                    className="h-9 w-48 rounded-[var(--radius-sm)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg))] px-2.5 text-[12.5px] focus:border-[hsl(var(--brand)/0.6)] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand)/0.3)]"
-                  >
-                    <option value="">Sélectionner…</option>
-                    {available.map((c) => (
-                      <option key={c.id} value={c.name}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                    placeholder="Rechercher…"
+                    emptyLabel="Aucune compétence trouvée"
+                    options={available.map((c) => ({
+                      value: c.name,
+                      label: c.name,
+                    }))}
+                    className="h-9 w-48 bg-[hsl(var(--bg))] px-2.5 text-[12.5px]"
+                  />
+                </div>
                 <div className="flex flex-col gap-1">
                   <span className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[hsl(var(--ink-3))]">
                     Niveau · {LEVEL_LABEL[level]}
