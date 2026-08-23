@@ -38,11 +38,13 @@ import { cn } from "@/lib/utils";
 const SECTIONS = [
   { id: "compte",        label: "Compte",        Icon: UserIcon,   group: "Vous"    },
   { id: "apparence",     label: "Apparence",     Icon: Palette,    group: "Vous"    },
-  { id: "notifications", label: "Notifications", Icon: Bell,       group: "Vous"    },
+  // { id: "notifications", label: "Notifications", Icon: Bell,       group: "Vous"    },
   // { id: "integrations",  label: "Intégrations",  Icon: Plug,       group: "Équipe"  },
-  { id: "membres",       label: "Membres",       Icon: Users,      group: "Équipe"  },
+  // { id: "membres",       label: "Membres",       Icon: Users,      group: "Équipe"  },
   // { id: "securite",      label: "Sécurité",      Icon: Shield,     group: "Équipe"  },
 ] as const;
+
+const groups = Array.from(new Set(SECTIONS.map(el => el.group)));
 
 type SectionId = (typeof SECTIONS)[number]["id"];
 
@@ -53,7 +55,7 @@ export function SettingsShell() {
     <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
       <aside className="lg:sticky lg:top-[80px] lg:self-start">
         <nav>
-          {(["Vous", "Équipe"] as const).map((group) => (
+          {groups.map((group) => (
             <div key={group} className="mb-4">
               <div className="mb-1 px-3 text-[10.5px] font-semibold uppercase tracking-[0.16em] text-[hsl(var(--ink-3))]">
                 {group}
@@ -95,9 +97,9 @@ export function SettingsShell() {
       <div className="min-w-0">
         {active === "compte" && <AccountSection />}
         {active === "apparence" && <AppearanceSection />}
-        {active === "notifications" && <NotificationsSection />}
+        {/* {active === "notifications" && <NotificationsSection />} */}
         {/* {active === "integrations" && <IntegrationsSection />} */}
-        {active === "membres" && <MembersSection />}
+        {/* {active === "membres" && <MembersSection />} */}
         {/* {active === "securite" && <SecuritySection />} */}
       </div>
     </div>
