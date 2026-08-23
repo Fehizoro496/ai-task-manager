@@ -9,6 +9,7 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
+    "test": "node tests/run.js",
     "seed:admin": "node src/scripts/seed-admin.js",
     "seed:data": "node src/scripts/seed-data.js"
   },
