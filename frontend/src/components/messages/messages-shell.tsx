@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Search, Plus, Send, Loader2, Users as UsersIcon } from "lucide-react";
+import { Search, Plus, Send, Loader2, Users as UsersIcon, RefreshCwIcon, RefreshCcw, X } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,6 +40,14 @@ function fmtRelative(iso: string) {
   return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
 }
 
+/** Minuscules sans accents, pour une recherche tolérante. */
+function normalize(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase();
+}
+
 function sortConversations(list: Conversation[]): Conversation[] {
   return [...list].sort((a, b) => {
     const ta = a.lastMessage ? new Date(a.lastMessage.createdAt).getTime() : 0;
@@ -62,6 +70,7 @@ export function MessagesShell() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
+  const [query, setQuery] = useState("");
   const [loadingConvs, setLoadingConvs] = useState(true);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
   const [sending, setSending] = useState(false);
@@ -162,6 +171,20 @@ export function MessagesShell() {
     [conversations, activeId],
   );
 
+  const filteredConversations = useMemo(() => {
+    const q = normalize(query.trim());
+    if (!q) return conversations;
+    return conversations.filter((c) => {
+      const haystack = [
+        conversationLabel(c, user?.id ?? ""),
+        ...(c.members?.map((m) => m.name) ?? []),
+        c.lastMessage?.senderName ?? "",
+        c.lastMessage?.content ?? "",
+      ];
+      return haystack.some((value) => normalize(value).includes(q));
+    });
+  }, [conversations, query, user?.id]);
+
   async function send() {
     if (!draft.trim() || !activeId) return;
     const content = draft.trim();
@@ -201,15 +224,32 @@ export function MessagesShell() {
               title="Rafraichir"
               className="grid h-7 w-7 place-items-center rounded-[6px] text-[hsl(var(--ink-3))] hover:bg-[hsl(var(--bg-muted))] hover:text-ink"
             >
-              <Plus className="h-4 w-4" />
+              <RefreshCcw className="h-4 w-4" />
             </button>
           </div>
           <div className="relative mt-2">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[hsl(var(--ink-3))]" />
             <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setQuery("");
+              }}
               placeholder="Rechercher…"
-              className="h-8 w-full rounded-[var(--radius-sm)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg))] pl-7 pr-2 text-[12.5px] placeholder:text-[hsl(var(--ink-4))] focus:border-[hsl(var(--brand)/0.5)] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand)/0.3)]"
+              aria-label="Rechercher une conversation"
+              className="h-8 w-full rounded-[var(--radius-sm)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg))] pl-7 pr-7 text-[12.5px] placeholder:text-[hsl(var(--ink-4))] focus:border-[hsl(var(--brand)/0.5)] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand)/0.3)]"
             />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                title="Effacer la recherche"
+                aria-label="Effacer la recherche"
+                className="absolute right-1 top-1/2 grid h-5 w-5 -translate-y-1/2 place-items-center rounded-[4px] text-[hsl(var(--ink-3))] hover:bg-[hsl(var(--bg-muted))] hover:text-ink"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
           </div>
         </header>
 
@@ -223,9 +263,13 @@ export function MessagesShell() {
             <div className="px-3 py-6 text-center text-[12px] text-[hsl(var(--ink-3))]">
               Aucune conversation.
             </div>
+          ) : filteredConversations.length === 0 ? (
+            <div className="px-3 py-6 text-center text-[12px] text-[hsl(var(--ink-3))]">
+              Aucun résultat pour «&nbsp;{query.trim()}&nbsp;».
+            </div>
           ) : (
             <ul className="flex flex-col gap-0.5">
-              {conversations.map((c) => {
+              {filteredConversations.map((c) => {
                 const label = conversationLabel(c, user.id);
                 const lm = c.lastMessage;
                 const previewSender =
