@@ -13,6 +13,33 @@ const listByQuery = asyncHandler(async (req, res) => {
   res.json(tasks.map((t) => tasksService.serializeTask(t, req.query.projectId)));
 });
 
+/** Découpe un paramètre de requête répété ou en CSV (`?priority=high,urgent`). */
+const parseCsv = (value) =>
+  (Array.isArray(value) ? value : String(value ?? "").split(","))
+    .map((v) => String(v).trim())
+    .filter(Boolean);
+
+const listMine = asyncHandler(async (req, res) => {
+  const isAdmin = req.user.role === "ADMIN";
+  const result = await tasksService.listForUser(req.user.id, isAdmin, {
+    scope: req.query.scope,
+    q: req.query.q,
+    priorities: parseCsv(req.query.priority),
+    projectIds: parseCsv(req.query.projectId),
+    sort: req.query.sort,
+    limit: req.query.limit,
+    offset: req.query.offset,
+  });
+
+  res.json({
+    tasks: result.tasks.map((t) => tasksService.serializeTask(t)),
+    total: result.total,
+    limit: result.limit,
+    offset: result.offset,
+    hasMore: result.hasMore,
+  });
+});
+
 const search = asyncHandler(async (req, res) => {
   const isAdmin = req.user.role === "ADMIN";
   const limit = Math.min(Number(req.query.limit) || 8, 20);
@@ -74,4 +101,4 @@ const reorderForProject = asyncHandler(async (req, res) => {
   res.json(result);
 });
 
-module.exports = { create, listByQuery, search, getById, update, remove, move, listByProject, createForProject, assign, reorderForProject };
+module.exports = { create, listByQuery, listMine, search, getById, update, remove, move, listByProject, createForProject, assign, reorderForProject };

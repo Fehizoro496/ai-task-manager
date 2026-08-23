@@ -25,6 +25,8 @@ export const endpoints = {
     assign: (id: string) => `/api/tasks/${id}/assign`,
     search: (q: string, limit = 8) =>
       `/api/tasks/search?q=${encodeURIComponent(q)}&limit=${limit}`,
+    /** Tâches assignées à l'utilisateur courant (filtrées et paginées côté serveur). */
+    mine: () => "/api/tasks/my",
   },
 
   ai: {

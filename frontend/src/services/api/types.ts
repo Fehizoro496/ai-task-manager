@@ -89,7 +89,10 @@ export interface Task {
   } | null;
   labels: string[];
   commentsCount?: number;
+  /** Projet porteur, renvoyé par les endpoints qui incluent la relation. */
+  project?: { id: UUID; name: string; color: string | null } | null;
   dueDate: string | null;
+  createdAt?: string;
   branch?: string | null;
   githubBranch?: string | null;
   githubBranchUrl?: string | null;

@@ -26,11 +26,50 @@ export interface MoveTaskInput {
   order?: number;
 }
 
+export type MyTasksScope = "all" | "active" | "done";
+export type MyTasksSort = "due_asc" | "due_desc" | "priority" | "recent";
+
+/**
+ * Filtres de la page « Mes tâches ». Tout est appliqué côté serveur : la
+ * réponse est déjà filtrée, triée et découpée en pages.
+ */
+export interface MyTasksQuery {
+  scope?: MyTasksScope;
+  q?: string;
+  /** Priorités retenues — sérialisées en CSV. */
+  priorities?: TaskPriority[];
+  /** Projets retenus — sérialisés en CSV. */
+  projectIds?: string[];
+  sort?: MyTasksSort;
+  limit?: number;
+  offset?: number;
+}
+
+export interface MyTasksPage {
+  tasks: Task[];
+  total: number;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+}
+
 export const tasksApi = {
   listByProject: (projectId: string) =>
     apiClient.get<Task[]>(endpoints.tasks.listByProject(projectId)),
 
   getById: (id: string) => apiClient.get<Task>(endpoints.tasks.byId(id)),
+
+  /** Page de tâches assignées à l'utilisateur courant. */
+  listMine: ({ priorities, projectIds, q, ...rest }: MyTasksQuery, signal?: AbortSignal) =>
+    apiClient.get<MyTasksPage>(endpoints.tasks.mine(), {
+      signal,
+      query: {
+        ...rest,
+        q: q?.trim() || undefined,
+        priority: priorities?.length ? priorities.join(",") : undefined,
+        projectId: projectIds?.length ? projectIds.join(",") : undefined,
+      },
+    }),
 
   /** Recherche par identifiant ou titre, restreinte aux tâches visibles. */
   search: (q: string, limit = 8) =>

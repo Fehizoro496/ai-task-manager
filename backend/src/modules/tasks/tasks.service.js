@@ -1,3 +1,4 @@
+const { Prisma } = require("@prisma/client");
 const prisma = require("../../prisma/client");
 const AppError = require("../../utils/AppError");
 const { createNotification, notifyAdmins } = require("../notifications/notifications.service");
@@ -78,6 +79,7 @@ const serializeTask = (task, projectId) => {
     comments_count: task._count?.comments ?? 0,
     dueDate: task.dueDate ? task.dueDate.toISOString() : null,
     due_date: task.dueDate ? task.dueDate.toISOString() : null,
+    project: project ? { id: project.id, name: project.name, color: project.color ?? null } : null,
     createdAt: task.createdAt.toISOString(),
     created_at: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
@@ -471,6 +473,132 @@ const findVisibleByIdentifiers = async (identifiers, userId, isAdmin) => {
   });
 };
 
+/** Valeurs de priorité connues — sert à valider les filtres entrants. */
+const PRIORITY_VALUES = ["urgent", "high", "medium", "low"];
+const SORT_MODES = ["due_asc", "due_desc", "priority", "recent"];
+const SCOPES = ["all", "active", "done"];
+const MY_TASKS_DEFAULT_LIMIT = 30;
+const MY_TASKS_MAX_LIMIT = 100;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Neutralise les jokers LIKE saisis par l'utilisateur (`%`, `_`, `\`). */
+const escapeLike = (value) => value.replace(/[\%_]/g, (c) => `\${c}`);
+
+/**
+ * Clause ORDER BY correspondant au mode de tri. La priorité n'étant pas un
+ * enum en base, son ordre métier passe par un CASE. `t.id` ferme chaque tri
+ * pour rendre la pagination par offset déterministe.
+ */
+const myTasksOrderBy = (sort) => {
+  switch (sort) {
+    case "due_desc":
+      return Prisma.sql`t."dueDate" DESC NULLS LAST, t."createdAt" DESC, t."id" ASC`;
+    case "priority":
+      return Prisma.sql`CASE lower(t."priority")
+          WHEN 'urgent' THEN 0
+          WHEN 'high' THEN 1
+          WHEN 'medium' THEN 2
+          WHEN 'low' THEN 3
+          ELSE 4
+        END ASC, t."dueDate" ASC NULLS LAST, t."id" ASC`;
+    case "recent":
+      return Prisma.sql`t."createdAt" DESC, t."id" ASC`;
+    default:
+      return Prisma.sql`t."dueDate" ASC NULLS LAST, t."createdAt" DESC, t."id" ASC`;
+  }
+};
+
+/**
+ * Liste paginée de la page « Mes tâches », filtrée et triée en base. Le client
+ * ne charge qu'une page à la fois et redemande la suivante en arrivant en bas
+ * du tableau.
+ *
+ * Périmètre : un membre ne voit que les tâches qui lui sont assignées, un admin
+ * voit toutes les tâches — la page lui sert de vue d'ensemble.
+ *
+ * Le tri par priorité impose un CASE SQL, donc une requête brute. Elle ne
+ * retourne que les ids (plus le total via une window function) ; les tâches
+ * sont ensuite hydratées par Prisma pour conserver le même `include` — et donc
+ * la même sérialisation — que les autres endpoints.
+ */
+const listForUser = async (userId, isAdmin, options = {}) => {
+  const rawLimit = Number(options.limit);
+  const limit = Number.isFinite(rawLimit)
+    ? Math.min(Math.max(Math.trunc(rawLimit), 1), MY_TASKS_MAX_LIMIT)
+    : MY_TASKS_DEFAULT_LIMIT;
+  const rawOffset = Number(options.offset);
+  const offset = Number.isFinite(rawOffset) ? Math.max(Math.trunc(rawOffset), 0) : 0;
+
+  const sort = SORT_MODES.includes(options.sort) ? options.sort : "due_asc";
+  const scope = SCOPES.includes(options.scope) ? options.scope : "all";
+  const q = (options.q || "").trim();
+  const priorities = (options.priorities || [])
+    .map((p) => String(p).toLowerCase())
+    .filter((p) => PRIORITY_VALUES.includes(p));
+  const projectIds = (options.projectIds || []).filter((id) => UUID_RE.test(id));
+
+  // Un filtre demandé dont aucune valeur n'est reconnue ne doit pas s'effacer :
+  // il ne peut rien matcher, on répond une page vide plutôt que la liste entière.
+  const droppedFilter =
+    (options.priorities?.length > 0 && priorities.length === 0) ||
+    (options.projectIds?.length > 0 && projectIds.length === 0);
+  if (droppedFilter) return { tasks: [], total: 0, limit, offset, hasMore: false };
+
+  const conditions = isAdmin ? [] : [Prisma.sql`t."assigneeId" = ${userId}`];
+  if (scope === "active") conditions.push(Prisma.sql`t."status" <> 'DONE'`);
+  if (scope === "done") conditions.push(Prisma.sql`t."status" = 'DONE'`);
+  if (q) {
+    const pattern = `%${escapeLike(q)}%`;
+    conditions.push(Prisma.sql`(
+      t."title" ILIKE ${pattern}
+      OR t."identifier" ILIKE ${pattern}
+      OR p."name" ILIKE ${pattern}
+    )`);
+  }
+  if (priorities.length > 0) {
+    conditions.push(Prisma.sql`lower(t."priority") IN (${Prisma.join(priorities)})`);
+  }
+  if (projectIds.length > 0) {
+    conditions.push(Prisma.sql`t."projectId" IN (${Prisma.join(projectIds)})`);
+  }
+
+  const where =
+    conditions.length > 0
+      ? Prisma.sql`WHERE ${Prisma.join(conditions, " AND ")}`
+      : Prisma.empty;
+
+  const rows = await prisma.$queryRaw`
+    SELECT t."id", COUNT(*) OVER()::int AS total
+    FROM "Task" t
+    JOIN "Project" p ON p."id" = t."projectId"
+    ${where}
+    ORDER BY ${myTasksOrderBy(sort)}
+    LIMIT ${limit} OFFSET ${offset}
+  `;
+
+  // Page vide au-delà du premier lot : la window function ne remonte pas de
+  // total, mais on sait qu'on a atteint la fin de la liste.
+  const total = rows.length > 0 ? rows[0].total : offset;
+  if (rows.length === 0) {
+    return { tasks: [], total, limit, offset, hasMore: false };
+  }
+
+  const ids = rows.map((r) => r.id);
+  const tasks = await prisma.task.findMany({
+    where: { id: { in: ids } },
+    include: { ...assigneeInclude, project: true },
+  });
+  const byId = new Map(tasks.map((t) => [t.id, t]));
+
+  return {
+    tasks: ids.map((id) => byId.get(id)).filter(Boolean),
+    total,
+    limit,
+    offset,
+    hasMore: offset + rows.length < total,
+  };
+};
+
 module.exports = {
   create,
   getById,
@@ -478,6 +606,7 @@ module.exports = {
   remove,
   moveTask,
   listByProject,
+  listForUser,
   createForProject,
   reorderForProject,
   assignSelf,

@@ -75,6 +75,83 @@ router.get("/", tasksController.listByQuery);
 
 /**
  * @swagger
+ * /tasks/my:
+ *   get:
+ *     tags: [Tasks]
+ *     summary: List the current user's tasks (filtered, sorted, paginated)
+ *     description: >
+ *       Alimente la page « Mes tâches ». Un membre reçoit les tâches qui lui sont
+ *       assignées, un admin reçoit toutes les tâches. Filtres, recherche et tri
+ *       sont appliqués en base ; la liste est paginée par offset pour un
+ *       chargement progressif.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: scope
+ *         schema:
+ *           type: string
+ *           enum: [all, active, done]
+ *           default: all
+ *       - in: query
+ *         name: q
+ *         description: Recherche sur le titre, l'identifiant ou le nom du projet
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: priority
+ *         description: Priorités acceptées, séparées par des virgules
+ *         schema:
+ *           type: string
+ *           example: urgent,high
+ *       - in: query
+ *         name: projectId
+ *         description: Identifiants de projets, séparés par des virgules
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           enum: [due_asc, due_desc, priority, recent]
+ *           default: due_asc
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 30
+ *           maximum: 100
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *     responses:
+ *       200:
+ *         description: Page de tâches assignées
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 tasks:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Task'
+ *                 total:
+ *                   type: integer
+ *                 limit:
+ *                   type: integer
+ *                 offset:
+ *                   type: integer
+ *                 hasMore:
+ *                   type: boolean
+ */
+// Déclarée avant `/:id` pour que "my" ne soit pas capturé comme un id.
+router.get("/my", tasksController.listMine);
+
+/**
+ * @swagger
  * /tasks/search:
  *   get:
  *     tags: [Tasks]
