@@ -27,8 +27,11 @@ const del = (state) => {
   store.delete(state);
 };
 
-// Cleanup expired entries every minute
-setInterval(() => {
+// Cleanup expired entries every minute.
+// `unref()` : ce nettoyage best-effort ne doit pas maintenir le process en vie
+// à lui seul — sans quoi tout script chargeant l'app (tests, scripts ponctuels)
+// ne rendrait jamais la main. Le serveur, lui, a ses propres handles actifs.
+const cleanupTimer = setInterval(() => {
   const now = Date.now();
   for (const [key, value] of store.entries()) {
     if (now > value.expiresAt) {
@@ -36,5 +39,6 @@ setInterval(() => {
     }
   }
 }, 60_000);
+cleanupTimer.unref();
 
 module.exports = { set, get, delete: del };
