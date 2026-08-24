@@ -65,4 +65,54 @@ const makeTask = ({ projectId, ...rest } = {}) => {
   });
 };
 
-module.exports = { makeUser, makeAdmin, makeProject, addMember, makeTask };
+/**
+ * Crée une conversation directe entre deux utilisateurs et les y inscrit,
+ * comme le fait le service de messagerie.
+ */
+const makeDM = async (userA, userB) => {
+  const conversation = await prisma.conversation.create({ data: { isGroup: false } });
+  await prisma.conversationMember.createMany({
+    data: [
+      { conversationId: conversation.id, userId: userA },
+      { conversationId: conversation.id, userId: userB },
+    ],
+  });
+  return conversation;
+};
+
+/**
+ * Crée un message. `attachments` reste optionnel (colonne JSON) et n'est posé
+ * que si l'appelant le fournit, comme le service.
+ */
+const makeMessage = ({ conversationId, senderId, ...rest } = {}) =>
+  prisma.message.create({
+    data: {
+      conversationId,
+      senderId,
+      content: rest.content ?? "Bonjour",
+      ...(rest.attachments ? { attachments: rest.attachments } : {}),
+      ...(rest.deletedAt ? { deletedAt: rest.deletedAt } : {}),
+    },
+  });
+
+/** Crée un brouillon de plan IA rattaché à un projet. */
+const makeAiDraft = ({ projectId, ...rest } = {}) =>
+  prisma.aiDraft.create({
+    data: {
+      projectId,
+      document: rest.document ?? "Cahier des charges",
+      plan: rest.plan ?? { tasks: [{ title: "Tâche initiale" }] },
+      approved: rest.approved ?? false,
+    },
+  });
+
+module.exports = {
+  makeUser,
+  makeAdmin,
+  makeProject,
+  addMember,
+  makeTask,
+  makeDM,
+  makeMessage,
+  makeAiDraft,
+};
