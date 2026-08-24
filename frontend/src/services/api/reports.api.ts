@@ -39,7 +39,25 @@ export interface AssigneeStat {
 
 export interface DayCompletion {
   date: string;
+  label: string;
   completed: number;
+}
+
+export type RangeUnit = "day" | "week" | "month";
+
+/** Période résolue par le serveur (bornes + libellé prêt à afficher). */
+export interface ReportsRange {
+  unit: RangeUnit;
+  anchor: string;
+  start: string;
+  end: string;
+  label: string;
+}
+
+/** Paramètres de requête : unité + une date d'ancrage dans la période. */
+export interface ReportsRangeQuery {
+  unit?: RangeUnit;
+  anchor?: string;
 }
 
 export interface ReportsOverview {
@@ -49,9 +67,13 @@ export interface ReportsOverview {
   byProject: ProjectBreakdown[];
   topAssignees: AssigneeStat[];
   completionByDay: DayCompletion[];
+  range: ReportsRange;
 }
 
 export const reportsApi = {
-  overview: () =>
-    apiClient.get<ReportsOverview>(endpoints.reports.overview()),
+  overview: (query?: ReportsRangeQuery, signal?: AbortSignal) =>
+    apiClient.get<ReportsOverview>(endpoints.reports.overview(), {
+      query: { unit: query?.unit, anchor: query?.anchor },
+      signal,
+    }),
 };

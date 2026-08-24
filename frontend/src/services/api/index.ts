@@ -51,6 +51,9 @@ export type {
   AssigneeStat,
   DayCompletion,
   DistributionItem,
+  RangeUnit,
+  ReportsRange,
+  ReportsRangeQuery,
 } from "./reports.api";
 
 export type * from "./types";

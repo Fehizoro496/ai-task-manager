@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowUpRight,
   CircleDashed,
@@ -10,6 +10,10 @@ import {
   Trophy,
   Users,
 } from "lucide-react";
+import { ConfigProvider, DatePicker } from "antd";
+import frFR from "antd/locale/fr_FR";
+import dayjs from "dayjs";
+import "dayjs/locale/fr";
 import { Topbar } from "@/components/shell/topbar";
 import { Breadcrumb } from "@/components/shell/breadcrumb";
 import { Avatar } from "@/components/ui/avatar";
@@ -19,8 +23,36 @@ import { BarChart } from "@/components/charts/bar-chart";
 import { DonutChart } from "@/components/charts/donut";
 import { Sparkline } from "@/components/dashboard/sparkline";
 import { reportsApi, routerService } from "@/services";
-import type { ReportsOverview } from "@/services";
+import type { RangeUnit, ReportsOverview, ReportsRange } from "@/services";
 import { cn } from "@/lib/utils";
+
+const UNIT_META: Record<RangeUnit, { label: string }> = {
+  day: { label: "Jour" },
+  week: { label: "Semaine" },
+  month: { label: "Mois" },
+};
+
+const UNIT_ORDER: RangeUnit[] = ["day", "week", "month"];
+
+const GRANULARITY_LABEL: Record<RangeUnit, string> = {
+  day: "par heure",
+  week: "par jour",
+  month: "par jour",
+};
+
+// Semaine démarrant le lundi, cohérent avec le calcul serveur.
+dayjs.locale("fr");
+
+// Le mode du DatePicker antd suit l'unité choisie.
+const PICKER_BY_UNIT: Record<RangeUnit, "date" | "week" | "month"> = {
+  day: "date",
+  week: "week",
+  month: "month",
+};
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
+const toISODate = (d: Date) =>
+  `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 
 export default function ReportsPage() {
   const [data, setData] = useState<ReportsOverview | null>(null);
@@ -28,27 +60,37 @@ export default function ReportsPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [computedAt, setComputedAt] = useState<Date | null>(null);
-
-  const load = async (silent = false) => {
-    if (silent) setRefreshing(true);
-    else setLoading(true);
-    try {
-      const d = await reportsApi.overview();
-      setData(d);
-      setComputedAt(new Date());
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur de chargement.");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+  const [unit, setUnit] = useState<RangeUnit>("day");
+  const [anchor, setAnchor] = useState<string>(() => toISODate(new Date()));
+  const [nonce, setNonce] = useState(0);
+  const firstLoad = useRef(true);
 
   useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const controller = new AbortController();
+    const silent = !firstLoad.current;
+    firstLoad.current = false;
+    if (silent) setRefreshing(true);
+    else setLoading(true);
+
+    (async () => {
+      try {
+        const d = await reportsApi.overview({ unit, anchor }, controller.signal);
+        setData(d);
+        setComputedAt(new Date());
+        setError(null);
+      } catch (e) {
+        if (controller.signal.aborted) return;
+        setError(e instanceof Error ? e.message : "Erreur de chargement.");
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+          setRefreshing(false);
+        }
+      }
+    })();
+
+    return () => controller.abort();
+  }, [unit, anchor, nonce]);
 
   return (
     <>
@@ -81,7 +123,7 @@ export default function ReportsPage() {
               <div className="mt-5 flex flex-wrap items-center gap-3">
                 <button
                   type="button"
-                  onClick={() => load(true)}
+                  onClick={() => setNonce((n) => n + 1)}
                   disabled={refreshing || loading}
                   className="inline-flex h-9 items-center gap-1.5 rounded-[var(--radius-sm)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-elevated))] px-3 text-[12.5px] font-semibold tracking-tight hover:bg-[hsl(var(--bg-muted))] disabled:opacity-60"
                 >
@@ -92,6 +134,15 @@ export default function ReportsPage() {
                   )}
                   Recalculer
                 </button>
+
+                <RangeControl
+                  unit={unit}
+                  anchor={anchor}
+                  onUnit={setUnit}
+                  onAnchor={setAnchor}
+                  disabled={loading}
+                />
+
                 {computedAt && (
                   <span className="font-mono text-[10.5px] text-[hsl(var(--ink-3))]">
                     Calculé à{" "}
@@ -135,7 +186,7 @@ export default function ReportsPage() {
             {error ?? "Aucune donnée."}
           </div>
         ) : (
-          <Content data={data} computedAt={computedAt} />
+          <Content data={data} computedAt={computedAt} range={data.range} />
         )}
       </main>
     </>
@@ -159,31 +210,43 @@ const PRIO_COLOR: Record<string, string> = {
 function Content({
   data,
   computedAt,
+  range,
 }: {
   data: ReportsOverview;
   computedAt: Date | null;
+  range: ReportsRange;
 }) {
   const { totals, byStatus, byPriority, byProject, topAssignees, completionByDay } =
     data;
 
-  const completionSeries = completionByDay.map((d) => d.completed);
-  const completionLabels = completionByDay.map((d) => {
-    const dt = new Date(d.date + "T00:00:00");
-    return `${dt.getDate()}/${dt.getMonth() + 1}`;
-  });
+  const completionSeries = useMemo(
+    () => completionByDay.map((d) => d.completed),
+    [completionByDay],
+  );
+  const completionLabels = useMemo(
+    () => completionByDay.map((d) => d.label),
+    [completionByDay],
+  );
 
-  const donutSegments = byStatus.map((s) => ({
-    label: s.label,
-    value: s.count,
-    color: STATUS_COLOR[s.key] ?? "hsl(230 14% 60%)",
-  }));
+  const donutSegments = useMemo(
+    () =>
+      byStatus.map((s) => ({
+        label: s.label,
+        value: s.count,
+        color: STATUS_COLOR[s.key] ?? "hsl(230 14% 60%)",
+      })),
+    [byStatus],
+  );
 
   // Mini-séries pour les sparklines KPI
-  const sparkActive = completionSeries.slice(-7);
   const sparkDone = useMemo(() => {
     let acc = 0;
     return completionByDay.map((d) => (acc += d.completed)).slice(-8);
   }, [completionByDay]);
+  const sparkActive = useMemo(
+    () => completionSeries.slice(-8),
+    [completionSeries],
+  );
   const sparkTotal = useMemo(() => {
     // Total cumulé approximatif sur la fenêtre
     const out: number[] = [];
@@ -194,16 +257,22 @@ function Content({
     }
     return out;
   }, [totals.tasks, sparkDone]);
-  const sparkMembers = [
-    Math.max(totals.members - 2, 1),
-    Math.max(totals.members - 1, 1),
-    totals.members,
-    totals.members,
-    totals.members,
-  ];
+  const sparkMembers = useMemo(
+    () => [
+      Math.max(totals.members - 2, 1),
+      Math.max(totals.members - 1, 1),
+      totals.members,
+      totals.members,
+      totals.members,
+    ],
+    [totals.members],
+  );
 
-  const last7 = completionByDay.slice(-7);
-  const last7Total = last7.reduce((a, b) => a + b.completed, 0);
+  const windowTotal = useMemo(
+    () => completionByDay.reduce((a, b) => a + b.completed, 0),
+    [completionByDay],
+  );
+  const periodLabel = range.label;
 
   return (
     <>
@@ -226,19 +295,19 @@ function Content({
           spark={sparkTotal}
         />
         <Kpi
-          label="Terminées (7j)"
-          value={last7Total}
+          label="Terminées"
+          value={windowTotal}
           Icon={Trophy}
           tone="sage"
-          hint={last7Total > 0 ? "élan en cours" : "à relancer"}
+          hint={windowTotal > 0 ? "sur la période" : "à relancer"}
           spark={sparkActive.length > 1 ? sparkActive : sparkDone}
         />
         <Kpi
-          label="Membres"
+          label="Contributeurs"
           value={totals.members}
           Icon={Users}
           tone="rose"
-          hint="approuvés"
+          hint="actifs"
           spark={sparkMembers}
         />
       </section>
@@ -248,8 +317,8 @@ function Content({
         <Panel
           eyebrow="Activité"
           title="Rythme de livraison"
-          flourish="14 derniers jours"
-          hint="Tâches passées en « Terminé » par jour. Le rythme se lit dans la pente."
+          flourish={`${periodLabel} · ${GRANULARITY_LABEL[range.unit]}`}
+          hint="Tâches passées en « Terminé » sur la période. Le rythme se lit dans la pente."
         >
           <div className="mt-2">
             <AreaChart
@@ -265,12 +334,12 @@ function Content({
               Terminé
             </span>
             <span className="font-mono text-[10.5px] text-[hsl(var(--ink-4))]">
-              fenêtre J-13 → J
+              {periodLabel}
             </span>
             <span className="ml-auto">
-              {last7Total === 0
-                ? "Pas de livraison cette semaine."
-                : `${last7Total} livraison${last7Total > 1 ? "s" : ""} sur 7 jours.`}
+              {windowTotal === 0
+                ? "Pas de livraison sur la période."
+                : `${windowTotal} livraison${windowTotal > 1 ? "s" : ""} sur la période.`}
             </span>
           </footer>
         </Panel>
@@ -279,7 +348,7 @@ function Content({
           eyebrow="Anatomie"
           title="Composition du backlog"
           flourish="par statut"
-          hint="Le centre indique le taux global d'achèvement."
+          hint="Le centre indique le taux d'achèvement sur la période."
         >
           <div className="mt-2 grid items-center gap-5 sm:grid-cols-[auto_1fr]">
             <div className="mx-auto">
@@ -383,7 +452,7 @@ function Content({
         >
           {byProject.length === 0 ? (
             <p className="py-6 text-center text-[13px] text-[hsl(var(--ink-3))]">
-              Aucune tâche pour le moment.
+              Aucune activité sur cette période.
             </p>
           ) : (
             <ul className="grid gap-3 sm:grid-cols-2">
@@ -549,6 +618,108 @@ function Content({
 
 /* ---------- Atoms ---------- */
 
+function RangeControl({
+  unit,
+  anchor,
+  onUnit,
+  onAnchor,
+  disabled,
+}: {
+  unit: RangeUnit;
+  anchor: string;
+  onUnit: (unit: RangeUnit) => void;
+  onAnchor: (anchor: string) => void;
+  disabled?: boolean;
+}) {
+  const today = toISODate(new Date());
+  return (
+    <div className="inline-flex items-center gap-2">
+      {/* Unité */}
+      <div className="inline-flex h-9 items-center rounded-[var(--radius-sm)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-elevated))] p-0.5">
+        {UNIT_ORDER.map((u) => {
+          const active = u === unit;
+          return (
+            <button
+              key={u}
+              type="button"
+              onClick={() => onUnit(u)}
+              disabled={disabled}
+              aria-pressed={active}
+              className={cn(
+                "h-8 rounded-[7px] px-2.5 text-[12px] font-semibold tracking-tight transition-colors disabled:opacity-60",
+                active
+                  ? "bg-[hsl(var(--brand-soft))] text-[hsl(var(--brand-ink))]"
+                  : "text-[hsl(var(--ink-3))] hover:text-ink",
+              )}
+            >
+              {UNIT_META[u].label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Date d'ancrage — DatePicker antd, mode suivant l'unité */}
+      <ConfigProvider
+        locale={frFR}
+        theme={{
+          token: {
+            colorPrimary: "#6366F1",
+            borderRadius: 8,
+            controlHeight: 36,
+            fontFamily: "inherit",
+          },
+        }}
+      >
+        <DatePicker
+          picker={PICKER_BY_UNIT[unit]}
+          value={dayjs(anchor)}
+          onChange={(d) => d && onAnchor(d.format("YYYY-MM-DD"))}
+          allowClear={false}
+          disabled={disabled}
+          disabledDate={(d) => d.isAfter(dayjs(), "day")}
+        />
+      </ConfigProvider>
+
+      {anchor !== today && (
+        <button
+          type="button"
+          onClick={() => onAnchor(today)}
+          disabled={disabled}
+          className="inline-flex h-9 items-center rounded-[var(--radius-sm)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-elevated))] px-3 text-[12px] font-semibold tracking-tight text-[hsl(var(--brand-ink))] hover:bg-[hsl(var(--bg-muted))] disabled:opacity-60"
+        >
+          Actuel
+        </button>
+      )}
+    </div>
+  );
+}
+
+const KPI_TONES: Record<
+  "brand" | "sage" | "apricot" | "rose",
+  { bg: string; fg: string; spark: string }
+> = {
+  brand: {
+    bg: "bg-[hsl(var(--brand-soft))]",
+    fg: "text-[hsl(var(--brand-ink))]",
+    spark: "hsl(239 84% 67%)",
+  },
+  sage: {
+    bg: "bg-[hsl(152_50%_92%)]",
+    fg: "text-[hsl(var(--accent-sage))]",
+    spark: "hsl(152 35% 42%)",
+  },
+  apricot: {
+    bg: "bg-[hsl(23_92%_94%)]",
+    fg: "text-[hsl(22_78%_42%)]",
+    spark: "hsl(23 92% 55%)",
+  },
+  rose: {
+    bg: "bg-[hsl(348_78%_96%)]",
+    fg: "text-[hsl(var(--accent-rose))]",
+    spark: "hsl(348 78% 58%)",
+  },
+};
+
 function Kpi({
   label,
   value,
@@ -564,29 +735,7 @@ function Kpi({
   hint?: string;
   spark?: number[];
 }) {
-  const tones: Record<string, { bg: string; fg: string; spark: string }> = {
-    brand: {
-      bg: "bg-[hsl(var(--brand-soft))]",
-      fg: "text-[hsl(var(--brand-ink))]",
-      spark: "hsl(239 84% 67%)",
-    },
-    sage: {
-      bg: "bg-[hsl(152_50%_92%)]",
-      fg: "text-[hsl(var(--accent-sage))]",
-      spark: "hsl(152 35% 42%)",
-    },
-    apricot: {
-      bg: "bg-[hsl(23_92%_94%)]",
-      fg: "text-[hsl(22_78%_42%)]",
-      spark: "hsl(23 92% 55%)",
-    },
-    rose: {
-      bg: "bg-[hsl(348_78%_96%)]",
-      fg: "text-[hsl(var(--accent-rose))]",
-      spark: "hsl(348 78% 58%)",
-    },
-  };
-  const t = tones[tone];
+  const t = KPI_TONES[tone];
   return (
     <div className="group relative overflow-hidden rounded-[var(--radius-lg)] border border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))] p-5 shadow-[var(--shadow-1)] transition-shadow hover:shadow-[var(--shadow-2)]">
       <div className="flex items-start justify-between">
