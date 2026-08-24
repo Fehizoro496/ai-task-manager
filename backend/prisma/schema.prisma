@@ -75,7 +75,11 @@ model Message {
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   senderId       String
   sender         User         @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
-  content        String
+  content        String       @default("")
+  // Pièces jointes : tableau JSON de { url, name, mime, size }.
+  attachments    Json?
+  // Suppression douce (tombstone) : conserve la ligne, masque le contenu.
+  deletedAt      DateTime?
   createdAt      DateTime     @default(now())
 }
 

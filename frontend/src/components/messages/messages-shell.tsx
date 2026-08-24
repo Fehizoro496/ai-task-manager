@@ -1,6 +1,20 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Search, Plus, Send, Loader2, Users as UsersIcon, RefreshCwIcon, RefreshCcw } from "lucide-react";
+import * as Dialog from "@radix-ui/react-dialog";
+import {
+  Search,
+  Send,
+  Loader2,
+  Users as UsersIcon,
+  RefreshCcw,
+  Paperclip,
+  Image as ImageIcon,
+  Trash2,
+  X,
+  FileText,
+  Download,
+  AlertTriangle,
+} from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,11 +24,36 @@ import {
   toast,
   useAuth,
   useUnreadMessagesStore,
+  API_BASE_URL,
 } from "@/services";
-import type { Conversation, Message } from "@/services";
+import type { Attachment, Conversation, Message } from "@/services";
 import { MessageContent } from "./task-mention";
 import { TaskMentionTextarea } from "./task-mention-textarea";
 import { cn } from "@/lib/utils";
+
+/** URL absolue d'une pièce jointe servie par le backend (/uploads/...). */
+function mediaUrl(url: string): string {
+  return url.startsWith("http") ? url : `${API_BASE_URL}${url}`;
+}
+
+function isImageMime(mime: string): boolean {
+  return mime.startsWith("image/");
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} o`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} Ko`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
+}
+
+const MAX_ATTACHMENTS = 5;
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
+/** Fichier sélectionné avant envoi, avec URL d'aperçu pour les images. */
+interface PendingFile {
+  file: File;
+  previewUrl: string | null;
+}
 
 function fmtTime(iso: string) {
   return new Date(iso).toLocaleTimeString("fr-FR", {
@@ -49,6 +88,16 @@ function normalize(value: string) {
     .toLowerCase();
 }
 
+/** Aperçu texte d'un message pour la liste des conversations. */
+function previewOf(msg: Pick<Message, "content" | "attachments" | "deletedAt">): string {
+  if (msg.deletedAt) return "Message supprimé";
+  if (msg.content?.trim()) return msg.content;
+  const n = msg.attachments?.length ?? 0;
+  if (n > 1) return `${n} pièces jointes`;
+  if (n === 1) return msg.attachments![0].name;
+  return "";
+}
+
 function sortConversations(list: Conversation[]): Conversation[] {
   return [...list].sort((a, b) => {
     const ta = a.lastMessage ? new Date(a.lastMessage.createdAt).getTime() : 0;
@@ -75,9 +124,15 @@ export function MessagesShell() {
   const [loadingConvs, setLoadingConvs] = useState(true);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
   const [sending, setSending] = useState(false);
+  const [pending, setPending] = useState<PendingFile[]>([]);
+  const [pendingDelete, setPendingDelete] = useState<Message | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const activeIdRef = useRef<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const clearUnreadForConv = useUnreadMessagesStore((s) => s.clearForConv);
+  const isAdmin = user?.role === "ADMIN";
 
   useEffect(() => {
     activeIdRef.current = activeId;
@@ -107,7 +162,7 @@ export function MessagesShell() {
           ...curr[idx],
           unreadCount: (curr[idx].unreadCount ?? 0) + incrUnread,
           lastMessage: {
-            content: msg.content,
+            content: previewOf(msg),
             senderId: msg.senderId,
             senderName: msg.senderName,
             createdAt: msg.createdAt,
@@ -144,6 +199,28 @@ export function MessagesShell() {
     const off = socketService.on("new_message", onMessage);
     return off;
   }, [bumpConversation, user?.id]);
+
+  // Suppression temps réel : on remplace le message par son tombstone en place.
+  useEffect(() => {
+    const onDeleted = (...args: unknown[]) => {
+      const msg = args[0] as Message | undefined;
+      if (!msg?.id) return;
+      setMessages((curr) =>
+        curr.map((m) => (m.id === msg.id ? { ...m, ...msg } : m)),
+      );
+      setConversations((curr) =>
+        curr.map((c) =>
+          c.lastMessage &&
+          c.id === msg.conversationId &&
+          c.lastMessage.createdAt === msg.createdAt
+            ? { ...c, lastMessage: { ...c.lastMessage, content: "Message supprimé" } }
+            : c,
+        ),
+      );
+    };
+    const off = socketService.on("message:deleted", onDeleted);
+    return off;
+  }, []);
 
   // Load messages + mark as read quand la conv active change.
   useEffect(() => {
@@ -186,20 +263,61 @@ export function MessagesShell() {
     });
   }, [conversations, query, user?.id]);
 
+  function addFiles(list: FileList | null) {
+    if (!list || list.length === 0) return;
+    // Snapshot immédiat : l'input est remis à zéro juste après (onChange), ce
+    // qui vide la FileList live. On fige donc les File maintenant.
+    const incoming = Array.from(list);
+    setPending((curr) => {
+      const room = MAX_ATTACHMENTS - curr.length;
+      if (room <= 0) {
+        toast.error(`Maximum ${MAX_ATTACHMENTS} fichiers par message.`);
+        return curr;
+      }
+      const picked: PendingFile[] = [];
+      for (const file of incoming.slice(0, room)) {
+        if (file.size > MAX_FILE_SIZE) {
+          toast.error(`« ${file.name} » dépasse 10 Mo.`);
+          continue;
+        }
+        picked.push({
+          file,
+          previewUrl: file.type.startsWith("image/")
+            ? URL.createObjectURL(file)
+            : null,
+        });
+      }
+      return [...curr, ...picked];
+    });
+  }
+
+  function removePending(index: number) {
+    setPending((curr) => {
+      const target = curr[index];
+      if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl);
+      return curr.filter((_, i) => i !== index);
+    });
+  }
+
   async function send() {
-    if (!draft.trim() || !activeId) return;
     const content = draft.trim();
+    const files = pending.map((p) => p.file);
+    if ((!content && files.length === 0) || !activeId) return;
+    const snapshot = pending;
     setSending(true);
     setDraft("");
+    setPending([]);
     try {
-      const { message } = await chatApi.sendMessage(activeId, content);
+      const { message } = await chatApi.sendMessage(activeId, content, files);
       // Dedupe — socket may also broadcast this same message
       setMessages((curr) =>
         curr.some((m) => m.id === message.id) ? curr : [...curr, message],
       );
       bumpConversation(message);
+      snapshot.forEach((p) => p.previewUrl && URL.revokeObjectURL(p.previewUrl));
     } catch (err) {
       setDraft(content);
+      setPending(snapshot);
       console.error("send message failed", err);
       toast.error(
         err instanceof Error ? err.message : "Envoi impossible.",
@@ -207,6 +325,31 @@ export function MessagesShell() {
       );
     } finally {
       setSending(false);
+    }
+  }
+
+  async function confirmDelete() {
+    const m = pendingDelete;
+    if (!m) return;
+    const snapshot = messages;
+    setDeleting(true);
+    setMessages((curr) =>
+      curr.map((x) =>
+        x.id === m.id
+          ? { ...x, deletedAt: new Date().toISOString(), content: "", attachments: [] }
+          : x,
+      ),
+    );
+    try {
+      await chatApi.deleteMessage(m.id);
+      setPendingDelete(null);
+    } catch (err) {
+      setMessages(snapshot);
+      toast.error(
+        err instanceof Error ? err.message : "Suppression impossible.",
+      );
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -380,12 +523,36 @@ export function MessagesShell() {
                               </span>
                             </div>
                           )}
-                          <MessageContent
-                            content={m.content}
-                            mentionedTasks={m.mentionedTasks}
-                            className="mt-0.5 max-w-[68ch] text-[13.5px] leading-relaxed text-[hsl(var(--ink-2))]"
-                          />
+                          {m.deletedAt ? (
+                            <p className="mt-0.5 text-[13px] italic text-[hsl(var(--ink-4))]">
+                              Message supprimé
+                            </p>
+                          ) : (
+                            <>
+                              {m.content?.trim() && (
+                                <MessageContent
+                                  content={m.content}
+                                  mentionedTasks={m.mentionedTasks}
+                                  className="mt-0.5 max-w-[68ch] text-[13.5px] leading-relaxed text-[hsl(var(--ink-2))]"
+                                />
+                              )}
+                              {(m.attachments?.length ?? 0) > 0 && (
+                                <MessageAttachments attachments={m.attachments!} />
+                              )}
+                            </>
+                          )}
                         </div>
+                        {!m.deletedAt && (isMine || isAdmin) && (
+                          <button
+                            type="button"
+                            onClick={() => setPendingDelete(m)}
+                            title="Supprimer le message"
+                            aria-label="Supprimer le message"
+                            className="absolute right-2 top-1.5 hidden h-6 w-6 place-items-center rounded-[6px] text-[hsl(var(--ink-4))] hover:bg-[hsl(var(--alert-danger-bg))] hover:text-[hsl(var(--accent-rose))] group-hover:grid"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                       </li>
                     );
                   })}
@@ -395,6 +562,45 @@ export function MessagesShell() {
 
             <div className="border-t border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))] p-3">
               <div className="rounded-[var(--radius-md)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg))] focus-within:border-[hsl(var(--brand)/0.5)] focus-within:ring-2 focus-within:ring-[hsl(var(--brand)/0.3)]">
+                {pending.length > 0 && (
+                  <div className="flex flex-wrap gap-2 border-b border-[hsl(var(--line))] p-2">
+                    {pending.map((p, i) => (
+                      <div
+                        key={i}
+                        className="relative flex items-center gap-2 rounded-[var(--radius-sm)] border border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))] p-1.5 pr-6"
+                      >
+                        {p.previewUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={p.previewUrl}
+                            alt={p.file.name}
+                            className="h-10 w-10 rounded-[4px] object-cover"
+                          />
+                        ) : (
+                          <span className="grid h-10 w-10 place-items-center rounded-[4px] bg-[hsl(var(--bg-sunken))] text-[hsl(var(--ink-3))]">
+                            <FileText className="h-4 w-4" />
+                          </span>
+                        )}
+                        <div className="min-w-0 max-w-[140px]">
+                          <div className="truncate text-[11.5px] font-medium">
+                            {p.file.name}
+                          </div>
+                          <div className="text-[10px] text-[hsl(var(--ink-3))]">
+                            {formatBytes(p.file.size)}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removePending(i)}
+                          aria-label="Retirer la pièce jointe"
+                          className="absolute right-1 top-1 grid h-4 w-4 place-items-center rounded-full bg-[hsl(var(--bg-sunken))] text-[hsl(var(--ink-3))] hover:text-[hsl(var(--accent-rose))]"
+                        >
+                          <X className="h-2.5 w-2.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <TaskMentionTextarea
                   value={draft}
                   onChange={setDraft}
@@ -405,16 +611,56 @@ export function MessagesShell() {
                   className="max-h-40 w-full resize-none bg-transparent px-3 py-2.5 text-[13.5px] placeholder:text-[hsl(var(--ink-4))] focus:outline-none disabled:opacity-50"
                 />
                 <div className="flex items-center justify-between px-2 pb-2">
-                  <span className="text-[10.5px] text-[hsl(var(--ink-3))]">
-                    <kbd className="font-mono">↵</kbd> envoyer ·{" "}
-                    <kbd className="font-mono">⇧↵</kbd> ligne ·{" "}
-                    <kbd className="font-mono">#</kbd> lier une tâche
-                  </span>
+                  <div className="flex items-center gap-1">
+                    <input
+                      ref={imageInputRef}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      hidden
+                      onChange={(e) => {
+                        addFiles(e.target.files);
+                        e.target.value = "";
+                      }}
+                    />
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      hidden
+                      onChange={(e) => {
+                        addFiles(e.target.files);
+                        e.target.value = "";
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => imageInputRef.current?.click()}
+                      disabled={sending}
+                      title="Joindre une photo"
+                      className="grid h-7 w-7 place-items-center rounded-[6px] text-[hsl(var(--ink-3))] hover:bg-[hsl(var(--bg-muted))] hover:text-ink disabled:opacity-50"
+                    >
+                      <ImageIcon className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={sending}
+                      title="Joindre un fichier"
+                      className="grid h-7 w-7 place-items-center rounded-[6px] text-[hsl(var(--ink-3))] hover:bg-[hsl(var(--bg-muted))] hover:text-ink disabled:opacity-50"
+                    >
+                      <Paperclip className="h-4 w-4" />
+                    </button>
+                    <span className="ml-1 hidden text-[10.5px] text-[hsl(var(--ink-3))] sm:inline">
+                      <kbd className="font-mono">↵</kbd> envoyer ·{" "}
+                      <kbd className="font-mono">#</kbd> lier une tâche
+                    </span>
+                  </div>
                   <Button
                     variant="brand"
                     size="sm"
                     onClick={send}
-                    disabled={!draft.trim() || sending}
+                    disabled={(!draft.trim() && pending.length === 0) || sending}
                   >
                     {sending ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -443,6 +689,106 @@ export function MessagesShell() {
           </div>
         )}
       </section>
+
+      <Dialog.Root
+        open={pendingDelete !== null}
+        onOpenChange={(v) => {
+          if (!v && !deleting) setPendingDelete(null);
+        }}
+      >
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-50 bg-[hsl(230_30%_8%/0.45)] backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in-0" />
+          <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[420px] max-w-[94vw] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[var(--radius-xl)] border border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))] shadow-[var(--shadow-3)] data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95">
+            <div className="flex items-start gap-3 px-5 pt-5">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[hsl(var(--alert-danger-bg))] text-[hsl(var(--accent-rose))]">
+                <AlertTriangle className="h-4 w-4" />
+              </span>
+              <div className="min-w-0">
+                <Dialog.Title className="font-display text-[16px] font-semibold tracking-tight">
+                  Supprimer ce message ?
+                </Dialog.Title>
+                <Dialog.Description className="mt-1 text-[12.5px] leading-relaxed text-[hsl(var(--ink-3))]">
+                  Le message et ses pièces jointes seront retirés pour tous les
+                  participants. Cette action est irréversible.
+                </Dialog.Description>
+              </div>
+            </div>
+            <div className="mt-5 flex justify-end gap-2 border-t border-[hsl(var(--line))] bg-[hsl(var(--bg-sunken)/0.4)] px-5 py-3">
+              <Dialog.Close asChild>
+                <Button variant="ghost" size="sm" disabled={deleting}>
+                  Annuler
+                </Button>
+              </Dialog.Close>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                disabled={deleting}
+                className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[hsl(var(--accent-rose))] px-3 py-1.5 text-[12.5px] font-semibold text-white hover:bg-[hsl(348_70%_50%)] disabled:opacity-60"
+              >
+                {deleting ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="h-3.5 w-3.5" />
+                )}
+                Supprimer
+              </button>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+    </div>
+  );
+}
+
+/** Rendu des pièces jointes d'un message : images en vignettes, autres en liens. */
+function MessageAttachments({ attachments }: { attachments: Attachment[] }) {
+  const images = attachments.filter((a) => isImageMime(a.mime));
+  const files = attachments.filter((a) => !isImageMime(a.mime));
+  return (
+    <div className="mt-1.5 flex flex-col gap-1.5">
+      {images.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {images.map((a) => (
+            <a
+              key={a.url}
+              href={mediaUrl(a.url)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block overflow-hidden rounded-[var(--radius-sm)] border border-[hsl(var(--line))]"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={mediaUrl(a.url)}
+                alt={a.name}
+                className="max-h-52 max-w-[280px] object-cover"
+              />
+            </a>
+          ))}
+        </div>
+      )}
+      {files.map((a) => (
+        <a
+          key={a.url}
+          href={mediaUrl(a.url)}
+          target="_blank"
+          rel="noopener noreferrer"
+          download={a.name}
+          className="group/file inline-flex max-w-[280px] items-center gap-2 rounded-[var(--radius-sm)] border border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))] p-2 hover:border-[hsl(var(--brand)/0.4)]"
+        >
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[5px] bg-[hsl(var(--bg-sunken))] text-[hsl(var(--ink-3))]">
+            <FileText className="h-4 w-4" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[12.5px] font-medium">
+              {a.name}
+            </span>
+            <span className="block text-[10.5px] text-[hsl(var(--ink-3))]">
+              {formatBytes(a.size)}
+            </span>
+          </span>
+          <Download className="h-3.5 w-3.5 shrink-0 text-[hsl(var(--ink-4))] group-hover/file:text-[hsl(var(--brand-ink))]" />
+        </a>
+      ))}
     </div>
   );
 }

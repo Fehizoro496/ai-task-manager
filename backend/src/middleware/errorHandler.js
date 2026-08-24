@@ -27,6 +27,16 @@ const errorHandler = (err, req, res, next) => {
     });
   }
 
+  // Erreurs d'upload multer (taille/nombre de fichiers dépassés, etc.).
+  if (err.name === "MulterError") {
+    const messages = {
+      LIMIT_FILE_SIZE: "Fichier trop volumineux (max 10 Mo).",
+      LIMIT_FILE_COUNT: "Trop de fichiers (max 5).",
+      LIMIT_UNEXPECTED_FILE: "Champ de fichier inattendu.",
+    };
+    return res.status(400).json({ error: messages[err.code] || "Upload invalide." });
+  }
+
   res.status(statusCode).json({ error: message });
 };
 

@@ -1,8 +1,10 @@
+const path = require("path");
 const express = require("express");
 const cors = require("cors");
 const swaggerUi = require("swagger-ui-express");
 const swaggerSpec = require("./config/swagger");
 const errorHandler = require("./middleware/errorHandler");
+const { UPLOADS_ROOT } = require("./middleware/upload");
 
 const authRoutes = require("./modules/auth/auth.routes");
 const projectsRoutes = require("./modules/projects/projects.routes");
@@ -26,6 +28,15 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+// Fichiers uploadés (pièces jointes de messagerie). `nosniff` empêche le
+// navigateur d'interpréter un fichier avec un type deviné.
+app.use(
+  "/uploads",
+  express.static(UPLOADS_ROOT, {
+    setHeaders: (res) => res.setHeader("X-Content-Type-Options", "nosniff"),
+  }),
+);
 
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 

@@ -70,8 +70,13 @@ export async function request<T = unknown>(
 ): Promise<T> {
   const { method = "GET", body, query, auth = true, headers, ...rest } = options;
 
+  // Le multipart (FormData) est envoyé tel quel : le navigateur pose lui-même
+  // le Content-Type avec la boundary. Le reste part en JSON.
+  const isFormData =
+    typeof FormData !== "undefined" && body instanceof FormData;
+
   const finalHeaders = new Headers(headers);
-  if (body !== undefined && !finalHeaders.has("Content-Type")) {
+  if (body !== undefined && !isFormData && !finalHeaders.has("Content-Type")) {
     finalHeaders.set("Content-Type", "application/json");
   }
   if (auth) {
@@ -83,7 +88,12 @@ export async function request<T = unknown>(
     ...rest,
     method,
     headers: finalHeaders,
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body:
+      body === undefined
+        ? undefined
+        : isFormData
+          ? (body as FormData)
+          : JSON.stringify(body),
   });
 
   const payload = await parseResponse(response);

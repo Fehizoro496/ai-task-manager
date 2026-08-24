@@ -71,6 +71,7 @@ export const endpoints = {
       `/api/chat/conversations/${conversationId}/messages`,
     read: (conversationId: string) =>
       `/api/chat/conversations/${conversationId}/read`,
+    message: (messageId: string) => `/api/chat/messages/${messageId}`,
   },
 
   calendar: {

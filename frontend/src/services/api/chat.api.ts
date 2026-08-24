@@ -19,10 +19,25 @@ export const chatApi = {
       endpoints.chat.messages(conversationId),
     ),
 
-  sendMessage: (conversationId: string, content: string) =>
-    apiClient.post<{ message: Message }>(endpoints.chat.messages(conversationId), {
-      content,
-    }),
+  sendMessage: (conversationId: string, content: string, files?: File[]) => {
+    // Avec pièces jointes → multipart ; sinon JSON classique.
+    if (files && files.length > 0) {
+      const form = new FormData();
+      form.append("content", content);
+      for (const file of files) form.append("files", file);
+      return apiClient.post<{ message: Message }>(
+        endpoints.chat.messages(conversationId),
+        form,
+      );
+    }
+    return apiClient.post<{ message: Message }>(
+      endpoints.chat.messages(conversationId),
+      { content },
+    );
+  },
+
+  deleteMessage: (messageId: string) =>
+    apiClient.delete<{ message: Message }>(endpoints.chat.message(messageId)),
 
   markRead: (conversationId: string) =>
     apiClient.post<{ conversationId: string }>(endpoints.chat.read(conversationId)),

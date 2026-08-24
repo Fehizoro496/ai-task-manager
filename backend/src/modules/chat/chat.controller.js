@@ -40,9 +40,23 @@ const sendMessage = async (req, res, next) => {
       req.params.id,
       req.user.id,
       content,
+      req.files ?? [],
       req.user.role === 'ADMIN',
     );
     res.status(201).json({ message });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const deleteMessage = async (req, res, next) => {
+  try {
+    const message = await chatService.deleteMessage(
+      req.params.messageId,
+      req.user.id,
+      req.user.role === 'ADMIN',
+    );
+    res.json({ message });
   } catch (err) {
     next(err);
   }
@@ -60,4 +74,11 @@ const markRead = async (req, res, next) => {
   }
 };
 
-module.exports = { getConversations, createDM, getMessages, sendMessage, markRead };
+module.exports = {
+  getConversations,
+  createDM,
+  getMessages,
+  sendMessage,
+  deleteMessage,
+  markRead,
+};

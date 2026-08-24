@@ -173,6 +173,14 @@ export interface MentionedTask {
   } | null;
 }
 
+/** Pièce jointe d'un message. `url` est relative à l'hôte backend (/uploads/...). */
+export interface Attachment {
+  url: string;
+  name: string;
+  mime: string;
+  size: number;
+}
+
 export interface Message {
   id: UUID;
   conversationId: UUID;
@@ -180,6 +188,9 @@ export interface Message {
   senderId: UUID;
   senderName: string;
   sender_avatar_url: string | null;
+  attachments?: Attachment[];
+  /** Renseigné si le message a été supprimé (tombstone). */
+  deletedAt?: string | null;
   /** Tâches mentionnées résolues pour le lecteur : celles hors de sa portée en sont absentes. */
   mentionedTasks?: MentionedTask[];
   createdAt: string;

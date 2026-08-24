@@ -1,6 +1,10 @@
+const fs = require('fs');
+const path = require('path');
+const { Prisma } = require('@prisma/client');
 const prisma = require('../../prisma/client');
 const AppError = require('../../utils/AppError');
 const { getIo } = require('../../socket');
+const { CHAT_DIR } = require('../../middleware/upload');
 const {
   extractIdentifiers,
   resolveMentionsForMessages,
@@ -9,16 +13,34 @@ const {
 
 const memberSelect = { id: true, name: true, avatarUrl: true };
 
-const serializeMessage = (msg, mentionedTasks = []) => ({
-  id: msg.id,
-  conversationId: msg.conversationId,
-  content: msg.content,
-  senderId: msg.senderId,
-  senderName: msg.sender.name,
-  sender_avatar_url: msg.sender.avatarUrl ?? null,
-  mentionedTasks,
-  createdAt: msg.createdAt.toISOString(),
-});
+const attachmentsOf = (msg) =>
+  Array.isArray(msg.attachments) ? msg.attachments : [];
+
+const serializeMessage = (msg, mentionedTasks = []) => {
+  const deleted = Boolean(msg.deletedAt);
+  return {
+    id: msg.id,
+    conversationId: msg.conversationId,
+    content: deleted ? '' : msg.content,
+    attachments: deleted ? [] : attachmentsOf(msg),
+    deletedAt: deleted ? msg.deletedAt.toISOString() : null,
+    senderId: msg.senderId,
+    senderName: msg.sender.name,
+    sender_avatar_url: msg.sender.avatarUrl ?? null,
+    mentionedTasks: deleted ? [] : mentionedTasks,
+    createdAt: msg.createdAt.toISOString(),
+  };
+};
+
+// Texte d'aperçu affiché dans la liste des conversations.
+const messagePreview = (msg) => {
+  if (msg.deletedAt) return 'Message supprimé';
+  if (msg.content && msg.content.trim()) return msg.content;
+  const atts = attachmentsOf(msg);
+  if (atts.length > 1) return `${atts.length} pièces jointes`;
+  if (atts.length === 1) return atts[0]?.name || 'Pièce jointe';
+  return '';
+};
 
 const serializeConversation = (conv, lastMessage, unreadCount = 0) => ({
   id: conv.id,
@@ -32,7 +54,7 @@ const serializeConversation = (conv, lastMessage, unreadCount = 0) => ({
   unreadCount,
   lastMessage: lastMessage
     ? {
-        content: lastMessage.content,
+        content: messagePreview(lastMessage),
         senderId: lastMessage.senderId,
         senderName: lastMessage.sender.name,
         createdAt: lastMessage.createdAt.toISOString(),
@@ -190,14 +212,31 @@ const createDmsForNewUser = async (userId) => {
   return created;
 };
 
-const sendMessage = async (convId, senderId, content, isAdmin = false) => {
+const sendMessage = async (convId, senderId, content, files = [], isAdmin = false) => {
   const member = await prisma.conversationMember.findUnique({
     where: { conversationId_userId: { conversationId: convId, userId: senderId } },
   });
   if (!member) throw new AppError('Forbidden', 403);
 
+  const trimmed = (content ?? '').trim();
+  const attachments = (files ?? []).map((f) => ({
+    url: `/uploads/chat/${path.basename(f.path)}`,
+    name: f.originalname,
+    mime: f.mimetype,
+    size: f.size,
+  }));
+
+  if (!trimmed && attachments.length === 0) {
+    throw new AppError('Message vide', 400);
+  }
+
   const message = await prisma.message.create({
-    data: { conversationId: convId, senderId, content },
+    data: {
+      conversationId: convId,
+      senderId,
+      content: trimmed,
+      attachments: attachments.length ? attachments : undefined,
+    },
     include: { sender: { select: memberSelect } },
   });
 
@@ -250,6 +289,57 @@ const sendMessage = async (convId, senderId, content, isAdmin = false) => {
   return serialized;
 };
 
+/**
+ * Suppression douce (tombstone) d'un message : l'auteur ou un admin peut
+ * supprimer. Le contenu et les pièces jointes sont effacés (fichiers retirés
+ * du disque), la ligne est conservée avec `deletedAt`.
+ */
+const deleteMessage = async (messageId, userId, isAdmin = false) => {
+  const message = await prisma.message.findUnique({
+    where: { id: messageId },
+    include: { sender: { select: memberSelect } },
+  });
+  if (!message) throw new AppError('Message introuvable', 404);
+
+  const member = await prisma.conversationMember.findUnique({
+    where: {
+      conversationId_userId: { conversationId: message.conversationId, userId },
+    },
+  });
+  if (!member) throw new AppError('Forbidden', 403);
+  if (message.senderId !== userId && !isAdmin) throw new AppError('Forbidden', 403);
+
+  if (message.deletedAt) return serializeMessage(message);
+
+  // Retrait des fichiers du disque (best-effort).
+  for (const a of attachmentsOf(message)) {
+    if (typeof a?.url === 'string' && a.url.startsWith('/uploads/chat/')) {
+      fs.unlink(path.join(CHAT_DIR, path.basename(a.url)), () => {});
+    }
+  }
+
+  const updated = await prisma.message.update({
+    where: { id: messageId },
+    data: { deletedAt: new Date(), content: '', attachments: Prisma.DbNull },
+    include: { sender: { select: memberSelect } },
+  });
+  const serialized = serializeMessage(updated);
+
+  const io = getIo();
+  if (io) {
+    const members = await prisma.conversationMember.findMany({
+      where: { conversationId: message.conversationId },
+      select: { userId: true },
+    });
+    for (const m of members) {
+      io.to(`user:${m.userId}`).emit('message:deleted', serialized);
+    }
+    console.log(`[socket] → message:deleted  msg=${messageId}  by=${userId}`);
+  }
+
+  return serialized;
+};
+
 const markConversationRead = async (convId, userId) => {
   const member = await prisma.conversationMember.findUnique({
     where: { conversationId_userId: { conversationId: convId, userId } },
@@ -277,5 +367,6 @@ module.exports = {
   getOrCreateDM,
   getMessages,
   sendMessage,
+  deleteMessage,
   markConversationRead,
 };
