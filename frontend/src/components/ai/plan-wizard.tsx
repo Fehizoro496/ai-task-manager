@@ -15,9 +15,9 @@ import {
   Plus,
   X,
 } from "lucide-react";
+import { Select as AntSelect } from "antd";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
-import { Combobox } from "@/components/ui/combobox";
 import { WizardStepper } from "@/components/ai/wizard-stepper";
 import {
   aiApi,
@@ -677,15 +677,16 @@ function TaskEditor({
           </span>
         ))}
         {available.length > 0 && (
-          <Combobox
-            value=""
-            onChange={(name) => {
-              if (name) toggleLabel(name);
-            }}
+          <AntSelect
+            showSearch
+            value={null}
+            onSelect={(name) => name && toggleLabel(name)}
             placeholder="+ label…"
-            emptyLabel="Aucun label trouvé"
+            size="small"
+            optionFilterProp="label"
+            notFoundContent="Aucun label trouvé"
             options={available.map((l) => ({ value: l.name, label: l.name }))}
-            className="h-7 w-40 rounded-full text-[11px]"
+            className="w-40"
           />
         )}
       </div>

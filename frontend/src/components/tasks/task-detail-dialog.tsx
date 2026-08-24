@@ -17,6 +17,7 @@ import {
   Plus,
   Wand2,
 } from "lucide-react";
+import { Select as AntSelect } from "antd";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -608,22 +609,22 @@ function TaskDetailBody({
                 );
                 if (available.length === 0) return null;
                 return (
-                  <select
-                    value=""
-                    onChange={(e) => {
-                      if (e.target.value) addLabel(e.target.value);
-                    }}
+                  <AntSelect
+                    showSearch
+                    value={null}
+                    onSelect={(v) => v && addLabel(v)}
                     disabled={saving}
-                    className="h-6 rounded-full border border-dashed border-[hsl(var(--line-strong))] bg-transparent px-2 text-[11px] text-[hsl(var(--ink-3))] outline-none focus:border-[hsl(var(--brand)/0.5)] disabled:opacity-60"
+                    placeholder="+ label…"
+                    size="small"
+                    optionFilterProp="label"
+                    notFoundContent="Aucun label trouvé"
+                    options={available.map((l) => ({
+                      value: l.name,
+                      label: l.name,
+                    }))}
+                    className="w-32"
                     title="Ajouter un label"
-                  >
-                    <option value="">+ label…</option>
-                    {available.map((l) => (
-                      <option key={l.id} value={l.name}>
-                        {l.name}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 );
               })()}
             </div>

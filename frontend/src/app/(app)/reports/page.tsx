@@ -10,10 +10,8 @@ import {
   Trophy,
   Users,
 } from "lucide-react";
-import { ConfigProvider, DatePicker } from "antd";
-import frFR from "antd/locale/fr_FR";
+import { DatePicker } from "antd";
 import dayjs from "dayjs";
-import "dayjs/locale/fr";
 import { Topbar } from "@/components/shell/topbar";
 import { Breadcrumb } from "@/components/shell/breadcrumb";
 import { Avatar } from "@/components/ui/avatar";
@@ -39,9 +37,6 @@ const GRANULARITY_LABEL: Record<RangeUnit, string> = {
   week: "par jour",
   month: "par jour",
 };
-
-// Semaine démarrant le lundi, cohérent avec le calcul serveur.
-dayjs.locale("fr");
 
 // Le mode du DatePicker antd suit l'unité choisie.
 const PICKER_BY_UNIT: Record<RangeUnit, "date" | "week" | "month"> = {
@@ -659,26 +654,14 @@ function RangeControl({
       </div>
 
       {/* Date d'ancrage — DatePicker antd, mode suivant l'unité */}
-      <ConfigProvider
-        locale={frFR}
-        theme={{
-          token: {
-            colorPrimary: "#6366F1",
-            borderRadius: 8,
-            controlHeight: 36,
-            fontFamily: "inherit",
-          },
-        }}
-      >
-        <DatePicker
-          picker={PICKER_BY_UNIT[unit]}
-          value={dayjs(anchor)}
-          onChange={(d) => d && onAnchor(d.format("YYYY-MM-DD"))}
-          allowClear={false}
-          disabled={disabled}
-          disabledDate={(d) => d.isAfter(dayjs(), "day")}
-        />
-      </ConfigProvider>
+      <DatePicker
+        picker={PICKER_BY_UNIT[unit]}
+        value={dayjs(anchor)}
+        onChange={(d) => d && onAnchor(d.format("YYYY-MM-DD"))}
+        allowClear={false}
+        disabled={disabled}
+        disabledDate={(d) => d.isAfter(dayjs(), "day")}
+      />
 
       {anchor !== today && (
         <button

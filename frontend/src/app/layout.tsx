@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Manrope } from "next/font/google";
 import { AntdRegistry } from "@ant-design/nextjs-registry";
 import "./globals.css";
+import { AntdProvider } from "@/components/providers/antd-provider";
 import { AuthProvider } from "@/services/auth";
 import { RouterBridge } from "@/services/router";
 import { Toaster } from "@/components/ui/toaster";
@@ -51,9 +52,11 @@ export default function RootLayout({
       </head>
       <body className="min-h-dvh bg-paper text-ink font-body">
         <AntdRegistry>
-          <RouterBridge />
-          <AuthProvider>{children}</AuthProvider>
-          <Toaster />
+          <AntdProvider>
+            <RouterBridge />
+            <AuthProvider>{children}</AuthProvider>
+            <Toaster />
+          </AntdProvider>
         </AntdRegistry>
       </body>
     </html>

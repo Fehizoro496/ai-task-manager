@@ -1,9 +1,9 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, Plus, Sparkles, Wand2, X } from "lucide-react";
+import { Select } from "antd";
 import { skillsApi, useAuth } from "@/services";
 import type { Skill, UserSkill } from "@/services";
-import { Combobox } from "@/components/ui/combobox";
 import { cn } from "@/lib/utils";
 
 const LEVEL_LABEL = ["", "Novice", "Débutant", "Confirmé", "Avancé", "Expert"];
@@ -160,17 +160,19 @@ export function SkillsPanel({ userId }: { userId: string }) {
                   <span className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[hsl(var(--ink-3))]">
                     Compétence
                   </span>
-                  <Combobox
-                    value={name}
-                    onChange={setName}
+                  <Select
+                    showSearch
+                    value={name || undefined}
+                    onChange={(v) => setName(v ?? "")}
                     disabled={saving}
                     placeholder="Rechercher…"
-                    emptyLabel="Aucune compétence trouvée"
+                    optionFilterProp="label"
+                    notFoundContent="Aucune compétence trouvée"
                     options={available.map((c) => ({
                       value: c.name,
                       label: c.name,
                     }))}
-                    className="h-9 w-48 bg-[hsl(var(--bg))] px-2.5 text-[12.5px]"
+                    className="w-48"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
