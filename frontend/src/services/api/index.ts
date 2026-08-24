@@ -21,6 +21,8 @@ export { chatApi } from "./chat.api";
 export { usersApi } from "./users.api";
 export type { UserDetail, UserRecentTask } from "./users.api";
 export { calendarApi } from "./calendar.api";
+export { holidaysApi } from "./holidays.api";
+export type { Holiday } from "./holidays.api";
 export type {
   CalendarEvent,
   CalendarEventUser,

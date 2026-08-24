@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -12,14 +12,16 @@ import {
   Globe2,
   Lock,
   Trash2,
+  PartyPopper,
   Users as UsersIcon,
 } from "lucide-react";
 import { PriorityPill, StatusPill } from "@/components/ui/pill";
 import { Avatar } from "@/components/ui/avatar";
-import { calendarApi, routerService, toast } from "@/services";
+import { calendarApi, holidaysApi, routerService, toast } from "@/services";
 import type {
   CalendarEvent,
   CustomCalendarEvent,
+  Holiday,
   TaskCalendarEvent,
 } from "@/services";
 import { normalizeApiPriority, normalizeApiStatus } from "@/lib/mappers";
@@ -61,6 +63,8 @@ export function MonthView() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [holidays, setHolidays] = useState<Map<string, Holiday>>(new Map());
+  const fetchedYears = useRef<Set<number>>(new Set());
 
   const refetch = () => {
     const fromDate = new Date(year, month, 1);
@@ -82,6 +86,41 @@ export function MonthView() {
     refetch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year, month]);
+
+  // La grille déborde sur les mois voisins : aux bornes janvier/décembre, on
+  // récupère aussi les fériés de l'année adjacente.
+  const neededYears = useMemo(() => {
+    const set = new Set<number>([year]);
+    if (month === 0) set.add(year - 1);
+    if (month === 11) set.add(year + 1);
+    return [...set];
+  }, [year, month]);
+
+  useEffect(() => {
+    const missing = neededYears.filter((y) => !fetchedYears.current.has(y));
+    if (missing.length === 0) return;
+    // Marque comme « chargée » avant l'appel pour éviter les requêtes en double
+    // (StrictMode, re-renders). Le merge ci-dessous est idempotent : on
+    // n'annule jamais le résultat, sinon la première année chargée serait
+    // perdue au remontage de l'effet en dev.
+    missing.forEach((y) => fetchedYears.current.add(y));
+
+    Promise.all(
+      missing.map((y) =>
+        holidaysApi.list(y).catch(() => {
+          // Échec réseau : on autorise une nouvelle tentative ultérieure.
+          fetchedYears.current.delete(y);
+          return [] as Holiday[];
+        }),
+      ),
+    ).then((lists) => {
+      setHolidays((prev) => {
+        const next = new Map(prev);
+        for (const list of lists) for (const h of list) next.set(h.date, h);
+        return next;
+      });
+    });
+  }, [neededYears]);
 
   const handleEventCreated = (event: CustomCalendarEvent) => {
     setEvents((curr) => [...curr, event]);
@@ -174,6 +213,7 @@ export function MonthView() {
 
   const selectedDate = new Date(selected + "T00:00:00");
   const selectedEvents = eventsByDate.get(selected) ?? [];
+  const selectedHoliday = holidays.get(selected);
   const dayInMonth =
     selectedDate.getMonth() === month && selectedDate.getFullYear() === year;
 
@@ -309,6 +349,8 @@ export function MonthView() {
               const lastRow = row === rowCount - 1;
               const lastCol = i % 7 === 6;
               const weekend = !cell.out && isWeekend(cell.iso);
+              const holiday = !cell.out ? holidays.get(cell.iso) : undefined;
+              const maxEvents = holiday ? 1 : 2;
               return (
                 <button
                   key={i}
@@ -320,9 +362,11 @@ export function MonthView() {
                     lastRow && "border-b-0",
                     cell.out
                       ? "bg-[hsl(var(--bg-sunken)/0.3)] text-[hsl(var(--ink-4))]"
-                      : weekend
-                        ? "bg-[hsl(var(--bg-sunken)/0.35)] hover:bg-[hsl(var(--bg-sunken)/0.6)]"
-                        : "hover:bg-[hsl(var(--bg-sunken)/0.5)]",
+                      : holiday
+                        ? "bg-[hsl(var(--accent-rose)/0.07)] hover:bg-[hsl(var(--accent-rose)/0.12)]"
+                        : weekend
+                          ? "bg-[hsl(var(--bg-sunken)/0.35)] hover:bg-[hsl(var(--bg-sunken)/0.6)]"
+                          : "hover:bg-[hsl(var(--bg-sunken)/0.5)]",
                     isSelected &&
                       "bg-[hsl(var(--brand-soft)/0.55)] hover:bg-[hsl(var(--brand-soft)/0.55)]",
                   )}
@@ -339,14 +383,29 @@ export function MonthView() {
                           ? "bg-[hsl(var(--brand-soft))] text-[hsl(var(--brand-ink))] ring-1 ring-[hsl(var(--brand)/0.4)]"
                           : cell.out
                             ? "text-[hsl(var(--ink-4))]"
-                            : "text-ink",
+                            : holiday
+                              ? "text-[hsl(var(--accent-rose))]"
+                              : "text-ink",
                     )}
                   >
                     {cell.day}
                   </span>
 
                   <div className="mt-1 flex min-h-0 flex-col gap-0.5">
-                    {dayEvents.slice(0, 2).map((e) => {
+                    {holiday && (
+                      <span
+                        className="inline-flex items-center gap-1 truncate rounded-[3px] border px-1 py-px text-[10px] font-medium text-[hsl(var(--accent-rose))]"
+                        style={{
+                          background: "hsl(var(--accent-rose)/0.12)",
+                          borderColor: "hsl(var(--accent-rose)/0.4)",
+                        }}
+                        title={holiday.name}
+                      >
+                        <PartyPopper className="h-2.5 w-2.5 shrink-0" />
+                        <span className="truncate">{holiday.name}</span>
+                      </span>
+                    )}
+                    {dayEvents.slice(0, maxEvents).map((e) => {
                       const accent = e.projectColor ?? "#6366F1";
                       const identifier =
                         e.type === "task_due" ? e.identifier : null;
@@ -370,9 +429,9 @@ export function MonthView() {
                         </span>
                       );
                     })}
-                    {dayEvents.length > 2 && (
+                    {dayEvents.length > maxEvents && (
                       <span className="font-mono text-[9px] text-[hsl(var(--ink-3))]">
-                        +{dayEvents.length - 2}
+                        +{dayEvents.length - maxEvents}
                       </span>
                     )}
                   </div>
@@ -444,7 +503,30 @@ export function MonthView() {
           </header>
 
           <ul className="relative min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
-            {selectedEvents.length === 0 ? (
+            {selectedHoliday && (
+              <li>
+                <div
+                  className="flex items-center gap-2.5 rounded-[var(--radius-md)] border px-3 py-2.5 text-[hsl(var(--accent-rose))]"
+                  style={{
+                    background: "hsl(var(--accent-rose)/0.1)",
+                    borderColor: "hsl(var(--accent-rose)/0.35)",
+                  }}
+                >
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[hsl(var(--accent-rose)/0.15)]">
+                    <PartyPopper className="h-3.5 w-3.5" />
+                  </span>
+                  <div className="min-w-0">
+                    <div className="text-[9.5px] font-semibold uppercase tracking-[0.16em] opacity-80">
+                      Jour férié
+                    </div>
+                    <div className="truncate text-[12.5px] font-semibold text-ink">
+                      {selectedHoliday.name}
+                    </div>
+                  </div>
+                </div>
+              </li>
+            )}
+            {selectedEvents.length === 0 && !selectedHoliday ? (
               <li className="grid place-items-center rounded-[var(--radius-sm)] border border-dashed border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-sunken)/0.4)] px-4 py-6 text-center">
                 <span className="text-[15px] text-[hsl(var(--ink-3))]">
                   Une page blanche.
