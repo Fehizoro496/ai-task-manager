@@ -207,14 +207,15 @@ export default function MyTasksPage() {
               ))}
             </div>
 
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Rechercher…"
-              allowClear
-              prefix={<Search className="h-3.5 w-3.5 text-[hsl(var(--ink-3))]" />}
-              className="ml-auto w-[220px]"
-            />
+            <div className="ml-auto w-[220px]">
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Rechercher…"
+                allowClear
+                prefix={<Search className="h-3.5 w-3.5 text-[hsl(var(--ink-3))]" />}
+              />
+            </div>
 
             <Popover.Root>
               <Popover.Trigger asChild>

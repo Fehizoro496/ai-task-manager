@@ -324,14 +324,15 @@ export function KanbanBoard({
     >
       <div className="shrink-0 px-6 py-4 border-b border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))]">
         <div className="flex flex-wrap items-center gap-3">
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Rechercher une tâche…"
-            allowClear
-            prefix={<Search className="h-3.5 w-3.5 text-[hsl(var(--ink-3))]" />}
-            className="w-[260px]"
-          />
+          <div className="w-[260px]">
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Rechercher une tâche…"
+              allowClear
+              prefix={<Search className="h-3.5 w-3.5 text-[hsl(var(--ink-3))]" />}
+            />
+          </div>
 
           <FilterPopover<TaskPriority>
             title="Priorité"
