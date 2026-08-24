@@ -48,7 +48,7 @@ export default function DashboardPage() {
                 en cours. Bonne énergie ce matin.
               </p>
 
-              <div className="mt-5 flex flex-wrap items-center gap-2">
+              {/* <div className="mt-5 flex flex-wrap items-center gap-2">
                 <Button variant="brand" size="md" onClick={() => routerService.toProjects()}>
                   <Plus className="h-4 w-4" />
                   Voir les projets
@@ -60,7 +60,7 @@ export default function DashboardPage() {
                 <Button variant="ghost" size="md" onClick={() => routerService.toMyTasks()}>
                   Mes tâches du jour →
                 </Button>
-              </div>
+              </div> */}
             </div>
           </div>
         </section>
