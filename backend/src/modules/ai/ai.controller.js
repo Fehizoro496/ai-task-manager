@@ -17,6 +17,15 @@ const listDrafts = asyncHandler(async (req, res) => {
   res.json(drafts.map(aiService.serializeDraft));
 });
 
+const update = asyncHandler(async (req, res) => {
+  const draft = await aiService.updateDraftPlan(
+    req.params.id,
+    req.user.id,
+    req.body?.plan,
+  );
+  res.json(aiService.serializeDraft(draft));
+});
+
 const approve = asyncHandler(async (req, res) => {
   const result = await aiService.approveDraft(req.params.id, req.user.id);
   res.status(201).json(result);
@@ -36,4 +45,4 @@ const refine = asyncHandler(async (req, res) => {
   res.json(aiService.serializeDraft(draft));
 });
 
-module.exports = { plan, getDraft, listDrafts, approve, reject, refine };
+module.exports = { plan, getDraft, listDrafts, update, approve, reject, refine };

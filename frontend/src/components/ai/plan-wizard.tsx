@@ -10,14 +10,25 @@ import {
   FolderKanban,
   Send,
   MessageSquare,
+  Pencil,
+  Trash2,
+  Plus,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { PriorityPill } from "@/components/ui/pill";
 import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { WizardStepper } from "@/components/ai/wizard-stepper";
-import { aiApi, toast, useAiGenerationStore, useAuth, useProjects } from "@/services";
-import type { AiDraft } from "@/services";
-import { normalizeApiPriority, projectPrefix } from "@/lib/mappers";
+import {
+  aiApi,
+  labelsApi,
+  toast,
+  useAiGenerationStore,
+  useAuth,
+  useProjects,
+} from "@/services";
+import type { AiDraft, Label } from "@/services";
+import { projectPrefix } from "@/lib/mappers";
 import { cn } from "@/lib/utils";
 
 const EXAMPLE = `Je veux créer une plateforme e-learning avec les fonctionnalités suivantes :
@@ -29,8 +40,24 @@ const EXAMPLE = `Je veux créer une plateforme e-learning avec les fonctionnalit
 interface PlanTaskShape {
   title: string;
   description?: string;
-  priority?: string;
   labels?: string[];
+}
+
+interface TaskForm {
+  title: string;
+  description: string;
+  labels: string[];
+}
+
+const EMPTY_FORM: TaskForm = { title: "", description: "", labels: [] };
+
+/** Convertit le formulaire en tâche de plan (champs vides omis). */
+function formToTask(f: TaskForm): PlanTaskShape {
+  const task: PlanTaskShape = { title: f.title.trim() };
+  const description = f.description.trim();
+  if (description) task.description = description;
+  if (f.labels.length) task.labels = f.labels;
+  return task;
 }
 
 function readPlan(draft: AiDraft | null): PlanTaskShape[] {
@@ -60,8 +87,10 @@ export function PlanWizard() {
     projectId: genProjectId,
     error: genError,
     refining,
+    saving,
     start,
     refine: refineDraft,
+    savePlan,
     reset: resetGeneration,
   } = useAiGenerationStore();
   const loading = status === "generating";
@@ -73,6 +102,24 @@ export function PlanWizard() {
   const [error, setError] = useState<string | null>(null);
   const [refineInput, setRefineInput] = useState("");
 
+  // Édition manuelle de l'aperçu : un seul éditeur ouvert à la fois, soit sur
+  // une tâche existante (`editingIndex`), soit sur une nouvelle (`adding`).
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [form, setForm] = useState<TaskForm>(EMPTY_FORM);
+  const [labelCatalog, setLabelCatalog] = useState<Label[]>([]);
+  const editorOpen = adding || editingIndex !== null;
+  const busy = saving || refining;
+
+  // Catalogue de labels (géré par l'admin) — seuls ces labels sont conservés
+  // à l'approbation, donc on ne propose que ceux-ci à l'édition.
+  useEffect(() => {
+    labelsApi
+      .listAll()
+      .then((r) => setLabelCatalog(r.labels))
+      .catch(() => setLabelCatalog([]));
+  }, []);
+
   // Si la génération est terminée (y compris pendant qu'on était sur une
   // autre page), on affiche l'aperçu au montage / à la transition.
   useEffect(() => {
@@ -81,6 +128,59 @@ export function PlanWizard() {
 
   const tasks = useMemo(() => readPlan(draft), [draft]);
   const tasksTotal = tasks.length;
+
+  function closeEditor() {
+    setEditingIndex(null);
+    setAdding(false);
+    setForm(EMPTY_FORM);
+  }
+
+  function openEdit(index: number) {
+    if (busy) return;
+    const t = tasks[index];
+    setAdding(false);
+    setEditingIndex(index);
+    setForm({
+      title: t.title ?? "",
+      description: t.description ?? "",
+      labels: t.labels ?? [],
+    });
+  }
+
+  function openAdd() {
+    if (busy) return;
+    setEditingIndex(null);
+    setForm(EMPTY_FORM);
+    setAdding(true);
+  }
+
+  function toggleFormLabel(name: string) {
+    setForm((f) =>
+      f.labels.includes(name)
+        ? { ...f, labels: f.labels.filter((l) => l !== name) }
+        : { ...f, labels: [...f.labels, name] },
+    );
+  }
+
+  // Persiste le plan (édition, ajout ou suppression) via le store, qui
+  // met à jour le brouillon. On revient en lecture seule si ça réussit.
+  async function saveEditor() {
+    if (form.title.trim().length < 1 || saving) return;
+    const entry = formToTask(form);
+    let next: PlanTaskShape[];
+    if (adding) next = [...tasks, entry];
+    else if (editingIndex !== null)
+      next = tasks.map((t, i) => (i === editingIndex ? entry : t));
+    else return;
+    const ok = await savePlan(next);
+    if (ok) closeEditor();
+  }
+
+  async function deleteTask(index: number) {
+    if (busy) return;
+    const next = tasks.filter((_, i) => i !== index);
+    await savePlan(next);
+  }
 
   async function generate() {
     if (brief.trim().length < 10) return;
@@ -234,42 +334,65 @@ export function PlanWizard() {
       )}
 
       {step === 2 && draft && (
-        <section className="mt-6 rounded-[var(--radius-lg)] border border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))] shadow-[var(--shadow-1)]">
-          <header className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-[hsl(var(--line))]">
-            <div>
+        <section className="mt-6 flex max-h-[calc(100dvh-14rem)] flex-col rounded-[var(--radius-lg)] border border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))] shadow-[var(--shadow-1)]">
+          <header className="flex shrink-0 items-center justify-between gap-3 border-b border-[hsl(var(--line))] px-5 pt-4 pb-3">
+            <div className="min-w-0">
               <div className="font-display text-[16px] font-semibold tracking-tight">
                 Aperçu du plan généré par l&apos;IA
               </div>
               <div className="mt-1 text-[12px] text-[hsl(var(--ink-3))]">
-                {tasksTotal} tâche{tasksTotal > 1 ? "s" : ""}
+                {tasksTotal} tâche{tasksTotal > 1 ? "s" : ""} · éditez ou ajoutez avant l&apos;approbation
               </div>
             </div>
-            {refining && (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-[hsl(var(--brand)/0.3)] bg-[hsl(var(--brand-soft))] px-2.5 py-1 text-[11px] font-semibold text-[hsl(var(--brand-ink))]">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                Affinage en cours…
-              </span>
-            )}
+            <div className="flex shrink-0 items-center gap-2">
+              {saving && (
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-[hsl(var(--ink-3))]">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Enregistrement…
+                </span>
+              )}
+              {refining && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-[hsl(var(--brand)/0.3)] bg-[hsl(var(--brand-soft))] px-2.5 py-1 text-[11px] font-semibold text-[hsl(var(--brand-ink))]">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Affinage…
+                </span>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={openAdd}
+                disabled={busy || editorOpen}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Ajouter
+              </Button>
+            </div>
           </header>
 
-          <ul className="space-y-1 p-2">
-            {tasks
-              .map((task, ti) => (
+          <ul className="min-h-0 flex-1 divide-y divide-[hsl(var(--line)/0.4)] overflow-y-auto p-2">
+            {tasks.map((task, ti) =>
+              editingIndex === ti ? (
+                <li key={ti}>
+                  <TaskEditor
+                    form={form}
+                    setForm={setForm}
+                    toggleLabel={toggleFormLabel}
+                    labelCatalog={labelCatalog}
+                    saving={saving}
+                    onCancel={closeEditor}
+                    onSave={saveEditor}
+                    submitLabel="Enregistrer"
+                  />
+                </li>
+              ) : (
                 <li
                   key={ti}
-                  className="flex items-start gap-2.5 rounded-[var(--radius-sm)] px-3 py-2 hover:bg-[hsl(var(--bg-sunken)/0.5)]"
+                  className="group flex items-start gap-2.5 px-3 py-2 hover:bg-[hsl(var(--bg-sunken)/0.5)]"
                 >
-                  <span className="mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-elevated))]" />
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-start gap-2">
-                      <span className="text-[13px] font-medium leading-snug tracking-tight">
-                        {task.title}
-                      </span>
-                      <PriorityPill
-                        priority={normalizeApiPriority(task.priority)}
-                        className="ml-auto shrink-0"
-                      />
-                    </div>
+                    <span className="text-[13px] font-medium leading-snug tracking-tight">
+                      {task.title}
+                    </span>
                     {task.description && (
                       <p className="mt-0.5 text-[12px] leading-relaxed text-[hsl(var(--ink-3))]">
                         {task.description}
@@ -288,19 +411,69 @@ export function PlanWizard() {
                       </div>
                     )}
                   </div>
+                  {!editorOpen && (
+                    <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                      <button
+                        type="button"
+                        onClick={() => openEdit(ti)}
+                        disabled={busy}
+                        title="Éditer"
+                        className="grid h-7 w-7 place-items-center rounded-[var(--radius-sm)] text-[hsl(var(--ink-3))] hover:bg-[hsl(var(--bg-muted))] hover:text-ink disabled:opacity-40"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteTask(ti)}
+                        disabled={busy}
+                        title="Supprimer"
+                        className="grid h-7 w-7 place-items-center rounded-[var(--radius-sm)] text-[hsl(var(--ink-3))] hover:bg-[hsl(var(--bg-muted))] hover:text-[hsl(var(--accent-rose))] disabled:opacity-40"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </li>
-              ))}
+              ),
+            )}
+
+            {adding && (
+              <li>
+                <TaskEditor
+                  form={form}
+                  setForm={setForm}
+                  toggleLabel={toggleFormLabel}
+                  labelCatalog={labelCatalog}
+                  saving={saving}
+                  onCancel={closeEditor}
+                  onSave={saveEditor}
+                  submitLabel="Ajouter la tâche"
+                />
+              </li>
+            )}
+
+            {tasksTotal === 0 && !adding && (
+              <li className="grid place-items-center px-4 py-10 text-center">
+                <p className="text-[13px] text-[hsl(var(--ink-3))]">
+                  Aucune tâche dans ce plan.
+                </p>
+                <Button variant="outline" size="sm" className="mt-3" onClick={openAdd}>
+                  <Plus className="h-3.5 w-3.5" />
+                  Ajouter une tâche
+                </Button>
+              </li>
+            )}
           </ul>
 
           {/* Affiner par la discussion : raffinement itératif sans tout régénérer */}
-          <div className="border-t border-[hsl(var(--line))] px-5 py-4">
+          <div className="shrink-0 border-t border-[hsl(var(--line))] px-5 py-3">
             <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-[hsl(var(--ink-3))]">
               <MessageSquare className="h-3.5 w-3.5" />
               Affiner avec l&apos;IA
             </div>
 
             {draft.messages && draft.messages.length > 0 && (
-              <ul className="mt-3 space-y-1.5">
+              <ul className="mt-2 max-h-24 space-y-1.5 overflow-y-auto pr-1">
                 {draft.messages.map((m) =>
                   m.role === "user" ? (
                     <li key={m.id} className="flex justify-end">
@@ -318,7 +491,7 @@ export function PlanWizard() {
               </ul>
             )}
 
-            <div className="mt-3 rounded-[var(--radius-md)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg))] focus-within:border-[hsl(var(--brand)/0.5)] focus-within:ring-2 focus-within:ring-[hsl(var(--brand)/0.3)]">
+            <div className="mt-2 rounded-[var(--radius-md)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg))] focus-within:border-[hsl(var(--brand)/0.5)] focus-within:ring-2 focus-within:ring-[hsl(var(--brand)/0.3)]">
               <textarea
                 value={refineInput}
                 onChange={(e) => setRefineInput(e.target.value)}
@@ -330,7 +503,7 @@ export function PlanWizard() {
                 }}
                 placeholder="Ex. : ajoute une tâche de sécurité · regroupe les tâches de paiement · simplifie le suivi de progression…"
                 rows={2}
-                disabled={refining}
+                disabled={refining || editorOpen}
                 className="block w-full resize-none bg-transparent px-3 py-2.5 text-[13px] placeholder:text-[hsl(var(--ink-4))] focus:outline-none disabled:opacity-60"
               />
               <div className="flex items-center justify-between gap-2 border-t border-[hsl(var(--line))] px-3 py-2">
@@ -341,7 +514,7 @@ export function PlanWizard() {
                   variant="brand"
                   size="sm"
                   onClick={refine}
-                  disabled={refining || refineInput.trim().length < 3}
+                  disabled={refining || editorOpen || refineInput.trim().length < 3}
                 >
                   {refining ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -354,7 +527,7 @@ export function PlanWizard() {
             </div>
           </div>
 
-          <footer className="flex items-center justify-end gap-2 border-t border-[hsl(var(--line))] bg-[hsl(var(--bg-sunken)/0.4)] px-5 py-3">
+          <footer className="flex shrink-0 items-center justify-end gap-2 border-t border-[hsl(var(--line))] bg-[hsl(var(--bg-sunken)/0.4)] px-5 py-3">
             <Button
               variant="outline"
               size="sm"
@@ -362,12 +535,17 @@ export function PlanWizard() {
                 resetGeneration();
                 setStep(1);
               }}
-              disabled={refining}
+              disabled={busy || editorOpen}
             >
               <RefreshCw className="h-3.5 w-3.5" />
               Régénérer
             </Button>
-            <Button variant="sage" size="sm" onClick={() => setStep(3)} disabled={refining}>
+            <Button
+              variant="sage"
+              size="sm"
+              onClick={() => setStep(3)}
+              disabled={busy || editorOpen || tasksTotal === 0}
+            >
               Continuer
             </Button>
           </footer>
@@ -425,6 +603,105 @@ export function PlanWizard() {
           </footer>
         </section>
       )}
+    </div>
+  );
+}
+
+/** Éditeur inline d'une tâche (édition d'une existante ou ajout manuel). */
+function TaskEditor({
+  form,
+  setForm,
+  toggleLabel,
+  labelCatalog,
+  saving,
+  onSave,
+  onCancel,
+  submitLabel,
+}: {
+  form: TaskForm;
+  setForm: React.Dispatch<React.SetStateAction<TaskForm>>;
+  toggleLabel: (name: string) => void;
+  labelCatalog: Label[];
+  saving: boolean;
+  onSave: () => void;
+  onCancel: () => void;
+  submitLabel: string;
+}) {
+  const available = labelCatalog.filter((l) => !form.labels.includes(l.name));
+  const canSave = form.title.trim().length >= 1 && !saving;
+  return (
+    <div
+      className="rounded-[var(--radius-md)] border border-[hsl(var(--brand)/0.45)] bg-[hsl(var(--bg))] p-3 shadow-[var(--shadow-1)]"
+      onKeyDown={(e) => {
+        if (e.key === "Escape") {
+          e.preventDefault();
+          onCancel();
+        }
+      }}
+    >
+      <input
+        autoFocus
+        value={form.title}
+        onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            if (canSave) onSave();
+          }
+        }}
+        placeholder="Titre de la tâche"
+        className="w-full rounded-[var(--radius-sm)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-elevated))] px-2.5 py-1.5 text-[13px] font-medium text-ink placeholder:text-[hsl(var(--ink-4))] focus:border-[hsl(var(--brand)/0.6)] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand)/0.25)]"
+      />
+      <textarea
+        value={form.description}
+        onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+        placeholder="Description (facultative)"
+        rows={2}
+        className="mt-2 block w-full resize-none rounded-[var(--radius-sm)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-elevated))] px-2.5 py-1.5 text-[12.5px] leading-relaxed text-ink placeholder:text-[hsl(var(--ink-4))] focus:border-[hsl(var(--brand)/0.6)] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand)/0.25)]"
+      />
+      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+        {form.labels.map((l) => (
+          <span
+            key={l}
+            className="inline-flex items-center gap-1 rounded-full bg-[hsl(var(--bg-sunken))] px-2 py-0.5 text-[11px] font-medium text-[hsl(var(--ink-3))]"
+          >
+            {l}
+            <button
+              type="button"
+              onClick={() => toggleLabel(l)}
+              title="Retirer"
+              className="grid h-3.5 w-3.5 place-items-center rounded-full text-[hsl(var(--ink-4))] hover:bg-[hsl(var(--bg-muted))] hover:text-[hsl(var(--accent-rose))]"
+            >
+              <X className="h-2.5 w-2.5" />
+            </button>
+          </span>
+        ))}
+        {available.length > 0 && (
+          <Combobox
+            value=""
+            onChange={(name) => {
+              if (name) toggleLabel(name);
+            }}
+            placeholder="+ label…"
+            emptyLabel="Aucun label trouvé"
+            options={available.map((l) => ({ value: l.name, label: l.name }))}
+            className="h-7 w-40 rounded-full text-[11px]"
+          />
+        )}
+      </div>
+      <div className="mt-3 flex items-center justify-end gap-2">
+        <Button variant="ghost" size="sm" onClick={onCancel} disabled={saving}>
+          Annuler
+        </Button>
+        <Button variant="brand" size="sm" onClick={onSave} disabled={!canSave}>
+          {saving ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Check className="h-3.5 w-3.5" />
+          )}
+          {submitLabel}
+        </Button>
+      </div>
     </div>
   );
 }

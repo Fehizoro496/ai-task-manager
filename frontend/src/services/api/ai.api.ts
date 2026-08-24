@@ -22,6 +22,9 @@ export const aiApi = {
   getDraft: (id: string) =>
     apiClient.get<AiDraft>(endpoints.ai.draftById(id)),
 
+  updateDraftPlan: (id: string, plan: unknown) =>
+    apiClient.patch<AiDraft>(endpoints.ai.draftById(id), { plan }),
+
   approveDraft: (id: string) =>
     apiClient.post<unknown>(endpoints.ai.approveDraft(id)),
 

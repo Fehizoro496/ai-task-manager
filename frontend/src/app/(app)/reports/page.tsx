@@ -71,9 +71,6 @@ export default function ReportsPage() {
               </span>
               <h1 className="mt-3 font-display text-[38px] font-semibold leading-[1.02] tracking-tight">
                 Rapports{" "}
-                <span className="font-normal text-[hsl(var(--ink-2))]">
-                  &amp; signaux faibles
-                </span>
               </h1>
               <p className="mt-2.5 max-w-[520px] text-[14px] leading-relaxed text-[hsl(var(--ink-2))]">
                 Une lecture éditoriale de l&apos;activité —{" "}

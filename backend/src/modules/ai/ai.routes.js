@@ -1,7 +1,7 @@
 const { Router } = require("express");
 const authenticate = require("../../middleware/auth");
 const validate = require("../../middleware/validate");
-const { planRequestSchema } = require("./ai.schema");
+const { planRequestSchema, updatePlanSchema } = require("./ai.schema");
 const aiController = require("./ai.controller");
 
 const router = Router();
@@ -99,6 +99,41 @@ router.get("/drafts", aiController.listDrafts);
  *         description: Draft not found
  */
 router.get("/drafts/:id", aiController.getDraft);
+
+/**
+ * @swagger
+ * /ai/drafts/{id}:
+ *   patch:
+ *     tags: [AI]
+ *     summary: Update a draft plan (manual edits / added tasks before approval)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [plan]
+ *             properties:
+ *               plan:
+ *                 type: object
+ *     responses:
+ *       200:
+ *         description: Updated draft
+ *       400:
+ *         description: Draft already approved
+ *       404:
+ *         description: Draft not found
+ */
+router.patch("/drafts/:id", validate(updatePlanSchema), aiController.update);
 
 /**
  * @swagger

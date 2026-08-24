@@ -21,4 +21,9 @@ const aiPlanSchema = z.object({
   tasks: z.array(aiTaskSchema),
 });
 
-module.exports = { planRequestSchema, aiPlanSchema };
+// Mise à jour manuelle du plan depuis l'aperçu (éditions / ajouts de tâches).
+const updatePlanSchema = z.object({
+  plan: aiPlanSchema,
+});
+
+module.exports = { planRequestSchema, aiPlanSchema, updatePlanSchema };

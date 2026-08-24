@@ -232,6 +232,29 @@ const refineDraft = async (draftId, userId, instruction) => {
   return updated;
 };
 
+/**
+ * Met à jour manuellement le plan d'un brouillon (éditions / ajouts de tâches
+ * effectués dans l'aperçu, avant approbation). Ne touche pas au fil de discussion.
+ */
+const updateDraftPlan = async (draftId, userId, plan) => {
+  const draft = await prisma.aiDraft.findUnique({
+    where: { id: draftId },
+    include: { project: true },
+  });
+  if (!draft || draft.project.ownerId !== userId) {
+    throw new AppError("Draft not found", 404);
+  }
+  if (draft.approved) {
+    throw new AppError("Draft already approved", 400);
+  }
+
+  return prisma.aiDraft.update({
+    where: { id: draftId },
+    data: { plan },
+    include: { project: true, ...draftWithMessages },
+  });
+};
+
 const listDrafts = async (projectId, userId) => {
   const project = await prisma.project.findFirst({
     where: { id: projectId, ownerId: userId },
@@ -324,4 +347,4 @@ const rejectDraft = async (draftId, userId) => {
   });
 };
 
-module.exports = { generatePlan, getDraft, listDrafts, approveDraft, rejectDraft, refineDraft, serializeDraft };
+module.exports = { generatePlan, getDraft, listDrafts, updateDraftPlan, approveDraft, rejectDraft, refineDraft, serializeDraft };

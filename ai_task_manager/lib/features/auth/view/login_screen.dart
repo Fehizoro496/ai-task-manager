@@ -142,7 +142,7 @@ class LoginScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Sign in to continue',
+                        'Connectez-vous pour continuer',
                         style: TextStyle(
                           color: subtitleColor,
                           fontSize: 15,
@@ -168,7 +168,7 @@ class LoginScreen extends ConsumerWidget {
                         ] else ...[
                           if (authState is AsyncError && !isPending) ...[
                             AuthErrorBanner(
-                              message: _extractError(authState.error ?? 'An error occurred'),
+                              message: _extractError(authState.error ?? 'Une erreur est survenue'),
                               isDark: isDark,
                             ).animate().fadeIn(duration: 300.ms).shake(
                                   hz: 3,
@@ -261,7 +261,7 @@ class _PendingContent extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.xl),
         Text(
-          'Account Pending Approval',
+          'Compte en attente d\'approbation',
           textAlign: TextAlign.center,
           style: TextStyle(
             color: titleColor,
@@ -272,8 +272,8 @@ class _PendingContent extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.sm),
         Text(
-          'Your account is awaiting admin approval. '
-          'You\'ll be notified once it\'s been reviewed.',
+          'Votre compte est en attente de validation par un administrateur. '
+          'Vous serez notifié une fois qu\'il aura été examiné.',
           textAlign: TextAlign.center,
           style: TextStyle(
             color: bodyColor,
@@ -299,7 +299,7 @@ class _PendingContent extends StatelessWidget {
               const SizedBox(width: AppSpacing.xs),
               Expanded(
                 child: Text(
-                  'Contact an administrator if this takes too long.',
+                  'Contactez un administrateur si cela prend trop de temps.',
                   style: TextStyle(
                     color: AppColors.warning,
                     fontSize: 12,
@@ -314,7 +314,7 @@ class _PendingContent extends StatelessWidget {
         GithubSignInButton(
           onPressed: () => ref.read(authStateProvider.notifier).clearError(),
           isLoading: false,
-          label: 'Try another account',
+          label: 'Essayer un autre compte',
         ),
       ],
     );

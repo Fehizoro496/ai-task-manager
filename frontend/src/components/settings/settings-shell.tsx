@@ -189,9 +189,9 @@ function AccountSection() {
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               <Badge tone="brand">{roleLabel}</Badge>
-              <Badge tone={user.status === "APPROVED" ? "sage" : "neutral"}>
+              {/* <Badge tone={user.status === "APPROVED" ? "sage" : "neutral"}>
                 {user.status}
-              </Badge>
+              </Badge> */}
               <Badge tone="neutral">
                 <Github className="h-2.5 w-2.5" /> GitHub
               </Badge>
@@ -250,7 +250,7 @@ function AccountSection() {
         </div>
       </Panel>
 
-      <Panel title="Session">
+      {/* <Panel title="Session">
         <div className="flex items-center gap-4">
           <div className="min-w-0 flex-1">
             <div className="text-[13.5px] font-semibold tracking-tight">
@@ -273,7 +273,7 @@ function AccountSection() {
             Déconnexion
           </Button>
         </div>
-      </Panel>
+      </Panel> */}
     </div>
   );
 }

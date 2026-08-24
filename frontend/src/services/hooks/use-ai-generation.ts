@@ -15,6 +15,8 @@ interface AiGenerationState {
   error: string | null;
   /** Affinage d'un brouillon existant en cours (vit dans le store comme `start`). */
   refining: boolean;
+  /** Persistance d'une édition manuelle du plan en cours. */
+  saving: boolean;
   /**
    * Lance la génération. Vit dans le store (pas dans le composant) → survit
    * à la navigation in-app. Notifie via un toast cliquable à la fin.
@@ -25,6 +27,11 @@ interface AiGenerationState {
    * → survit à la navigation in-app et notifie via un toast à la fin.
    */
   refine: (instruction: string) => Promise<void>;
+  /**
+   * Persiste une édition manuelle du plan (éditions / ajouts / suppressions de
+   * tâches faites dans l'aperçu). Renvoie `true` si la sauvegarde a réussi.
+   */
+  savePlan: (tasks: unknown[]) => Promise<boolean>;
   setDraft: (draft: AiDraft) => void;
   reset: () => void;
 }
@@ -35,6 +42,7 @@ export const useAiGenerationStore = create<AiGenerationState>((set, get) => ({
   projectId: null,
   error: null,
   refining: false,
+  saving: false,
 
   start: async ({ projectId, document }) => {
     if (get().status === "generating") return;
@@ -88,7 +96,28 @@ export const useAiGenerationStore = create<AiGenerationState>((set, get) => ({
     }
   },
 
+  savePlan: async (tasks) => {
+    const { draft, saving } = get();
+    if (!draft || saving) return false;
+    set({ saving: true, error: null });
+    try {
+      const updated = await aiApi.updateDraftPlan(draft.id, { tasks });
+      set({ draft: updated, saving: false });
+      return true;
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Enregistrement impossible.";
+      set({ saving: false, error: message });
+      useToastStore.getState().push({
+        kind: "error",
+        title: "Modification du plan",
+        message,
+        duration: 6000,
+      });
+      return false;
+    }
+  },
+
   setDraft: (draft) => set({ draft }),
   reset: () =>
-    set({ status: "idle", draft: null, projectId: null, error: null, refining: false }),
+    set({ status: "idle", draft: null, projectId: null, error: null, refining: false, saving: false }),
 }));
