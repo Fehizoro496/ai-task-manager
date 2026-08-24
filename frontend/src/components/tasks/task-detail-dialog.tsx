@@ -46,7 +46,12 @@ import type {
   User as ApiUser,
 } from "@/services";
 import type { UpdateTaskInput } from "@/services/api/tasks.api";
-import { normalizeApiStatus, normalizeApiPriority } from "@/lib/mappers";
+import {
+  normalizeApiStatus,
+  normalizeApiPriority,
+  statusFrToApi,
+  priorityFrToApi,
+} from "@/lib/mappers";
 import { cn } from "@/lib/utils";
 
 const STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
@@ -406,7 +411,7 @@ function TaskDetailBody({
           {code}
         </span>
         <Select
-          value={status}
+          value={statusFrToApi[status]}
           onChange={(v) =>
             patchTask({ status: v as TaskStatus }, { status: v as TaskStatus })
           }
@@ -552,7 +557,7 @@ function TaskDetailBody({
           </Meta>
           <Meta Icon={Sparkles} label="Priorité">
             <Select
-              value={priority}
+              value={priorityFrToApi[priority]}
               onChange={(v) =>
                 patchTask(
                   { priority: v as TaskPriority },
@@ -622,6 +627,9 @@ function TaskDetailBody({
                       value: l.name,
                       label: l.name,
                     }))}
+                    getPopupContainer={(trigger) =>
+                      trigger.parentElement ?? document.body
+                    }
                     className="w-32"
                     title="Ajouter un label"
                   />

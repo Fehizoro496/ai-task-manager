@@ -18,6 +18,7 @@ import { StatusPill, PriorityPill } from "@/components/ui/pill";
 import { TaskDetailDialog } from "@/components/tasks/task-detail-dialog";
 import { NewTaskDialog } from "@/components/tasks/new-task-dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   routerService,
   useDebouncedValue,
@@ -206,24 +207,14 @@ export default function MyTasksPage() {
               ))}
             </div>
 
-            <div className="relative ml-auto">
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[hsl(var(--ink-3))]" />
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Rechercher…"
-                className="h-8 w-[220px] rounded-[var(--radius-sm)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg))] pl-8 pr-7 text-[12.5px] placeholder:text-[hsl(var(--ink-4))] focus:border-[hsl(var(--brand)/0.5)] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand)/0.3)]"
-              />
-              {query && (
-                <button
-                  onClick={() => setQuery("")}
-                  className="absolute right-1.5 top-1/2 grid h-5 w-5 -translate-y-1/2 place-items-center rounded text-[hsl(var(--ink-3))] hover:bg-[hsl(var(--bg-sunken)/0.7)]"
-                  aria-label="Effacer"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              )}
-            </div>
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Rechercher…"
+              allowClear
+              prefix={<Search className="h-3.5 w-3.5 text-[hsl(var(--ink-3))]" />}
+              className="ml-auto w-[220px]"
+            />
 
             <Popover.Root>
               <Popover.Trigger asChild>

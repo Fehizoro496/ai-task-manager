@@ -10,7 +10,7 @@ import {
   Trophy,
   Users,
 } from "lucide-react";
-import { DatePicker } from "antd";
+import { DatePicker, Select } from "antd";
 import dayjs from "dayjs";
 import { Topbar } from "@/components/shell/topbar";
 import { Breadcrumb } from "@/components/shell/breadcrumb";
@@ -629,29 +629,17 @@ function RangeControl({
   const today = toISODate(new Date());
   return (
     <div className="inline-flex items-center gap-2">
-      {/* Unité */}
-      <div className="inline-flex h-9 items-center rounded-[var(--radius-sm)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-elevated))] p-0.5">
-        {UNIT_ORDER.map((u) => {
-          const active = u === unit;
-          return (
-            <button
-              key={u}
-              type="button"
-              onClick={() => onUnit(u)}
-              disabled={disabled}
-              aria-pressed={active}
-              className={cn(
-                "h-8 rounded-[7px] px-2.5 text-[12px] font-semibold tracking-tight transition-colors disabled:opacity-60",
-                active
-                  ? "bg-[hsl(var(--brand-soft))] text-[hsl(var(--brand-ink))]"
-                  : "text-[hsl(var(--ink-3))] hover:text-ink",
-              )}
-            >
-              {UNIT_META[u].label}
-            </button>
-          );
-        })}
-      </div>
+      {/* Unité — Select antd */}
+      <Select
+        value={unit}
+        onChange={(u) => onUnit(u)}
+        disabled={disabled}
+        className="w-28"
+        options={UNIT_ORDER.map((u) => ({
+          value: u,
+          label: UNIT_META[u].label,
+        }))}
+      />
 
       {/* Date d'ancrage — DatePicker antd, mode suivant l'unité */}
       <DatePicker

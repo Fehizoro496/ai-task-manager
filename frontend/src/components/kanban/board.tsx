@@ -39,6 +39,7 @@ import {
   statusFrToApi,
 } from "@/lib/mappers";
 import { Avatar } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
 import { PriorityPill } from "@/components/ui/pill";
 import { Badge } from "@/components/ui/badge";
 import { TaskDetailDialog } from "@/components/tasks/task-detail-dialog";
@@ -323,24 +324,14 @@ export function KanbanBoard({
     >
       <div className="shrink-0 px-6 py-4 border-b border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))]">
         <div className="flex flex-wrap items-center gap-3">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[hsl(var(--ink-3))]" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Rechercher une tâche…"
-              className="h-9 w-[260px] rounded-[var(--radius-sm)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg))] pl-8 pr-8 text-[13px] placeholder:text-[hsl(var(--ink-4))] focus:border-[hsl(var(--brand)/0.5)] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand)/0.3)]"
-            />
-            {query && (
-              <button
-                onClick={() => setQuery("")}
-                aria-label="Effacer"
-                className="absolute right-2 top-1/2 grid h-5 w-5 -translate-y-1/2 place-items-center rounded text-[hsl(var(--ink-3))] hover:bg-[hsl(var(--bg-sunken)/0.7)] hover:text-ink"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            )}
-          </div>
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Rechercher une tâche…"
+            allowClear
+            prefix={<Search className="h-3.5 w-3.5 text-[hsl(var(--ink-3))]" />}
+            className="w-[260px]"
+          />
 
           <FilterPopover<TaskPriority>
             title="Priorité"

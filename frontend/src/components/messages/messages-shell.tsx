@@ -1,8 +1,9 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Search, Plus, Send, Loader2, Users as UsersIcon, RefreshCwIcon, RefreshCcw, X } from "lucide-react";
+import { Search, Plus, Send, Loader2, Users as UsersIcon, RefreshCwIcon, RefreshCcw } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   chatApi,
   socketService,
@@ -227,9 +228,8 @@ export function MessagesShell() {
               <RefreshCcw className="h-4 w-4" />
             </button>
           </div>
-          <div className="relative mt-2">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[hsl(var(--ink-3))]" />
-            <input
+          <div className="mt-2">
+            <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => {
@@ -237,19 +237,12 @@ export function MessagesShell() {
               }}
               placeholder="Rechercher…"
               aria-label="Rechercher une conversation"
-              className="h-8 w-full rounded-[var(--radius-sm)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg))] pl-7 pr-7 text-[12.5px] placeholder:text-[hsl(var(--ink-4))] focus:border-[hsl(var(--brand)/0.5)] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand)/0.3)]"
+              allowClear
+              prefix={
+                <Search className="h-3.5 w-3.5 text-[hsl(var(--ink-3))]" />
+              }
+              className="w-full"
             />
-            {query && (
-              <button
-                type="button"
-                onClick={() => setQuery("")}
-                title="Effacer la recherche"
-                aria-label="Effacer la recherche"
-                className="absolute right-1 top-1/2 grid h-5 w-5 -translate-y-1/2 place-items-center rounded-[4px] text-[hsl(var(--ink-3))] hover:bg-[hsl(var(--bg-muted))] hover:text-ink"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            )}
           </div>
         </header>
 

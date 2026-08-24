@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { Loader2, Plus, Tag, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { labelsApi, toast } from "@/services";
 import type { Label } from "@/services";
 
@@ -73,7 +74,7 @@ export function LabelManager() {
 
       <div className="px-5 py-4">
         <div className="flex items-end gap-2">
-          <input
+          <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => {
@@ -84,7 +85,7 @@ export function LabelManager() {
             }}
             placeholder="ex. auth, ui, paiement…"
             disabled={saving}
-            className="h-9 w-56 rounded-[var(--radius-sm)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg))] px-2.5 text-[12.5px] lowercase focus:border-[hsl(var(--brand)/0.6)] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand)/0.3)]"
+            className="w-56 lowercase"
           />
           <Button variant="brand" size="sm" onClick={add} disabled={saving || !name.trim()}>
             {saving ? (

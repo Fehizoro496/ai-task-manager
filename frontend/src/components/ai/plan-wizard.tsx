@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { Select as AntSelect } from "antd";
 import { Button } from "@/components/ui/button";
+import { Input, Textarea } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { WizardStepper } from "@/components/ai/wizard-stepper";
 import {
@@ -280,12 +281,12 @@ export function PlanWizard() {
               Décrivez votre projet ou collez vos spécifications ici…
             </p>
             <div className="relative mt-3">
-              <textarea
+              <Textarea
                 value={brief}
                 onChange={(e) => setBrief(e.target.value)}
                 placeholder={EXAMPLE}
                 rows={12}
-                className="w-full resize-none rounded-[var(--radius-md)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg))] p-4 text-[13.5px] font-mono leading-relaxed text-ink placeholder:text-[hsl(var(--ink-4))] focus:border-[hsl(var(--brand)/0.6)] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand)/0.3)]"
+                className="resize-none p-4 font-mono text-[13.5px] leading-relaxed"
               />
               <span className="pointer-events-none absolute bottom-3 right-4 font-mono text-[10.5px] text-[hsl(var(--ink-3))]">
                 {brief.length} / 4000
@@ -639,7 +640,7 @@ function TaskEditor({
         }
       }}
     >
-      <input
+      <Input
         autoFocus
         value={form.title}
         onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
@@ -650,14 +651,14 @@ function TaskEditor({
           }
         }}
         placeholder="Titre de la tâche"
-        className="w-full rounded-[var(--radius-sm)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-elevated))] px-2.5 py-1.5 text-[13px] font-medium text-ink placeholder:text-[hsl(var(--ink-4))] focus:border-[hsl(var(--brand)/0.6)] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand)/0.25)]"
+        className="font-medium"
       />
-      <textarea
+      <Textarea
         value={form.description}
         onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
         placeholder="Description (facultative)"
         rows={2}
-        className="mt-2 block w-full resize-none rounded-[var(--radius-sm)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-elevated))] px-2.5 py-1.5 text-[12.5px] leading-relaxed text-ink placeholder:text-[hsl(var(--ink-4))] focus:border-[hsl(var(--brand)/0.6)] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand)/0.25)]"
+        className="mt-2 resize-none text-[12.5px] leading-relaxed"
       />
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
         {form.labels.map((l) => (
@@ -686,6 +687,7 @@ function TaskEditor({
             optionFilterProp="label"
             notFoundContent="Aucun label trouvé"
             options={available.map((l) => ({ value: l.name, label: l.name }))}
+            getPopupContainer={(trigger) => trigger.parentElement ?? document.body}
             className="w-40"
           />
         )}
