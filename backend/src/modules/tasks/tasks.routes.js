@@ -2,6 +2,7 @@ const { Router } = require("express");
 const authenticate = require("../../middleware/auth");
 const requireAdmin = require("../../middleware/requireAdmin");
 const validate = require("../../middleware/validate");
+const { taskImageUpload } = require("../../middleware/upload");
 const { createTaskSchema, updateTaskSchema, moveTaskSchema } = require("./tasks.schema");
 const tasksController = require("./tasks.controller");
 
@@ -288,6 +289,59 @@ router.put("/:id", requireAdmin, validate(updateTaskSchema), tasksController.upd
 router.patch("/:id/move", validate(moveTaskSchema), tasksController.move);
 
 router.patch("/:id/assign", tasksController.assign);
+
+/**
+ * @swagger
+ * /tasks/{id}/image:
+ *   post:
+ *     tags: [Tasks]
+ *     summary: Upload (or replace) the task image
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Task with the attached image
+ *       400:
+ *         description: Invalid image
+ *       404:
+ *         description: Task not found
+ *   delete:
+ *     tags: [Tasks]
+ *     summary: Remove the task image
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Task without image
+ *       404:
+ *         description: Task not found
+ */
+router.post("/:id/image", taskImageUpload.single("image"), tasksController.uploadImage);
+router.delete("/:id/image", tasksController.deleteImage);
 
 /**
  * @swagger

@@ -87,5 +87,16 @@ export const tasksApi = {
   assign: (id: string) =>
     apiClient.patch<Task>(endpoints.tasks.assign(id)),
 
+  /** Attache (ou remplace) l'image de la tâche via multipart. */
+  uploadImage: (id: string, file: File) => {
+    const form = new FormData();
+    form.append("image", file);
+    return apiClient.post<Task>(endpoints.tasks.image(id), form);
+  },
+
+  /** Retire l'image de la tâche. */
+  removeImage: (id: string) =>
+    apiClient.delete<Task>(endpoints.tasks.image(id)),
+
   remove: (id: string) => apiClient.delete<void>(endpoints.tasks.byId(id)),
 };

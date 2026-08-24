@@ -90,6 +90,18 @@ const assign = asyncHandler(async (req, res) => {
   res.json(tasksService.serializeTask(task));
 });
 
+const uploadImage = asyncHandler(async (req, res) => {
+  const isAdmin = req.user.role === "ADMIN";
+  const task = await tasksService.setImage(req.params.id, req.user.id, isAdmin, req.file);
+  res.json(tasksService.serializeTask(task));
+});
+
+const deleteImage = asyncHandler(async (req, res) => {
+  const isAdmin = req.user.role === "ADMIN";
+  const task = await tasksService.removeImage(req.params.id, req.user.id, isAdmin);
+  res.json(tasksService.serializeTask(task));
+});
+
 const reorderForProject = asyncHandler(async (req, res) => {
   const isAdmin = req.user.role === "ADMIN";
   const result = await tasksService.reorderForProject(
@@ -101,4 +113,4 @@ const reorderForProject = asyncHandler(async (req, res) => {
   res.json(result);
 });
 
-module.exports = { create, listByQuery, listMine, search, getById, update, remove, move, listByProject, createForProject, assign, reorderForProject };
+module.exports = { create, listByQuery, listMine, search, getById, update, remove, move, listByProject, createForProject, assign, uploadImage, deleteImage, reorderForProject };

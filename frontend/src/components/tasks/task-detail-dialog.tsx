@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import {
   X,
@@ -16,6 +16,7 @@ import {
   Trash2,
   Plus,
   Wand2,
+  ImagePlus,
 } from "lucide-react";
 import { Select as AntSelect } from "antd";
 import { Avatar } from "@/components/ui/avatar";
@@ -25,6 +26,7 @@ import { Select } from "@/components/ui/select";
 import { UserCombobox } from "@/components/ui/user-combobox";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import {
+  API_BASE_URL,
   commentsApi,
   distributionApi,
   labelsApi,
@@ -67,6 +69,15 @@ const PRIORITY_OPTIONS: { value: TaskPriority; label: string; swatch: string }[]
   { value: "medium", label: "Moyenne", swatch: "hsl(var(--brand))" },
   { value: "low", label: "Faible", swatch: "hsl(var(--ink-3))" },
 ];
+
+/** Types et taille max acceptés pour l'image d'une tâche (alignés sur le backend). */
+const IMAGE_ACCEPT = "image/png,image/jpeg,image/gif,image/webp";
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10 Mo
+
+/** URL absolue d'une image servie par le backend (/uploads/...). */
+function mediaUrl(url: string): string {
+  return url.startsWith("http") ? url : `${API_BASE_URL}${url}`;
+}
 
 
 interface TaskDetailDialogProps {
@@ -140,6 +151,9 @@ function TaskDetailBody({
   // Suppression de la tâche (admin) : confirmation inline.
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deletingTask, setDeletingTask] = useState(false);
+  // Image de la tâche : upload / suppression.
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const [imageBusy, setImageBusy] = useState(false);
 
   // Patch unifié : optimistic, rollback en cas d'erreur, toast.
   const patchTask = async (
@@ -354,6 +368,59 @@ function TaskDetailBody({
     }
   };
 
+  const handlePickImage = () => imageInputRef.current?.click();
+
+  const handleImageSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    // Réinitialise l'input pour permettre de re-sélectionner le même fichier.
+    e.target.value = "";
+    if (!file || !task || imageBusy) return;
+
+    if (!IMAGE_ACCEPT.split(",").includes(file.type)) {
+      toast.error("Formats acceptés : PNG, JPEG, GIF, WebP.", "Image refusée");
+      return;
+    }
+    if (file.size > MAX_IMAGE_SIZE) {
+      toast.error("L'image ne doit pas dépasser 10 Mo.", "Image trop lourde");
+      return;
+    }
+
+    setImageBusy(true);
+    try {
+      const updated = await tasksApi.uploadImage(task.id, file);
+      setTask(updated);
+      onUpdated?.(updated);
+      toast.success("Image ajoutée à la tâche.", "Image enregistrée");
+    } catch (err) {
+      console.error("Upload task image failed", err);
+      toast.error(
+        err instanceof Error ? err.message : "Envoi impossible.",
+        "Image refusée",
+      );
+    } finally {
+      setImageBusy(false);
+    }
+  };
+
+  const handleRemoveImage = async () => {
+    if (!task || imageBusy) return;
+    setImageBusy(true);
+    try {
+      const updated = await tasksApi.removeImage(task.id);
+      setTask(updated);
+      onUpdated?.(updated);
+      toast.success("Image retirée de la tâche.", "Image supprimée");
+    } catch (err) {
+      console.error("Remove task image failed", err);
+      toast.error(
+        err instanceof Error ? err.message : "Suppression impossible.",
+        "Refusé",
+      );
+    } finally {
+      setImageBusy(false);
+    }
+  };
+
   // Réinitialise les suggestions + la confirmation quand on change de tâche.
   useEffect(() => {
     setSuggestions(null);
@@ -532,6 +599,70 @@ function TaskDetailBody({
             className="mt-3 -mx-2 block w-[calc(100%+1rem)] rounded-[var(--radius-sm)] px-2 py-1 text-left text-[13px] text-[hsl(var(--ink-4))] hover:bg-[hsl(var(--bg-sunken)/0.6)]"
           >
             Ajouter une description…
+          </button>
+        )}
+
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept={IMAGE_ACCEPT}
+          onChange={handleImageSelected}
+          className="hidden"
+        />
+        {task.imageUrl ? (
+          <div className="group relative mt-4 overflow-hidden rounded-[var(--radius-md)] border border-[hsl(var(--line))] bg-[hsl(var(--bg-sunken)/0.4)]">
+            <button
+              type="button"
+              onClick={() => routerService.openExternal(mediaUrl(task.imageUrl!))}
+              title="Ouvrir l'image"
+              className="block w-full"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={mediaUrl(task.imageUrl)}
+                alt={task.title}
+                className="max-h-[320px] w-full object-contain"
+              />
+            </button>
+            <div className="absolute right-2 top-2 flex items-center gap-1.5 opacity-0 transition group-hover:opacity-100">
+              <button
+                type="button"
+                onClick={handlePickImage}
+                disabled={imageBusy}
+                title="Remplacer l'image"
+                className="inline-flex h-7 items-center gap-1 rounded-[var(--radius-sm)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-elevated))] px-2 text-[11.5px] font-medium text-[hsl(var(--ink-2))] shadow-[var(--shadow-1)] hover:bg-[hsl(var(--bg-muted))] hover:text-ink disabled:opacity-60"
+              >
+                {imageBusy ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <ImagePlus className="h-3.5 w-3.5" />
+                )}
+                Remplacer
+              </button>
+              <button
+                type="button"
+                onClick={handleRemoveImage}
+                disabled={imageBusy}
+                title="Supprimer l'image"
+                className="grid h-7 w-7 place-items-center rounded-[var(--radius-sm)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-elevated))] text-[hsl(var(--ink-3))] shadow-[var(--shadow-1)] hover:bg-[hsl(var(--alert-danger-bg))] hover:text-[hsl(var(--accent-rose))] disabled:opacity-60"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={handlePickImage}
+            disabled={imageBusy}
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-[var(--radius-md)] border border-dashed border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-sunken)/0.4)] px-3 py-4 text-[12.5px] font-medium text-[hsl(var(--ink-3))] transition hover:border-[hsl(var(--brand)/0.5)] hover:bg-[hsl(var(--brand-soft)/0.4)] hover:text-[hsl(var(--brand-ink))] disabled:opacity-60"
+          >
+            {imageBusy ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <ImagePlus className="h-4 w-4" />
+            )}
+            Ajouter une image
           </button>
         )}
 

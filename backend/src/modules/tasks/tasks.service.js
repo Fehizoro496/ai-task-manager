@@ -1,6 +1,9 @@
+const fs = require("fs");
+const path = require("path");
 const { Prisma } = require("@prisma/client");
 const prisma = require("../../prisma/client");
 const AppError = require("../../utils/AppError");
+const { TASKS_DIR } = require("../../middleware/upload");
 const { createNotification, notifyAdmins } = require("../notifications/notifications.service");
 const { isMember } = require("../projects/projects.service");
 const { createBranch } = require("../github/github.service");
@@ -59,6 +62,8 @@ const serializeTask = (task, projectId) => {
     github_repo_url: repoUrl,
     title: task.title,
     description: task.description,
+    imageUrl: task.imageUrl || null,
+    image_url: task.imageUrl || null,
     status: statusToLowercase[task.status] || task.status,
     priority: task.priority || "medium",
     position: task.position,
@@ -387,6 +392,73 @@ const reorderForProject = async (projectId, userId, isAdmin, columns) => {
   return { updated: updates.length };
 };
 
+/** Retire du disque le fichier d'une image de tâche (best-effort). */
+const unlinkTaskImage = (imageUrl) => {
+  if (typeof imageUrl === "string" && imageUrl.startsWith("/uploads/tasks/")) {
+    fs.unlink(path.join(TASKS_DIR, path.basename(imageUrl)), () => {});
+  }
+};
+
+/**
+ * Attache (ou remplace) l'image d'une tâche. L'ancienne image est retirée du
+ * disque. Autorisé à l'admin ou au propriétaire du projet, comme `update`.
+ */
+const setImage = async (id, userId, isAdmin, file) => {
+  if (!file) throw new AppError("Aucune image fournie", 400);
+
+  const task = await prisma.task.findUnique({
+    where: { id },
+    include: { project: true },
+  });
+  if (!task || (!isAdmin && task.project.ownerId !== userId)) {
+    // Fichier déjà écrit sur le disque par multer : on le nettoie.
+    unlinkTaskImage(`/uploads/tasks/${path.basename(file.path)}`);
+    throw new AppError("Task not found", 404);
+  }
+
+  if (task.imageUrl) unlinkTaskImage(task.imageUrl);
+
+  const imageUrl = `/uploads/tasks/${path.basename(file.path)}`;
+  const updated = await prisma.task.update({
+    where: { id },
+    data: { imageUrl },
+    include: {
+      ...assigneeInclude,
+      project: true,
+    },
+  });
+
+  const projectId = task.project.id;
+  emitToProject(projectId, "task:updated", serializeTask(updated, projectId));
+  return updated;
+};
+
+/** Retire l'image d'une tâche (fichier + champ). Idempotent. */
+const removeImage = async (id, userId, isAdmin) => {
+  const task = await prisma.task.findUnique({
+    where: { id },
+    include: { project: true },
+  });
+  if (!task || (!isAdmin && task.project.ownerId !== userId)) {
+    throw new AppError("Task not found", 404);
+  }
+
+  if (task.imageUrl) unlinkTaskImage(task.imageUrl);
+
+  const updated = await prisma.task.update({
+    where: { id },
+    data: { imageUrl: null },
+    include: {
+      ...assigneeInclude,
+      project: true,
+    },
+  });
+
+  const projectId = task.project.id;
+  emitToProject(projectId, "task:updated", serializeTask(updated, projectId));
+  return updated;
+};
+
 const assignSelf = async (id, userId, isAdmin) => {
   const task = await prisma.task.findUnique({ where: { id } });
   if (!task) throw new AppError("Task not found", 404);
@@ -610,6 +682,8 @@ module.exports = {
   createForProject,
   reorderForProject,
   assignSelf,
+  setImage,
+  removeImage,
   serializeTask,
   searchVisible,
   findVisibleByIdentifiers,

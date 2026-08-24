@@ -77,6 +77,8 @@ export interface Task {
   identifier?: string | null;
   title: string;
   description: string | null;
+  /** Image jointe, URL relative à l'hôte backend (/uploads/tasks/...). */
+  imageUrl?: string | null;
   status: TaskStatus;
   priority: TaskPriority | null;
   position: number;

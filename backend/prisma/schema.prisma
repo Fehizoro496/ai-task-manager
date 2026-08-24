@@ -127,6 +127,8 @@ model Task {
   githubBranch String?
   title        String
   description  String?
+  // Image jointe à la tâche (URL relative servie via /uploads/tasks/...).
+  imageUrl     String?
   status       TaskStatus @default(TODO)
   priority     String     @default("medium")
   position     Int        @default(0)
