@@ -24,6 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Select } from "@/components/ui/select";
 import { UserCombobox } from "@/components/ui/user-combobox";
+import { useImageViewer } from "@/components/ui/image-viewer";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import {
   API_BASE_URL,
@@ -133,6 +134,7 @@ function TaskDetailBody({
 }) {
   const { task, loading, error, refetch, setTask } = useTask(taskId);
   const { user, isAdmin } = useAuth();
+  const openImage = useImageViewer();
   const [comment, setComment] = useState("");
   const [submittingComment, setSubmittingComment] = useState(false);
   const [comments, setComments] = useState<TaskComment[]>([]);
@@ -613,9 +615,11 @@ function TaskDetailBody({
           <div className="group relative mt-4 overflow-hidden rounded-[var(--radius-md)] border border-[hsl(var(--line))] bg-[hsl(var(--bg-sunken)/0.4)]">
             <button
               type="button"
-              onClick={() => routerService.openExternal(mediaUrl(task.imageUrl!))}
+              onClick={() =>
+                openImage({ src: mediaUrl(task.imageUrl!), alt: task.title })
+              }
               title="Ouvrir l'image"
-              className="block w-full"
+              className="block w-full cursor-zoom-in"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img

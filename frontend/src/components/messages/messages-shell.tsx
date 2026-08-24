@@ -18,6 +18,8 @@ import {
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useImageViewer } from "@/components/ui/image-viewer";
+import { downloadFile } from "@/lib/download";
 import {
   chatApi,
   socketService,
@@ -742,6 +744,7 @@ export function MessagesShell() {
 
 /** Rendu des pièces jointes d'un message : images en vignettes, autres en liens. */
 function MessageAttachments({ attachments }: { attachments: Attachment[] }) {
+  const openImage = useImageViewer();
   const images = attachments.filter((a) => isImageMime(a.mime));
   const files = attachments.filter((a) => !isImageMime(a.mime));
   return (
@@ -749,12 +752,13 @@ function MessageAttachments({ attachments }: { attachments: Attachment[] }) {
       {images.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {images.map((a) => (
-            <a
+            <button
               key={a.url}
-              href={mediaUrl(a.url)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block overflow-hidden rounded-[var(--radius-sm)] border border-[hsl(var(--line))]"
+              type="button"
+              onClick={() =>
+                openImage({ src: mediaUrl(a.url), alt: a.name, downloadName: a.name })
+              }
+              className="block cursor-zoom-in overflow-hidden rounded-[var(--radius-sm)] border border-[hsl(var(--line))]"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -762,18 +766,16 @@ function MessageAttachments({ attachments }: { attachments: Attachment[] }) {
                 alt={a.name}
                 className="max-h-52 max-w-[280px] object-cover"
               />
-            </a>
+            </button>
           ))}
         </div>
       )}
       {files.map((a) => (
-        <a
+        <button
           key={a.url}
-          href={mediaUrl(a.url)}
-          target="_blank"
-          rel="noopener noreferrer"
-          download={a.name}
-          className="group/file inline-flex max-w-[280px] items-center gap-2 rounded-[var(--radius-sm)] border border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))] p-2 hover:border-[hsl(var(--brand)/0.4)]"
+          type="button"
+          onClick={() => downloadFile(mediaUrl(a.url), a.name)}
+          className="group/file inline-flex max-w-[280px] items-center gap-2 rounded-[var(--radius-sm)] border border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))] p-2 text-left hover:border-[hsl(var(--brand)/0.4)]"
         >
           <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[5px] bg-[hsl(var(--bg-sunken))] text-[hsl(var(--ink-3))]">
             <FileText className="h-4 w-4" />
@@ -787,7 +789,7 @@ function MessageAttachments({ attachments }: { attachments: Attachment[] }) {
             </span>
           </span>
           <Download className="h-3.5 w-3.5 shrink-0 text-[hsl(var(--ink-4))] group-hover/file:text-[hsl(var(--brand-ink))]" />
-        </a>
+        </button>
       ))}
     </div>
   );

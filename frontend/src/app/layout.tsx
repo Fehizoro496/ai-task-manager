@@ -6,6 +6,7 @@ import { AntdProvider } from "@/components/providers/antd-provider";
 import { AuthProvider } from "@/services/auth";
 import { RouterBridge } from "@/services/router";
 import { Toaster } from "@/components/ui/toaster";
+import { ImageViewerProvider } from "@/components/ui/image-viewer";
 
 // Police unique pour toute la plateforme. Toutes les variables --font-*
 // (globals.css) pointent vers --font-sans → un seul rendu typographique.
@@ -54,7 +55,9 @@ export default function RootLayout({
         <AntdRegistry>
           <AntdProvider>
             <RouterBridge />
-            <AuthProvider>{children}</AuthProvider>
+            <ImageViewerProvider>
+              <AuthProvider>{children}</AuthProvider>
+            </ImageViewerProvider>
             <Toaster />
           </AntdProvider>
         </AntdRegistry>
