@@ -71,6 +71,9 @@ const PRIORITY_OPTIONS: { value: TaskPriority; label: string; swatch: string }[]
   { value: "low", label: "Faible", swatch: "hsl(var(--ink-3))" },
 ];
 
+/** Info-bulle des champs verrouillés parce que la tâche appartient à un autre. */
+const LOCKED_HINT = "Tâche assignée à un autre membre : modification réservée à son assigné et aux admins.";
+
 /** Types et taille max acceptés pour l'image d'une tâche (alignés sur le backend). */
 const IMAGE_ACCEPT = "image/png,image/jpeg,image/gif,image/webp";
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10 Mo
@@ -472,6 +475,9 @@ function TaskDetailBody({
   const overdue = task.dueDate ? new Date(task.dueDate) < new Date() : false;
   const branchName = task.githubBranch ?? task.branch ?? null;
   const branchUrl = task.githubBranchUrl ?? null;
+  // Miroir de la règle serveur : une tâche libre est modifiable par tout membre,
+  // une tâche assignée ne l'est plus que par son assigné (et les admins).
+  const canEdit = isAdmin || !task.assigneeId || task.assigneeId === user?.id;
 
   return (
     <>
@@ -484,7 +490,7 @@ function TaskDetailBody({
           onChange={(v) =>
             patchTask({ status: v as TaskStatus }, { status: v as TaskStatus })
           }
-          disabled={saving}
+          disabled={saving || !canEdit}
           options={STATUS_OPTIONS}
           className="!h-8 w-[148px] !px-2.5 text-[12px]"
         />
@@ -558,9 +564,12 @@ function TaskDetailBody({
           />
         ) : (
           <h1
-            onClick={() => setTitleDraft(task.title)}
-            title="Cliquer pour modifier"
-            className="-mx-2 cursor-text rounded-[var(--radius-sm)] px-2 py-1 font-display text-[22px] font-semibold leading-tight tracking-tight hover:bg-[hsl(var(--bg-sunken)/0.6)]"
+            onClick={canEdit ? () => setTitleDraft(task.title) : undefined}
+            title={canEdit ? "Cliquer pour modifier" : LOCKED_HINT}
+            className={cn(
+              "-mx-2 rounded-[var(--radius-sm)] px-2 py-1 font-display text-[22px] font-semibold leading-tight tracking-tight",
+              canEdit && "cursor-text hover:bg-[hsl(var(--bg-sunken)/0.6)]",
+            )}
           >
             {task.title}
           </h1>
@@ -588,13 +597,16 @@ function TaskDetailBody({
           />
         ) : task.description ? (
           <p
-            onClick={() => setDescDraft(task.description ?? "")}
-            title="Cliquer pour modifier"
-            className="mt-3 -mx-2 cursor-text rounded-[var(--radius-sm)] px-2 py-1 text-[14px] leading-relaxed text-[hsl(var(--ink-2))] hover:bg-[hsl(var(--bg-sunken)/0.6)]"
+            onClick={canEdit ? () => setDescDraft(task.description ?? "") : undefined}
+            title={canEdit ? "Cliquer pour modifier" : LOCKED_HINT}
+            className={cn(
+              "mt-3 -mx-2 rounded-[var(--radius-sm)] px-2 py-1 text-[14px] leading-relaxed text-[hsl(var(--ink-2))]",
+              canEdit && "cursor-text hover:bg-[hsl(var(--bg-sunken)/0.6)]",
+            )}
           >
             {task.description}
           </p>
-        ) : (
+        ) : canEdit ? (
           <button
             type="button"
             onClick={() => setDescDraft("")}
@@ -602,7 +614,7 @@ function TaskDetailBody({
           >
             Ajouter une description…
           </button>
-        )}
+        ) : null}
 
         <input
           ref={imageInputRef}
@@ -632,7 +644,7 @@ function TaskDetailBody({
               <button
                 type="button"
                 onClick={handlePickImage}
-                disabled={imageBusy}
+                disabled={imageBusy || !canEdit}
                 title="Remplacer l'image"
                 className="inline-flex h-7 items-center gap-1 rounded-[var(--radius-sm)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-elevated))] px-2 text-[11.5px] font-medium text-[hsl(var(--ink-2))] shadow-[var(--shadow-1)] hover:bg-[hsl(var(--bg-muted))] hover:text-ink disabled:opacity-60"
               >
@@ -646,7 +658,7 @@ function TaskDetailBody({
               <button
                 type="button"
                 onClick={handleRemoveImage}
-                disabled={imageBusy}
+                disabled={imageBusy || !canEdit}
                 title="Supprimer l'image"
                 className="grid h-7 w-7 place-items-center rounded-[var(--radius-sm)] border border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-elevated))] text-[hsl(var(--ink-3))] shadow-[var(--shadow-1)] hover:bg-[hsl(var(--alert-danger-bg))] hover:text-[hsl(var(--accent-rose))] disabled:opacity-60"
               >
@@ -658,7 +670,8 @@ function TaskDetailBody({
           <button
             type="button"
             onClick={handlePickImage}
-            disabled={imageBusy}
+            disabled={imageBusy || !canEdit}
+            title={canEdit ? undefined : LOCKED_HINT}
             className="mt-4 flex w-full items-center justify-center gap-2 rounded-[var(--radius-md)] border border-dashed border-[hsl(var(--line-strong))] bg-[hsl(var(--bg-sunken)/0.4)] px-3 py-4 text-[12.5px] font-medium text-[hsl(var(--ink-3))] transition hover:border-[hsl(var(--brand)/0.5)] hover:bg-[hsl(var(--brand-soft)/0.4)] hover:text-[hsl(var(--brand-ink))] disabled:opacity-60"
           >
             {imageBusy ? (
@@ -677,7 +690,7 @@ function TaskDetailBody({
               members={members}
               membersLoaded={membersLoaded}
               currentUser={user}
-              disabled={saving}
+              disabled={saving || !canEdit}
               onAssign={handleAssign}
               onAssignSelf={handleAssignSelf}
             />
@@ -685,7 +698,7 @@ function TaskDetailBody({
               suggestions={suggestions}
               loading={loadingSuggest}
               currentAssigneeId={task.assigneeId}
-              disabled={saving}
+              disabled={saving || !canEdit}
               onFetch={fetchSuggestions}
               onPick={(id) => handleAssign(id)}
             />
@@ -699,7 +712,7 @@ function TaskDetailBody({
                   { priority: v as TaskPriority },
                 )
               }
-              disabled={saving}
+              disabled={saving || !canEdit}
               options={PRIORITY_OPTIONS}
               className="!h-9"
             />
@@ -708,7 +721,7 @@ function TaskDetailBody({
             <DatePicker
               value={task.dueDate}
               onChange={(iso) => patchTask({ dueDate: iso }, { dueDate: iso })}
-              disabled={saving}
+              disabled={saving || !canEdit}
               placeholder="Aucune échéance"
               className={
                 overdue
@@ -735,8 +748,8 @@ function TaskDetailBody({
                   <button
                     type="button"
                     onClick={() => removeLabel(l)}
-                    disabled={saving}
-                    title="Retirer"
+                    disabled={saving || !canEdit}
+                    title={canEdit ? "Retirer" : LOCKED_HINT}
                     className="grid h-3.5 w-3.5 place-items-center rounded-full text-[hsl(var(--ink-4))] hover:bg-[hsl(var(--bg-muted))] hover:text-[hsl(var(--accent-rose))] disabled:opacity-60"
                   >
                     <X className="h-2.5 w-2.5" />
@@ -747,7 +760,7 @@ function TaskDetailBody({
                 const available = labelCatalog.filter(
                   (l) => !(task.labels ?? []).includes(l.name),
                 );
-                if (available.length === 0) return null;
+                if (available.length === 0 || !canEdit) return null;
                 return (
                   <AntSelect
                     showSearch

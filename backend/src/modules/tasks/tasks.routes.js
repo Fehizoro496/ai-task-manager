@@ -207,6 +207,10 @@ router.get("/:id", tasksController.getById);
  *   put:
  *     tags: [Tasks]
  *     summary: Update a task (status, position, title, description, priority, etc.)
+ *     description: >
+ *       Une tâche non assignée est modifiable par tout membre du projet. Dès
+ *       qu'elle est assignée, seuls son assigné, le propriétaire du projet et
+ *       les admins peuvent la modifier.
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -247,10 +251,12 @@ router.get("/:id", tasksController.getById);
  *     responses:
  *       200:
  *         description: Task updated
+ *       403:
+ *         description: Task assigned to someone else
  *       404:
  *         description: Task not found
  */
-router.put("/:id", requireAdmin, validate(updateTaskSchema), tasksController.update);
+router.put("/:id", validate(updateTaskSchema), tasksController.update);
 
 /**
  * @swagger

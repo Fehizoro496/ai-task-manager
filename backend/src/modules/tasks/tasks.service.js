@@ -113,6 +113,29 @@ const verifyProjectOwnership = async (projectId, userId, isAdmin) => {
   return project;
 };
 
+/**
+ * Autorise l'écriture sur une tâche (contenu, image).
+ *
+ * Une tâche libre appartient au projet : tout membre peut s'en saisir. Dès
+ * qu'elle est assignée, elle devient le travail de son assigné et lui seul la
+ * modifie — l'admin et le propriétaire du projet gardant la main dans tous les
+ * cas. Un non-membre ne doit rien apprendre de l'existence de la tâche, d'où le
+ * 404 ; l'assigné concurrent, lui, est visible et mérite un 403 explicite.
+ *
+ * `task` doit avoir été chargée avec `include: { project: true }`.
+ */
+const assertCanEditTask = async (task, userId, isAdmin) => {
+  if (!task) throw new AppError("Task not found", 404);
+  if (isAdmin || task.project.ownerId === userId) return;
+
+  const member = await isMember(task.project.id, userId);
+  if (!member) throw new AppError("Task not found", 404);
+
+  if (task.assigneeId && task.assigneeId !== userId) {
+    throw new AppError("Cette tâche est assignée à un autre utilisateur", 403);
+  }
+};
+
 const create = async (userId, isAdmin, data) => {
   const project = await verifyProjectOwnership(data.projectId, userId, isAdmin);
   const identifier = await generateTaskIdentifier(project.id);
@@ -173,9 +196,7 @@ const update = async (id, userId, isAdmin, data) => {
     include: { project: true },
   });
 
-  if (!task || (!isAdmin && task.project.ownerId !== userId)) {
-    throw new AppError("Task not found", 404);
-  }
+  await assertCanEditTask(task, userId, isAdmin);
 
   // Validate assigneeId if provided
   if (data.assigneeId) {
@@ -272,11 +293,8 @@ const moveTask = async (id, userId, isAdmin, { status, position }) => {
     where: { id },
     include: { project: true },
   });
-  if (!task) throw new AppError("Task not found", 404);
-
-  if (!isAdmin && task.assigneeId !== userId) {
-    throw new AppError("You can only change the status of tasks assigned to you", 403);
-  }
+  // Déplacer une tâche revient à changer son statut : mêmes droits que `update`.
+  await assertCanEditTask(task, userId, isAdmin);
 
   const updated = await prisma.task.update({
     where: { id },
@@ -389,6 +407,12 @@ const statusMap = {
  * liste ordonnée d'IDs de tâches. Réassigne en transaction:
  *   task.status = colonne, task.position = index dans la liste.
  * Ignore silencieusement les IDs ne correspondant pas à des tâches du projet.
+ *
+ * Le board est un plan de travail commun : réordonner une colonne reste ouvert
+ * à tous ses membres. Changer de colonne, en revanche, change le statut de la
+ * tâche — c'est la règle de `update` qui s'applique, et le déplacement d'une
+ * tâche assignée à quelqu'un d'autre est ignoré plutôt que de faire échouer le
+ * lot entier.
  */
 const reorderForProject = async (projectId, userId, isAdmin, columns) => {
   const project = await prisma.project.findUnique({ where: { id: projectId } });
@@ -405,15 +429,21 @@ const reorderForProject = async (projectId, userId, isAdmin, columns) => {
   const allIds = Object.values(columns).flat();
   const projectTasks = await prisma.task.findMany({
     where: { id: { in: allIds }, projectId },
-    select: { id: true },
+    select: { id: true, status: true, assigneeId: true },
   });
-  const validIds = new Set(projectTasks.map((t) => t.id));
+  const byId = new Map(projectTasks.map((t) => [t.id, t]));
+  const canManage = isAdmin || project.ownerId === userId;
 
   const updates = [];
   for (const [colKey, ids] of Object.entries(columns)) {
     const dbStatus = statusMap[colKey?.toLowerCase()] ?? colKey;
     ids.forEach((id, index) => {
-      if (!validIds.has(id)) return;
+      const task = byId.get(id);
+      if (!task) return;
+
+      const locked = task.assigneeId && task.assigneeId !== userId;
+      if (!canManage && locked && dbStatus !== task.status) return;
+
       updates.push(
         prisma.task.update({
           where: { id },
@@ -437,7 +467,7 @@ const unlinkTaskImage = (imageUrl) => {
 
 /**
  * Attache (ou remplace) l'image d'une tâche. L'ancienne image est retirée du
- * disque. Autorisé à l'admin ou au propriétaire du projet, comme `update`.
+ * disque. Mêmes droits d'écriture que `update`.
  */
 const setImage = async (id, userId, isAdmin, file) => {
   if (!file) throw new AppError("Aucune image fournie", 400);
@@ -446,10 +476,12 @@ const setImage = async (id, userId, isAdmin, file) => {
     where: { id },
     include: { project: true },
   });
-  if (!task || (!isAdmin && task.project.ownerId !== userId)) {
+  try {
+    await assertCanEditTask(task, userId, isAdmin);
+  } catch (err) {
     // Fichier déjà écrit sur le disque par multer : on le nettoie.
     unlinkTaskImage(`/uploads/tasks/${path.basename(file.path)}`);
-    throw new AppError("Task not found", 404);
+    throw err;
   }
 
   if (task.imageUrl) unlinkTaskImage(task.imageUrl);
@@ -483,9 +515,7 @@ const removeImage = async (id, userId, isAdmin) => {
     where: { id },
     include: { project: true },
   });
-  if (!task || (!isAdmin && task.project.ownerId !== userId)) {
-    throw new AppError("Task not found", 404);
-  }
+  await assertCanEditTask(task, userId, isAdmin);
 
   if (task.imageUrl) unlinkTaskImage(task.imageUrl);
 
