@@ -129,6 +129,15 @@ const create = async (userId, isAdmin, data) => {
     createBranch(userId, project.githubOwner, project.githubRepo, githubBranch).catch(() => {});
   }
 
+  notifyAdmins({
+    type: "TASK_UPDATED",
+    title: "Tâche créée",
+    message: `La tâche "${task.title}" a été créée.`,
+    taskId: task.id,
+    link: `/projects/${project.id}/board?task=${task.id}`,
+    excludeUserId: userId,
+  }).catch(() => {});
+
   emitToProject(project.id, "task:created", serializeTask(task, project.id));
 
   return task;
@@ -218,6 +227,15 @@ const update = async (id, userId, isAdmin, data) => {
     }).catch(() => {});
   }
 
+  notifyAdmins({
+    type: "TASK_UPDATED",
+    title: "Tâche mise à jour",
+    message: `La tâche "${task.title}" a été modifiée.`,
+    taskId: id,
+    link,
+    excludeUserId: [userId, data.assigneeId, task.assigneeId],
+  }).catch(() => {});
+
   emitToProject(projectId, "task:updated", serializeTask(updated, projectId));
 
   return updated;
@@ -235,6 +253,16 @@ const remove = async (id, userId, isAdmin) => {
 
   const projectId = task.project.id;
   const deleted = await prisma.task.delete({ where: { id } });
+
+  notifyAdmins({
+    type: "TASK_UPDATED",
+    title: "Tâche supprimée",
+    message: `La tâche "${task.title}" a été supprimée.`,
+    taskId: id,
+    link: `/projects/${projectId}/board`,
+    excludeUserId: userId,
+  }).catch(() => {});
+
   emitToProject(projectId, "task:deleted", { id, projectId });
   return deleted;
 };
@@ -274,16 +302,15 @@ const moveTask = async (id, userId, isAdmin, { status, position }) => {
     }).catch(() => {});
   }
 
-  // Notify admins when a non-admin user changes the status
-  if (!isAdmin) {
-    notifyAdmins({
-      type: "TASK_STATUS_CHANGED",
-      title: "Statut de tâche modifié",
-      message: `Le statut de "${task.title}" a changé vers ${status}.`,
-      taskId: id,
-      link,
-    }).catch(() => {});
-  }
+  // Notify admins of any status change (excluding the actor and the assignee already notified)
+  notifyAdmins({
+    type: "TASK_STATUS_CHANGED",
+    title: "Statut de tâche modifié",
+    message: `Le statut de "${task.title}" a changé vers ${status}.`,
+    taskId: id,
+    link,
+    excludeUserId: [userId, task.assigneeId],
+  }).catch(() => {});
 
   emitToProject(projectId, "task:updated", serializeTask(updated, projectId));
 
@@ -336,6 +363,15 @@ const createForProject = async (userId, isAdmin, projectId, data) => {
   if (project?.githubOwner && project?.githubRepo) {
     createBranch(userId, project.githubOwner, project.githubRepo, githubBranch).catch(() => {});
   }
+
+  notifyAdmins({
+    type: "TASK_UPDATED",
+    title: "Tâche créée",
+    message: `La tâche "${task.title}" a été créée.`,
+    taskId: task.id,
+    link: `/projects/${projectId}/board?task=${task.id}`,
+    excludeUserId: userId,
+  }).catch(() => {});
 
   emitToProject(projectId, "task:created", serializeTask(task, projectId));
   return task;
@@ -429,6 +465,14 @@ const setImage = async (id, userId, isAdmin, file) => {
   });
 
   const projectId = task.project.id;
+  notifyAdmins({
+    type: "TASK_UPDATED",
+    title: "Tâche mise à jour",
+    message: `L'image de la tâche "${task.title}" a été modifiée.`,
+    taskId: id,
+    link: `/projects/${projectId}/board?task=${id}`,
+    excludeUserId: userId,
+  }).catch(() => {});
   emitToProject(projectId, "task:updated", serializeTask(updated, projectId));
   return updated;
 };
@@ -455,6 +499,14 @@ const removeImage = async (id, userId, isAdmin) => {
   });
 
   const projectId = task.project.id;
+  notifyAdmins({
+    type: "TASK_UPDATED",
+    title: "Tâche mise à jour",
+    message: `L'image de la tâche "${task.title}" a été retirée.`,
+    taskId: id,
+    link: `/projects/${projectId}/board?task=${id}`,
+    excludeUserId: userId,
+  }).catch(() => {});
   emitToProject(projectId, "task:updated", serializeTask(updated, projectId));
   return updated;
 };
@@ -477,6 +529,14 @@ const assignSelf = async (id, userId, isAdmin) => {
   });
 
   const projectId = updated.project?.id;
+  notifyAdmins({
+    type: "TASK_ASSIGNED",
+    title: "Tâche prise en charge",
+    message: `La tâche "${updated.title}" a été prise en charge.`,
+    taskId: id,
+    link: projectId ? `/projects/${projectId}/board?task=${id}` : "",
+    excludeUserId: userId,
+  }).catch(() => {});
   emitToProject(projectId, "task:updated", serializeTask(updated, projectId));
   return updated;
 };

@@ -1,7 +1,7 @@
 const prisma = require("../../prisma/client");
 const AppError = require("../../utils/AppError");
 const { isMember } = require("../projects/projects.service");
-const { createNotification } = require("../notifications/notifications.service");
+const { createNotification, notifyAdmins } = require("../notifications/notifications.service");
 
 const authorInclude = {
   author: {
@@ -69,25 +69,37 @@ const create = async (taskId, userId, isAdmin, data) => {
     include: authorInclude,
   });
 
+  const taskInfo = await prisma.task.findUnique({
+    where: { id: taskId },
+    select: { identifier: true, title: true },
+  });
+  const author = comment.author?.name ?? "Un membre";
+  const ident = taskInfo?.identifier ? `${taskInfo.identifier} ` : "";
+  const projectId = task.project.id;
+  const link = `/projects/${projectId}/board?task=${taskId}`;
+  const message = `${author} a commenté ${ident}« ${taskInfo?.title ?? ""} ».`;
+
   // Notification pour l'assigné (si différent de l'auteur)
   if (task.assigneeId && task.assigneeId !== userId) {
-    const taskInfo = await prisma.task.findUnique({
-      where: { id: taskId },
-      select: { identifier: true, title: true },
-    });
-    const author = comment.author?.name ?? "Un membre";
-    const ident = taskInfo?.identifier ? `${taskInfo.identifier} ` : "";
-    const projectId = task.project.id;
-    const link = `/projects/${projectId}/board?task=${taskId}`;
     await createNotification({
       type: "TASK_COMMENT",
       title: "Nouveau commentaire",
-      message: `${author} a commenté ${ident}« ${taskInfo?.title ?? ""} ».`,
+      message,
       userId: task.assigneeId,
       taskId,
       link,
     });
   }
+
+  // Notifie les admins (hors auteur du commentaire et hors assigné déjà notifié)
+  notifyAdmins({
+    type: "TASK_COMMENT",
+    title: "Nouveau commentaire",
+    message,
+    taskId,
+    link,
+    excludeUserId: [userId, task.assigneeId],
+  }).catch(() => {});
 
   return serialize(comment);
 };

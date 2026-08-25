@@ -58,9 +58,19 @@ const markAllAsRead = async (userId) => {
   });
 };
 
-const notifyAdmins = async ({ type, title, message, taskId, link }) => {
+/**
+ * Notifie tous les admins approuvés d'un événement. `excludeUserId` (id ou
+ * liste d'ids) permet de ne pas re-notifier l'admin à l'origine de l'action ou
+ * un admin déjà notifié à un autre titre (ex. assigné de la tâche).
+ */
+const notifyAdmins = async ({ type, title, message, taskId, link, excludeUserId }) => {
+  const excluded = (Array.isArray(excludeUserId) ? excludeUserId : [excludeUserId]).filter(Boolean);
   const admins = await prisma.user.findMany({
-    where: { role: "ADMIN", status: "APPROVED" },
+    where: {
+      role: "ADMIN",
+      status: "APPROVED",
+      ...(excluded.length ? { id: { notIn: excluded } } : {}),
+    },
     select: { id: true },
   });
   await Promise.all(
