@@ -4,6 +4,7 @@ const config = require("../../config/env");
 const AppError = require("../../utils/AppError");
 const { aiPlanSchema } = require("./ai.schema");
 const labelsService = require("../labels/labels.service");
+const { dedupeTasks, reconcilePlan } = require("./plan-merge");
 
 const anthropic = new Anthropic({ apiKey: config.anthropicApiKey });
 
@@ -23,7 +24,9 @@ const SYSTEM_PROMPT = `Tu es un assistant de planification de projet. À partir 
 
 - Les Tâches sont des unités de travail concrètes et actionnables.
 - Rédige TOUT le contenu (titres et descriptions) en français.
+- Chaque tâche a OBLIGATOIREMENT une "description" non vide : elle précise ce qui doit être fait.
 - Ton : TOUJOURS concis. Titres courts à l'impératif, une phrase courte maximum par description, sans remplissage.
+- Chaque unité de travail n'apparaît QU'UNE SEULE FOIS : jamais deux tâches au même objet, même formulées différemment.
 - Couvre le document de manière exhaustive sans inventer de périmètre non implicite.`;
 
 // JSON Schema utilisé pour les structured outputs (équivalent de aiPlanSchema).
@@ -40,12 +43,14 @@ const titleDescObject = (required, extraProps = {}) => ({
   additionalProperties: false,
 });
 
+// `description` est REQUIS : sans cela le modèle l'omet régulièrement lors
+// du raffinage et les tâches reviennent sans description.
 const PLAN_JSON_SCHEMA = {
   type: "object",
   properties: {
     tasks: {
       type: "array",
-      items: titleDescObject(["title"], {
+      items: titleDescObject(["title", "description"], {
         labels: { type: "array", items: { type: "string" } },
       }),
     },
@@ -133,7 +138,9 @@ const generatePlan = async (userId, { projectId, document }) => {
     throw new AppError("AI plan generation failed", 502);
   }
   // Re-validation côté serveur avec le schéma zod existant (défense en profondeur).
-  const plan = aiPlanSchema.parse(JSON.parse(textBlock.text));
+  const parsed = aiPlanSchema.parse(JSON.parse(textBlock.text));
+  // Filet de sécurité : le modèle peut proposer deux fois la même tâche.
+  const plan = { ...parsed, tasks: dedupeTasks(parsed.tasks) };
 
   const draft = await prisma.aiDraft.create({
     data: {
@@ -164,7 +171,9 @@ const REFINE_SYSTEM_PROMPT = `Tu raffines un plan de projet EXISTANT composé d'
 - Tu reçois le plan actuel (JSON), le brief initial et une instruction.
 - Applique l'instruction et renvoie le plan révisé COMPLET dans la même structure.
 - Rédige tout le contenu en français, sur un ton concis.
-- Conserve à l'identique toute partie non concernée par l'instruction (mêmes titres/descriptions).
+- Recopie MOT POUR MOT le titre ET la description de chaque tâche non concernée par l'instruction.
+- Chaque tâche du plan révisé a OBLIGATOIREMENT une "description" non vide : ne renvoie jamais une tâche sans sa description, même inchangée.
+- N'ajoute jamais une tâche qui recouvre une tâche déjà présente : modifie ou complète la tâche existante à la place. Chaque unité de travail n'apparaît qu'une seule fois dans le plan.
 - Ne supprime aucun contenu existant sauf si l'instruction le demande.`;
 
 /**
@@ -210,7 +219,10 @@ const refineDraft = async (draftId, userId, instruction) => {
 
   const block = response.content.find((b) => b.type === "text");
   if (!block) throw new AppError("AI plan refinement failed", 502);
-  const revisedPlan = aiPlanSchema.parse(JSON.parse(block.text));
+  const parsed = aiPlanSchema.parse(JSON.parse(block.text));
+  // Filet de sécurité : on récupère les descriptions/labels que le modèle
+  // aurait omis sur des tâches conservées, et on fusionne les doublons.
+  const revisedPlan = reconcilePlan(draft.plan, parsed);
 
   // Persiste le tour de discussion + le plan révisé.
   const [updated] = await prisma.$transaction([
