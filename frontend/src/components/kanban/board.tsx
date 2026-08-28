@@ -611,7 +611,7 @@ function TaskCard({
         <span className="font-mono text-[10.5px] font-semibold tracking-wider text-[hsl(var(--ink-3))]">
           {code}
         </span>
-        <span
+        {/* <span
           className={cn(
             "inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9.5px] font-semibold",
             token.bg,
@@ -620,7 +620,7 @@ function TaskCard({
         >
           <span className={cn("h-1 w-1 rounded-full", token.dot)} />
           {statusLabel[status]}
-        </span>
+        </span> */}
       </div>
       <div className="mt-1.5 text-[13px] font-semibold leading-snug tracking-tight">
         {task.title}
