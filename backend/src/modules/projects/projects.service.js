@@ -15,6 +15,26 @@ const generateIdentifierPrefix = (name) => {
   return words.map((w) => w[0]).join("").substring(0, 5).toUpperCase();
 };
 
+// Palette de repli, alignée sur les accents du thème frontend. La modale de
+// création n'expose pas de champ couleur : sans valeur par défaut, `color`
+// resterait null et les pastilles de projet (sélecteurs, filtres) disparaîtraient.
+const DEFAULT_COLORS = [
+  "#6C5CE7", // violet
+  "#00B894", // vert
+  "#FDAA5E", // abricot
+  "#6366F1", // indigo (brand)
+  "#27A7B0", // teal
+  "#E74062", // rose
+  "#F6A61E", // ambre
+  "#46916E", // sauge
+];
+
+/** Couleur suivante de la palette, en rotation sur le nombre de projets existants. */
+const nextDefaultColor = async () => {
+  const count = await prisma.project.count();
+  return DEFAULT_COLORS[count % DEFAULT_COLORS.length];
+};
+
 /**
  * Extrait {owner, repo} depuis une URL GitHub.
  * Exemples acceptés :
@@ -71,7 +91,7 @@ const create = async (ownerId, data) => {
     data: {
       name: data.name,
       description: data.description,
-      color: data.color,
+      color: data.color || (await nextDefaultColor()),
       ownerId,
       identifierPrefix,
       githubRepoUrl,

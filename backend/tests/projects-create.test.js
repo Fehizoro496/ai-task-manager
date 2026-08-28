@@ -73,6 +73,21 @@ describe("POST /api/projects", () => {
     assert.equal(res.body.identifierPrefix, "ZED");
   });
 
+  it("attribue une couleur par défaut quand aucune n'est fournie", async () => {
+    const res = await asUser(ctx.admin).post("/api/projects", { name: "Alpha Mobile" });
+    assert.match(res.body.color, /^#[0-9A-F]{6}$/i, "une couleur doit être posée");
+  });
+
+  it("fait tourner les couleurs par défaut entre projets successifs", async () => {
+    const admin = asUser(ctx.admin);
+    const couleurs = [];
+    for (const nom of ["Alpha", "Beta", "Gamma"]) {
+      const res = await admin.post("/api/projects", { name: nom });
+      couleurs.push(res.body.color);
+    }
+    assert.equal(new Set(couleurs).size, 3, "chaque projet doit avoir sa propre couleur");
+  });
+
   it("extrait le dépôt d'une URL GitHub fournie", async () => {
     const res = await asUser(ctx.admin).post("/api/projects", {
       name: "Alpha Mobile",
