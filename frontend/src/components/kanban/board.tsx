@@ -22,6 +22,7 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import * as Tooltip from "@radix-ui/react-tooltip";
 import {
   Plus,
   Search,
@@ -315,13 +316,14 @@ export function KanbanBoard({
   }
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCorners}
-      onDragStart={onDragStart}
-      onDragOver={onDragOver}
-      onDragEnd={onDragEnd}
-    >
+    <Tooltip.Provider delayDuration={250} skipDelayDuration={100}>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={onDragStart}
+        onDragOver={onDragOver}
+        onDragEnd={onDragEnd}
+      >
       <div className="shrink-0 px-6 py-4 border-b border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))]">
         <div className="flex flex-wrap items-center gap-3">
           <div className="w-[260px]">
@@ -465,7 +467,8 @@ export function KanbanBoard({
           onApplied={() => refetch()}
         />
       )}
-    </DndContext>
+      </DndContext>
+    </Tooltip.Provider>
   );
 }
 
@@ -641,10 +644,9 @@ function TaskCard({
       <div className="mt-3 flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           {task.assigneeId && (
-            <Avatar
+            <AssigneeTooltip
               id={task.assigneeId}
               name={task.assignee?.name ?? task.assigneeId}
-              size="xs"
             />
           )}
           {task.commentsCount != null && task.commentsCount > 0 && (
@@ -660,5 +662,30 @@ function TaskCard({
         <PriorityPill priority={priority} className="!text-[10px]" />
       </div>
     </button>
+  );
+}
+
+function AssigneeTooltip({ id, name }: { id: string; name: string }) {
+  return (
+    <Tooltip.Root>
+      <Tooltip.Trigger asChild>
+        <span className="inline-flex rounded-full outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--brand)/0.35)] focus-visible:ring-offset-1">
+          <Avatar id={id} name={name} size="xs" title={false} />
+        </span>
+      </Tooltip.Trigger>
+      <Tooltip.Portal>
+        <Tooltip.Content
+          side="right"
+          sideOffset={6}
+          collisionPadding={10}
+          className="z-50 rounded-md border border-[hsl(var(--line)/0.7)] bg-[hsl(var(--bg-elevated)/0.82)] px-2 py-1 shadow-[var(--shadow-1)] backdrop-blur-md data-[state=delayed-open]:animate-in data-[state=closed]:animate-out data-[state=delayed-open]:fade-in-0 data-[state=closed]:fade-out-0 data-[side=top]:slide-in-from-bottom-0.5"
+        >
+          <span className="block max-w-48 truncate text-[11px] font-medium leading-4 text-[hsl(var(--ink-2))]">
+            {name}
+          </span>
+          <Tooltip.Arrow className="fill-[hsl(var(--bg-elevated)/0.82)]" />
+        </Tooltip.Content>
+      </Tooltip.Portal>
+    </Tooltip.Root>
   );
 }

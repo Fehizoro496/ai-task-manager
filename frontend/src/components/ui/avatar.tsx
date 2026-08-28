@@ -30,12 +30,14 @@ export function Avatar({
   size = "md",
   className,
   ring,
+  title,
 }: {
   name: string;
   id: string;
   size?: keyof typeof SIZES;
   className?: string;
   ring?: boolean;
+  title?: string | false;
 }) {
   return (
     <span
@@ -47,7 +49,7 @@ export function Avatar({
         className,
       )}
       aria-label={name}
-      title={name}
+      title={title === false ? undefined : (title ?? name)}
     >
       {initials(name)}
     </span>
