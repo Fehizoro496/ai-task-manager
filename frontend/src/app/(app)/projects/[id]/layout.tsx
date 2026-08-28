@@ -62,25 +62,20 @@ export default function ProjectLayout({
       <div className="shrink-0 border-b border-[hsl(var(--line))] bg-[hsl(var(--bg-elevated))]">
         <div className="px-8 pt-6 pb-3">
           <div className="flex items-start justify-between gap-4">
-            <div className="flex items-start gap-4">
+            <div className="flex items-center gap-4">
               <span
                 className="grid h-14 w-14 place-items-center rounded-[12px] text-white font-mono text-[13px] font-bold shadow-[inset_0_-2px_4px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.25)]"
                 style={{ background: color }}
               >
                 {prefix}
               </span>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="font-display text-[22px] font-semibold tracking-tight">
-                    {project.name}
-                  </h1>
-                  <Badge tone="neutral">
-                    <span className="font-mono text-[10px]">{prefix}-</span>
-                  </Badge>
-                </div>
-                <p className="mt-1 max-w-[680px] text-[13.5px] text-[hsl(var(--ink-3))]">
-                  {project.description ?? "—"}
-                </p>
+              <div className="flex items-center gap-2">
+                <h1 className="font-display text-[22px] font-semibold tracking-tight">
+                  {project.name}
+                </h1>
+                <Badge tone="neutral">
+                  <span className="font-mono text-[10px]">{prefix}-</span>
+                </Badge>
               </div>
             </div>
             <div className="flex items-center gap-2">
