@@ -288,9 +288,6 @@ export function PlanWizard() {
                 rows={12}
                 className="resize-none p-4 font-mono text-[13.5px] leading-relaxed"
               />
-              <span className="pointer-events-none absolute bottom-3 right-4 font-mono text-[10.5px] text-[hsl(var(--ink-3))]">
-                {brief.length} / 4000
-              </span>
             </div>
 
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
