@@ -5,6 +5,7 @@ const AppError = require("../../utils/AppError");
 const { aiPlanSchema } = require("./ai.schema");
 const labelsService = require("../labels/labels.service");
 const { dedupeTasks, reconcilePlan } = require("./plan-merge");
+const { buildFewShotMessages } = require("./ai.examples");
 
 const anthropic = new Anthropic({ apiKey: config.anthropicApiKey });
 
@@ -129,7 +130,13 @@ const generatePlan = async (userId, { projectId, document }) => {
         cache_control: { type: "ephemeral" },
       },
     ],
-    messages: [{ role: "user", content: document }],
+    // Few-shot : des exemples document -> plan précèdent le vrai document pour
+    // montrer au modèle la granularité, le ton et le format attendus. Le vrai
+    // document reste le dernier message (pas de prefill assistant en fin).
+    messages: [
+      ...buildFewShotMessages(),
+      { role: "user", content: document },
+    ],
     output_config: { format: { type: "json_schema", schema: PLAN_JSON_SCHEMA } },
   });
 
