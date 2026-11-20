@@ -1,61 +1,17 @@
-export { apiClient, ApiError, request, tokenStorage } from "./client";
-export type { RequestOptions, HttpMethod } from "./client";
-export { endpoints } from "./endpoints";
+export * from "./core";
 
-export { authApi } from "./auth.api";
-export { projectsApi } from "./projects.api";
-export { tasksApi } from "./tasks.api";
-export type {
-  CreateTaskInput,
-  UpdateTaskInput,
-  MoveTaskInput,
-  MyTasksQuery,
-  MyTasksPage,
-  MyTasksScope,
-  MyTasksSort,
-} from "./tasks.api";
-export { aiApi } from "./ai.api";
-export { adminApi } from "./admin.api";
-export { notificationsApi } from "./notifications.api";
-export { chatApi } from "./chat.api";
-export { usersApi } from "./users.api";
-export type { UserDetail, UserRecentTask } from "./users.api";
-export { calendarApi } from "./calendar.api";
-export { holidaysApi } from "./holidays.api";
-export type { Holiday } from "./holidays.api";
-export type {
-  CalendarEvent,
-  CalendarEventUser,
-  CalendarEventVisibility,
-  CustomCalendarEvent,
-  TaskCalendarEvent,
-  CreateCalendarEventInput,
-} from "./calendar.api";
-export { commentsApi } from "./comments.api";
-export type { TaskComment } from "./comments.api";
-export { skillsApi } from "./skills.api";
-export type { Skill, UserSkill } from "./skills.api";
-export { labelsApi } from "./labels.api";
-export type { Label } from "./labels.api";
-export { distributionApi } from "./distribution.api";
-export type {
-  ScoreBreakdown,
-  AssigneeSuggestion,
-  SuggestResponse,
-  DistributionAssignment,
-  DistributionPreview,
-} from "./distribution.api";
-export { reportsApi } from "./reports.api";
-export type {
-  ReportTotals,
-  ReportsOverview,
-  ProjectBreakdown,
-  AssigneeStat,
-  DayCompletion,
-  DistributionItem,
-  RangeUnit,
-  ReportsRange,
-  ReportsRangeQuery,
-} from "./reports.api";
-
-export type * from "./types";
+export * from "./admin";
+export * from "./ai";
+export * from "./auth";
+export * from "./calendar";
+export * from "./chat";
+export * from "./comments";
+export * from "./distribution";
+export * from "./holidays";
+export * from "./labels";
+export * from "./notifications";
+export * from "./projects";
+export * from "./reports";
+export * from "./skills";
+export * from "./tasks";
+export * from "./users";

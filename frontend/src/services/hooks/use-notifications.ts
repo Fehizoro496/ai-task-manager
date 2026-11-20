@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { notificationsApi } from "../api/notifications.api";
-import type { Notification } from "../api/types";
+import { notificationsApi } from "../api/notifications";
+import type { Notification } from "../api/notifications";
 import { useAuthStore } from "../auth/auth-store";
 import { socketService } from "../socket";
 

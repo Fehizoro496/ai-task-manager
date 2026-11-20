@@ -3,14 +3,14 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 
 import { useMyTasks } from "@/services/hooks/use-my-tasks";
 import type { MyTasksFilters } from "@/services/hooks/use-my-tasks";
-import type { MyTasksPage } from "@/services/api/tasks.api";
-import type { Task } from "@/services/api/types";
+import type { MyTasksPage } from "@/services/api/tasks";
+import type { Task } from "@/services/api/tasks";
 
-vi.mock("@/services/api/tasks.api", () => ({
+vi.mock("@/services/api/tasks/tasks.api", () => ({
   tasksApi: { listMine: vi.fn() },
 }));
 
-import { tasksApi } from "@/services/api/tasks.api";
+import { tasksApi } from "@/services/api/tasks";
 
 const listMine = vi.mocked(tasksApi.listMine);
 

@@ -1,8 +1,8 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { tasksApi } from "../api/tasks.api";
-import type { MyTasksQuery, MyTasksScope, MyTasksSort } from "../api/tasks.api";
-import type { Task, TaskPriority } from "../api/types";
+import { tasksApi } from "../api/tasks";
+import type { MyTasksQuery, MyTasksScope, MyTasksSort } from "../api/tasks";
+import type { Task, TaskPriority } from "../api/tasks";
 
 /** Taille d'un lot. Le suivant est demandé en arrivant au bas du tableau. */
 export const MY_TASKS_PAGE_SIZE = 30;

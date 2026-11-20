@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { tasksApi } from "@/services/api/tasks.api";
-import { tokenStorage } from "@/services/api/client";
+import { tasksApi } from "@/services/api/tasks";
+import { tokenStorage } from "@/services/api/core";
 
 const pageVide = () =>
   new Response(JSON.stringify({ tasks: [], total: 0, limit: 30, offset: 0, hasMore: false }), {

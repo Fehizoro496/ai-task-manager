@@ -1,8 +1,8 @@
 "use client";
 import { useEffect } from "react";
 import { create } from "zustand";
-import { chatApi } from "../api/chat.api";
-import type { Message } from "../api/types";
+import { chatApi } from "../api/chat";
+import type { Message } from "../api/chat";
 import { useAuthStore } from "../auth/auth-store";
 import { socketService } from "../socket/socket";
 

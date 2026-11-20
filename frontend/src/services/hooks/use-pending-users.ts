@@ -1,7 +1,7 @@
 "use client";
 import { useEffect } from "react";
 import { create } from "zustand";
-import { adminApi } from "../api/admin.api";
+import { adminApi } from "../api/admin";
 import { useAuthStore } from "../auth/auth-store";
 import { socketService } from "../socket/socket";
 

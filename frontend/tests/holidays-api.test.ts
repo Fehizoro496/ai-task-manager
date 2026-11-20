@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { holidaysApi } from "@/services/api/holidays.api";
-import { tokenStorage } from "@/services/api/client";
+import { holidaysApi } from "@/services/api/holidays";
+import { tokenStorage } from "@/services/api/core";
 
 const nagerHoliday = (over: Record<string, unknown> = {}) => ({
   date: "2026-01-01",

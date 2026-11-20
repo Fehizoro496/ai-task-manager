@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { chatApi } from "@/services/api/chat.api";
-import { tokenStorage } from "@/services/api/client";
+import { chatApi } from "@/services/api/chat";
+import { tokenStorage } from "@/services/api/core";
 
 const ok = (payload: unknown = { message: { id: "m1" } }) =>
   new Response(JSON.stringify(payload), {

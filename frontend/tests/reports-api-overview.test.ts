@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { reportsApi } from "@/services/api/reports.api";
-import { tokenStorage } from "@/services/api/client";
+import { reportsApi } from "@/services/api/reports";
+import { tokenStorage } from "@/services/api/core";
 
 const overviewVide = () =>
   new Response(

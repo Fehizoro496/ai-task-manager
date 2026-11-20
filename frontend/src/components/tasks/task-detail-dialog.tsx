@@ -48,7 +48,7 @@ import type {
   TaskStatus,
   User as ApiUser,
 } from "@/services";
-import type { UpdateTaskInput } from "@/services/api/tasks.api";
+import type { UpdateTaskInput } from "@/services/api/tasks";
 import {
   normalizeApiStatus,
   normalizeApiPriority,

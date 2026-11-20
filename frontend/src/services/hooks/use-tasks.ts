@@ -1,9 +1,9 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { projectsApi } from "../api/projects.api";
-import { tasksApi } from "../api/tasks.api";
-import type { MoveTaskInput, UpdateTaskInput } from "../api/tasks.api";
-import type { Task } from "../api/types";
+import { projectsApi } from "../api/projects";
+import { tasksApi } from "../api/tasks";
+import type { MoveTaskInput, UpdateTaskInput } from "../api/tasks";
+import type { Task } from "../api/tasks";
 import { socketService } from "../socket";
 
 export function useProjectTasks(projectId: string | null | undefined) {

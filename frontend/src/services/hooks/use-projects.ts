@@ -1,9 +1,9 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { create as createStore } from "zustand";
-import { projectsApi } from "../api/projects.api";
-import type { CreateProjectInput, UpdateProjectInput } from "../api/projects.api";
-import type { Project } from "../api/types";
+import { projectsApi } from "../api/projects";
+import type { CreateProjectInput, UpdateProjectInput } from "../api/projects";
+import type { Project } from "../api/projects";
 import { useAuthStore } from "../auth/auth-store";
 
 /**

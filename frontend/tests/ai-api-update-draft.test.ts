@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { aiApi } from "@/services/api/ai.api";
-import { tokenStorage } from "@/services/api/client";
+import { aiApi } from "@/services/api/ai";
+import { tokenStorage } from "@/services/api/core";
 
 const ok = () =>
   new Response(JSON.stringify({ id: "d1", plan: { tasks: [] } }), {

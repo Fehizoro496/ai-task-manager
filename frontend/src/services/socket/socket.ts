@@ -1,6 +1,6 @@
 import { io, type Socket } from "socket.io-client";
 import { SOCKET_URL } from "../config";
-import { tokenStorage } from "../api/client";
+import { tokenStorage } from "../api/core";
 
 type Handler = (...args: unknown[]) => void;
 

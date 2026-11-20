@@ -1,7 +1,7 @@
 "use client";
 import { create } from "zustand";
-import type { User } from "../api/types";
-import { tokenStorage } from "../api/client";
+import type { User } from "../api/users";
+import { tokenStorage } from "../api/core";
 
 interface AuthState {
   user: User | null;

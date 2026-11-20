@@ -1,12 +1,12 @@
 "use client";
 import { useEffect } from "react";
-import { authApi } from "../api/auth.api";
-import { ApiError, tokenStorage } from "../api/client";
+import { authApi } from "../api/auth";
+import { ApiError, tokenStorage } from "../api/core";
 import { socketService } from "../socket/socket";
 import { projectsStoreApi } from "../hooks/use-projects";
 import { useAuthStore } from "./auth-store";
 import { applyAppearance, resetAppearance } from "@/lib/apply-appearance";
-import type { User } from "../api/types";
+import type { User } from "../api/users";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const setSession = useAuthStore((s) => s.setSession);

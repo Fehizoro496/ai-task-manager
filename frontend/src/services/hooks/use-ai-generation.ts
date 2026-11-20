@@ -1,7 +1,7 @@
 "use client";
 import { create } from "zustand";
-import { aiApi } from "../api/ai.api";
-import type { AiDraft } from "../api/types";
+import { aiApi } from "../api/ai";
+import type { AiDraft } from "../api/ai";
 import { useToastStore } from "../toast/toast-store";
 import { routerService } from "../router";
 
