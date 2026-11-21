@@ -11,7 +11,6 @@ import 'package:ai_task_manager/features/messages/viewmodel/chat_viewmodel.dart'
 import 'package:ai_task_manager/features/notifications/viewmodel/notification_viewmodel.dart';
 import 'package:ai_task_manager/features/projects/viewmodel/project_viewmodel.dart';
 import 'package:ai_task_manager/features/tasks/viewmodel/task_viewmodel.dart';
-import 'package:ai_task_manager/shared/app_layout.dart';
 import 'package:ai_task_manager/shared/providers.dart';
 
 final authServiceProvider = Provider<AuthService>((ref) {
@@ -55,7 +54,6 @@ class AuthViewModel extends AsyncNotifier<UserEntity?> {
     ref.invalidate(adminUsersProvider);
     ref.invalidate(adminOverviewProvider);
     ref.invalidate(aiPlanningStateProvider);
-    ref.invalidate(selectedNavIndexProvider);
     ref.invalidate(conversationsProvider);
     ref.invalidate(messagesProvider);
     ref.invalidate(boardTasksProvider);

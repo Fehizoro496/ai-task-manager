@@ -18,7 +18,6 @@ import 'package:ai_task_manager/features/messages/view/messages_screen.dart';
 import 'package:ai_task_manager/features/messages/view/conversation_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
-final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
@@ -70,120 +69,79 @@ final routerProvider = Provider<GoRouter>((ref) {
           },
         ),
       ),
-      ShellRoute(
-        navigatorKey: _shellNavigatorKey,
-        builder: (context, state, child) => AppLayout(child: child),
-        routes: [
-          GoRoute(
-            path: '/dashboard',
-            pageBuilder: (context, state) => CustomTransitionPage(
-              key: state.pageKey,
-              child: const DashboardScreen(),
-              transitionsBuilder:
-                  (context, animation, secondaryAnimation, child) {
-                return FadeTransition(opacity: animation, child: child);
-              },
-            ),
-          ),
-          GoRoute(
-            path: '/board/:projectId',
-            pageBuilder: (context, state) => CustomTransitionPage(
-              key: state.pageKey,
-              child: BoardScreen(
-                projectId: state.pathParameters['projectId'] ?? 'default',
-                highlightTaskId: state.uri.queryParameters['taskId'],
+      // Écrans ouverts au-dessus de la barre de navigation.
+      GoRoute(
+        path: '/ai-planning',
+        builder: (context, state) =>
+            const FullScreenLayout(child: AiPlanningScreen()),
+      ),
+      GoRoute(
+        path: '/admin',
+        builder: (context, state) =>
+            const FullScreenLayout(child: AdminDashboardScreen()),
+      ),
+      GoRoute(
+        path: '/team',
+        builder: (context, state) =>
+            const FullScreenLayout(child: TeamScreen()),
+      ),
+      // L'ordre des branches suit AppTab (branchIndex).
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) =>
+            AppLayout(navigationShell: navigationShell),
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/overview',
+                builder: (context, state) => const AdminOverviewScreen(),
               ),
-              transitionsBuilder:
-                  (context, animation, secondaryAnimation, child) {
-                return FadeTransition(opacity: animation, child: child);
-              },
-            ),
+            ],
           ),
-          GoRoute(
-            path: '/ai-planning',
-            pageBuilder: (context, state) => CustomTransitionPage(
-              key: state.pageKey,
-              child: const AiPlanningScreen(),
-              transitionsBuilder:
-                  (context, animation, secondaryAnimation, child) {
-                return FadeTransition(opacity: animation, child: child);
-              },
-            ),
-          ),
-          GoRoute(
-            path: '/admin',
-            pageBuilder: (context, state) => CustomTransitionPage(
-              key: state.pageKey,
-              child: const AdminDashboardScreen(),
-              transitionsBuilder:
-                  (context, animation, secondaryAnimation, child) {
-                return FadeTransition(opacity: animation, child: child);
-              },
-            ),
-          ),
-          GoRoute(
-            path: '/overview',
-            pageBuilder: (context, state) => CustomTransitionPage(
-              key: state.pageKey,
-              child: const AdminOverviewScreen(),
-              transitionsBuilder:
-                  (context, animation, secondaryAnimation, child) =>
-                      FadeTransition(opacity: animation, child: child),
-            ),
-          ),
-          GoRoute(
-            path: '/team',
-            pageBuilder: (context, state) => CustomTransitionPage(
-              key: state.pageKey,
-              child: const TeamScreen(),
-              transitionsBuilder:
-                  (context, animation, secondaryAnimation, child) =>
-                      FadeTransition(opacity: animation, child: child),
-            ),
-          ),
-          GoRoute(
-            path: '/notifications',
-            pageBuilder: (context, state) => CustomTransitionPage(
-              key: state.pageKey,
-              child: const NotificationsScreen(),
-              transitionsBuilder:
-                  (context, animation, secondaryAnimation, child) =>
-                      FadeTransition(opacity: animation, child: child),
-            ),
-          ),
-          GoRoute(
-            path: '/messages',
-            pageBuilder: (context, state) => CustomTransitionPage(
-              key: state.pageKey,
-              child: const MessagesScreen(),
-              transitionsBuilder:
-                  (context, animation, secondaryAnimation, child) =>
-                      FadeTransition(opacity: animation, child: child),
-            ),
-          ),
-          GoRoute(
-            path: '/messages/:conversationId',
-            pageBuilder: (context, state) => CustomTransitionPage(
-              key: state.pageKey,
-              child: ConversationScreen(
-                conversationId:
-                    state.pathParameters['conversationId']!,
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/dashboard',
+                builder: (context, state) => const DashboardScreen(),
               ),
-              transitionsBuilder:
-                  (context, animation, secondaryAnimation, child) =>
-                      FadeTransition(opacity: animation, child: child),
-            ),
+              GoRoute(
+                path: '/board/:projectId',
+                builder: (context, state) => BoardScreen(
+                  projectId: state.pathParameters['projectId'] ?? 'default',
+                  highlightTaskId: state.uri.queryParameters['taskId'],
+                ),
+              ),
+            ],
           ),
-          GoRoute(
-            path: '/settings',
-            pageBuilder: (context, state) => CustomTransitionPage(
-              key: state.pageKey,
-              child: const SettingsScreen(),
-              transitionsBuilder:
-                  (context, animation, secondaryAnimation, child) {
-                return FadeTransition(opacity: animation, child: child);
-              },
-            ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/messages',
+                builder: (context, state) => const MessagesScreen(),
+              ),
+              GoRoute(
+                path: '/messages/:conversationId',
+                builder: (context, state) => ConversationScreen(
+                  conversationId: state.pathParameters['conversationId']!,
+                ),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/notifications',
+                builder: (context, state) => const NotificationsScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/settings',
+                builder: (context, state) => const SettingsScreen(),
+              ),
+            ],
           ),
         ],
       ),

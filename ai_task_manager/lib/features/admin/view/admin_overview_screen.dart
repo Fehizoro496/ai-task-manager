@@ -259,7 +259,7 @@ class _KpiGrid extends StatelessWidget {
         color: AppColors.success,
         value: data.totalMembers,
         label: 'Members',
-        onTap: () => context.go('/team'),
+        onTap: () => context.push('/team'),
       ),
       (
         icon: Icons.hourglass_top_rounded,
@@ -268,7 +268,7 @@ class _KpiGrid extends StatelessWidget {
         label: 'Pending',
         onTap: () {
           ref.read(adminUserFilterProvider.notifier).state = 'PENDING';
-          context.go('/admin');
+          context.push('/admin');
         },
       ),
     ];

@@ -21,7 +21,7 @@ final approvedUsersProvider = FutureProvider<List<AdminUserModel>>((ref) {
   return ref.read(adminServiceProvider).getUsers(status: 'APPROVED');
 });
 
-/// Count of PENDING users — drives the Team sidebar badge.
+/// Count of PENDING users — drives the Profile tab and Team entry badges.
 final pendingUsersCountProvider = FutureProvider<int>((ref) async {
   final prefs = ref.read(sharedPreferencesProvider);
   if (prefs.getString(kCachedAuthTokenKey) == null) return 0;

@@ -2,10 +2,13 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:ai_task_manager/core/theme/app_colors.dart';
 import 'package:ai_task_manager/core/theme/app_spacing.dart';
+import 'package:ai_task_manager/features/admin/viewmodel/admin_viewmodel.dart';
 import 'package:ai_task_manager/features/auth/viewmodel/auth_viewmodel.dart';
+import 'package:ai_task_manager/shared/navigation/app_tab.dart';
 import 'package:ai_task_manager/shared/providers.dart';
 import 'package:ai_task_manager/shared/user_avatar.dart';
 
@@ -88,6 +91,16 @@ class SettingsScreen extends ConsumerWidget {
                           ref.read(themeModeProvider.notifier).state = mode,
                     ),
                   ),
+                  if (user?.isAdmin == true) ...[
+                    const SizedBox(height: AppSpacing.xxl),
+                    _buildSection(
+                      context: context,
+                      isDark: isDark,
+                      title: 'Administration',
+                      icon: Icons.admin_panel_settings_rounded,
+                      child: _AdminCard(isDark: isDark),
+                    ),
+                  ],
                   const SizedBox(height: AppSpacing.xxl),
                   _buildSection(
                     context: context,
@@ -110,7 +123,7 @@ class SettingsScreen extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Settings',
+          'Profile',
           style: TextStyle(
             color: isDark
                 ? AppColors.textPrimaryDark
@@ -441,6 +454,61 @@ class _ThemeChip extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Admin card ────────────────────────────────────────────────────────────────
+
+class _AdminCard extends ConsumerWidget {
+  final bool isDark;
+
+  const _AdminCard({required this.isDark});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final pendingLabel =
+        badgeLabel(ref.watch(pendingUsersCountProvider).valueOrNull ?? 0);
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          decoration: BoxDecoration(
+            color: isDark
+                ? Colors.white.withOpacity(0.07)
+                : Colors.white.withOpacity(0.76),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withOpacity(0.10)
+                  : Colors.white.withOpacity(0.85),
+            ),
+          ),
+          child: _SettingsTile(
+            icon: Icons.people_rounded,
+            label: 'Team',
+            isDark: isDark,
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (pendingLabel != null)
+                  Badge(label: Text(pendingLabel)),
+                const SizedBox(width: AppSpacing.sm),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 18,
+                  color: isDark
+                      ? AppColors.textTertiaryDark
+                      : AppColors.textTertiaryLight,
+                ),
+              ],
+            ),
+            onTap: () => context.push('/team'),
+          ),
         ),
       ),
     );
