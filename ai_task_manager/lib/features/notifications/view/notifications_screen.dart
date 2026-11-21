@@ -2,7 +2,6 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import 'package:ai_task_manager/core/design_system/app_button.dart';
@@ -10,6 +9,7 @@ import 'package:ai_task_manager/core/theme/app_colors.dart';
 import 'package:ai_task_manager/core/theme/app_spacing.dart';
 import 'package:ai_task_manager/features/notifications/model/notification_entity.dart';
 import 'package:ai_task_manager/features/notifications/viewmodel/notification_viewmodel.dart';
+import 'package:ai_task_manager/shared/navigation/app_navigation.dart';
 
 class NotificationsScreen extends ConsumerWidget {
   const NotificationsScreen({super.key});
@@ -63,7 +63,7 @@ class NotificationsScreen extends ConsumerWidget {
                           final dest = notification.taskId.isNotEmpty
                               ? '$base?taskId=${notification.taskId}'
                               : base;
-                          context.go(dest);
+                          openLocation(context, dest);
                         },
                       );
                     },

@@ -367,7 +367,8 @@ class _BackButtonState extends State<_BackButton> {
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       child: GestureDetector(
-        onTap: () => context.go('/messages'),
+        onTap: () =>
+            context.canPop() ? context.pop() : context.go('/messages'),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 140),
           width: 32,

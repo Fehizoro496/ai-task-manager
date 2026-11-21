@@ -230,7 +230,7 @@ class _ProjectGrid extends StatelessWidget {
                   project: project,
                   onTap: () {
                     ref.read(selectedProjectProvider.notifier).state = project;
-                    context.go('/board/${project.id}');
+                    context.push('/board/${project.id}');
                   },
                   onDelete: isAdmin
                       ? () => ref

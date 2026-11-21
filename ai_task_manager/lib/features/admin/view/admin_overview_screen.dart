@@ -787,7 +787,7 @@ class _UrgentDeadlinesSection extends StatelessWidget {
               task: items[i].task,
               projectName: items[i].projectName,
               isDark: isDark,
-              onTap: () => context.go('/board/${items[i].task.projectId}?taskId=${items[i].task.id}'),
+              onTap: () => context.push('/board/${items[i].task.projectId}?taskId=${items[i].task.id}'),
             ),
           ),
       ],
@@ -1046,7 +1046,7 @@ class _ProjectsSection extends StatelessWidget {
                     project: project,
                     tasks: tasks,
                     isDark: isDark,
-                    onTap: () => context.go('/board/${project.id}'),
+                    onTap: () => context.push('/board/${project.id}'),
                   );
                 },
               );

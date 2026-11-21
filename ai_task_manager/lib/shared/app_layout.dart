@@ -49,7 +49,21 @@ class AppLayout extends ConsumerWidget {
           isAdmin ? ref.watch(pendingUsersCountProvider).valueOrNull ?? 0 : 0,
     );
     final tabs = visibleTabs(isAdmin: isAdmin);
+    final homeTab = tabs.first;
+    final isOnHomeTab = navigationShell.currentIndex == homeTab.branchIndex;
 
+    // Retour Android depuis un autre onglet : revient au premier onglet ;
+    // depuis le premier, laisse le système quitter l'app.
+    return PopScope(
+      canPop: isOnHomeTab,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) navigationShell.goBranch(homeTab.branchIndex);
+      },
+      child: _buildScaffold(tabs, badges),
+    );
+  }
+
+  Widget _buildScaffold(List<AppTab> tabs, TabBadges badges) {
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: AuthBackground(

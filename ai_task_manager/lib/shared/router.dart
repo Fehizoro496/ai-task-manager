@@ -85,6 +85,23 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) =>
             const FullScreenLayout(child: TeamScreen()),
       ),
+      GoRoute(
+        path: '/board/:projectId',
+        builder: (context, state) => FullScreenLayout(
+          child: BoardScreen(
+            projectId: state.pathParameters['projectId'] ?? 'default',
+            highlightTaskId: state.uri.queryParameters['taskId'],
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/messages/:conversationId',
+        builder: (context, state) => FullScreenLayout(
+          child: ConversationScreen(
+            conversationId: state.pathParameters['conversationId']!,
+          ),
+        ),
+      ),
       // L'ordre des branches suit AppTab (branchIndex).
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
@@ -104,13 +121,6 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: '/dashboard',
                 builder: (context, state) => const DashboardScreen(),
               ),
-              GoRoute(
-                path: '/board/:projectId',
-                builder: (context, state) => BoardScreen(
-                  projectId: state.pathParameters['projectId'] ?? 'default',
-                  highlightTaskId: state.uri.queryParameters['taskId'],
-                ),
-              ),
             ],
           ),
           StatefulShellBranch(
@@ -118,12 +128,6 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/messages',
                 builder: (context, state) => const MessagesScreen(),
-              ),
-              GoRoute(
-                path: '/messages/:conversationId',
-                builder: (context, state) => ConversationScreen(
-                  conversationId: state.pathParameters['conversationId']!,
-                ),
               ),
             ],
           ),

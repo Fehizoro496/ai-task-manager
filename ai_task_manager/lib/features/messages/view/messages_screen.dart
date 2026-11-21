@@ -52,7 +52,7 @@ class MessagesScreen extends ConsumerWidget {
                       return _ConversationTile(
                         conversation: conv,
                         isDark: isDark,
-                        onTap: () => context.go('/messages/${conv.id}'),
+                        onTap: () => context.push('/messages/${conv.id}'),
                       );
                     },
                   ),
