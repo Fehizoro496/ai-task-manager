@@ -29,3 +29,26 @@
 - Les dépendances pointent vers le domaine : la couche domaine ne dépend d'aucune autre couche.
 - Organiser le code par bounded context (projects, tasks, ai_planning, messages…) et utiliser le langage ubiquitaire du métier dans les noms.
 - Le code existant (structure `data/model/service/view/viewmodel`) est migré progressivement : appliquer le DDD aux parties touchées sans lancer de refonte globale non demandée.
+
+## Workflow multi-agents (obligatoire)
+
+Rôles :
+- Claude = chef de projet + reviewer. Tu ne codes PAS toi-même les tâches d'implémentation.
+- Codex = exécutant. Toute implémentation passe par le sous-agent codex:codex-rescue.
+
+Pour chaque demande :
+1. PLAN : découpe en tâches petites et indépendantes. Pour chacune, écris une spec
+   précise : fichiers concernés, comportement attendu, contraintes (architecture,
+   state management, conventions du projet), critères d'acceptation.
+2. CHECKPOINT : `git add -A && git commit -m "checkpoint avant <tâche>"`.
+3. DÉLÉGATION : envoie la spec à Codex (codex:codex-rescue). Une tâche à la fois.
+4. REVUE : une fois Codex terminé :
+   - `git diff` et lis tout le diff
+   - `flutter analyze` puis `flutter test`
+   - vérifie la spec : critères remplis, rien hors périmètre, pas de régression
+5. VERDICT :
+   - OK → commit avec un message clair
+   - Problèmes mineurs → renvoie à Codex avec la liste précise des corrections (--resume)
+   - Mauvaise direction → `git reset --hard` au checkpoint et réécris la spec
+   Maximum 2 allers-retours par tâche ; ensuite, arrête-toi et demande-moi.
+6. Résumé final : tâches faites, problèmes trouvés en revue, points à vérifier par moi.
